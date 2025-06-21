@@ -1,0 +1,125 @@
+'use client';
+import { useState } from 'react';
+import Link from 'next/link';
+import { Gem, Menu, User, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
+export function Header() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    { href: '/', label: 'Browse' },
+    { href: '/suggestions', label: 'AI Suggestions' },
+  ];
+
+  const loggedInLinks = [
+    { href: '/collection', label: 'My Collection' },
+  ];
+  
+  const toggleLogin = () => setIsLoggedIn(!isLoggedIn);
+
+  const closeMenu = () => setIsMobileMenuOpen(false);
+
+  return (
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center">
+        <Link href="/" className="mr-6 flex items-center gap-2">
+          <Gem className="h-6 w-6 text-primary" />
+          <span className="font-bold text-lg font-headline">Crestox</span>
+        </Link>
+        <div className="hidden md:flex flex-1 items-center justify-between">
+          <nav className="flex items-center gap-6 text-sm">
+            {navLinks.map((link) => (
+              <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+                {link.label}
+              </Link>
+            ))}
+            {isLoggedIn && loggedInLinks.map((link) => (
+               <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="flex items-center gap-4">
+            {isLoggedIn ? (
+              <>
+                <Button onClick={toggleLogin} variant="secondary">Logout</Button>
+                <Avatar>
+                  <AvatarImage src="https://placehold.co/40x40.png" alt="User" />
+                  <AvatarFallback><User className="w-4 h-4"/></AvatarFallback>
+                </Avatar>
+              </>
+            ) : (
+              <>
+                <Button onClick={toggleLogin} variant="ghost">Login</Button>
+                <Button asChild>
+                  <Link href="/signup">Sign Up</Link>
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-1 items-center justify-end md:hidden">
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle Menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full">
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between border-b p-4">
+                    <Link href="/" onClick={closeMenu} className="flex items-center gap-2">
+                      <Gem className="h-6 w-6 text-primary" />
+                      <span className="font-bold font-headline">Crestox</span>
+                    </Link>
+                    <SheetTrigger asChild>
+                       <Button variant="ghost" size="icon">
+                        <X className="h-5 w-5" />
+                        <span className="sr-only">Close Menu</span>
+                      </Button>
+                    </SheetTrigger>
+                </div>
+                <nav className="flex flex-col gap-4 p-4">
+                  {navLinks.map((link) => (
+                    <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
+                      {link.label}
+                    </Link>
+                  ))}
+                  {isLoggedIn && loggedInLinks.map((link) => (
+                     <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
+                      {link.label}
+                    </Link>
+                  ))}
+                </nav>
+                <div className="mt-auto border-t p-4">
+                 {isLoggedIn ? (
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-2 font-medium">
+                            <Avatar>
+                              <AvatarImage src="https://placehold.co/40x40.png" alt="User" />
+                              <AvatarFallback>U</AvatarFallback>
+                            </Avatar>
+                            <span>User Profile</span>
+                        </div>
+                        <Button onClick={() => { toggleLogin(); closeMenu(); }} variant="secondary">Logout</Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <Button onClick={() => { toggleLogin(); closeMenu(); }} variant="outline">Login</Button>
+                      <Button asChild><Link href="/signup" onClick={closeMenu}>Sign Up</Link></Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+    </header>
+  );
+}
