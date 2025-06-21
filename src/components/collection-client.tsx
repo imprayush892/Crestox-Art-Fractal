@@ -2,17 +2,19 @@
 
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { ArrowDown, ArrowUp, ArrowUpRight, BarChart, DollarSign, TrendingUp } from 'lucide-react';
-import { format } from 'date-fns';
+import { ArrowUpRight, BarChart, DollarSign, TrendingUp, Wallet } from 'lucide-react';
 import type { OwnedFractal } from '@/context/auth-context';
+import type { Artist } from '@/lib/data';
+import { ArtistHoldingsDialog } from './artist-holdings-dialog';
 
 export function CollectionClient() {
   const { isLoggedIn, collection, artists } = useAuth();
   const router = useRouter();
+  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -52,6 +54,19 @@ export function CollectionClient() {
           return artistA.localeCompare(artistB);
       });
   }, [collectionByArtist, artistMap]);
+
+  const handleCardClick = (artistId: string) => {
+    const artist = artistMap.get(artistId);
+    if (artist) {
+        setSelectedArtist(artist);
+    }
+  };
+  
+  const handleCloseDialog = () => {
+      setSelectedArtist(null);
+  };
+  
+  const ownedFractalsForSelectedArtist = selectedArtist ? collectionByArtist[selectedArtist.id] || [] : [];
 
 
   if (!isLoggedIn) {
@@ -110,59 +125,58 @@ export function CollectionClient() {
                 </Card>
             </div>
 
-            <div className="space-y-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedArtistIds.map(artistId => {
                   const fractalsByArtist = collectionByArtist[artistId];
                   const artist = artistMap.get(artistId);
                   if (!artist) return null;
 
-                  return (
-                    <div key={artistId}>
-                        <h2 className="font-headline text-3xl font-bold mb-6 border-b pb-4">{artist.name}</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {fractalsByArtist.map((fractal) => {
-                                const currentValue = artist?.fractalPrice ?? fractal.purchasePrice;
-                                const valueChange = currentValue - fractal.purchasePrice;
+                  const totalInvestment = fractalsByArtist.reduce((sum, f) => sum + f.purchasePrice, 0);
+                  const currentValue = fractalsByArtist.length * artist.fractalPrice;
+                  const gainLoss = currentValue - totalInvestment;
 
-                                return (
-                                <Card key={fractal.id} className="flex flex-col">
-                                    <CardHeader>
-                                        <CardTitle className="font-headline text-xl">{fractal.artistName}</CardTitle>
-                                        <CardDescription>
-                                            Serial: <span className="font-mono">{fractal.serialNumber}</span>
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="grid gap-4 flex-grow">
-                                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                                            <span className="text-sm text-muted-foreground">Purchase Price</span>
-                                            <span className="font-semibold">${fractal.purchasePrice.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                                            <span className="text-sm text-muted-foreground">Current Value</span>
-                                            <div className="flex items-center gap-2">
-                                                 {valueChange !== 0 && (
-                                                    valueChange > 0 ? <ArrowUp className="h-4 w-4 text-green-500"/> : <ArrowDown className="h-4 w-4 text-red-500"/>
-                                                 )}
-                                                <span className="font-semibold">${currentValue.toLocaleString()}</span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="flex-col items-start text-xs text-muted-foreground">
-                                        <p>Purchased on {format(new Date(fractal.purchaseDate), "MMMM d, yyyy")}</p>
-                                        {artist && 
-                                            <Link href={`/artist/${artist.id}`} className="inline-flex items-center gap-1 mt-2 text-primary hover:underline">
-                                                View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
-                                            </Link>
-                                        }
-                                    </CardFooter>
-                                </Card>
-                                )
-                            })}
-                        </div>
-                    </div>
+                  return (
+                    <Card 
+                        key={artistId} 
+                        className="flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+                        onClick={() => handleCardClick(artistId)}
+                    >
+                        <CardHeader className="flex-row items-center gap-4">
+                            <Wallet className="w-8 h-8 text-primary"/>
+                            <div>
+                                <CardTitle className="font-headline text-2xl">{artist.name}</CardTitle>
+                                <CardDescription>{fractalsByArtist.length} Fractal{fractalsByArtist.length > 1 ? 's' : ''} Owned</CardDescription>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 flex-grow">
+                             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                                <span className="text-sm text-muted-foreground">Total Invested</span>
+                                <span className="font-semibold">${totalInvestment.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                                <span className="text-sm text-muted-foreground">Current Value</span>
+                                <span className="font-semibold">${currentValue.toLocaleString()}</span>
+                            </div>
+                        </CardContent>
+                        <CardFooter className="flex-col items-start w-full">
+                           <div className={`w-full text-sm font-semibold flex items-center justify-between ${gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                <span>Gain/Loss:</span>
+                                <span>${gainLoss.toLocaleString(undefined, { signDisplay: 'always' })}</span>
+                            </div>
+                            <Link href={`/artist/${artist.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 mt-4 text-primary hover:underline text-xs">
+                                View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
+                            </Link>
+                        </CardFooter>
+                    </Card>
                   )
               })}
             </div>
+             <ArtistHoldingsDialog 
+                isOpen={!!selectedArtist}
+                onClose={handleCloseDialog}
+                artist={selectedArtist}
+                ownedFractals={ownedFractalsForSelectedArtist}
+            />
         </>
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
