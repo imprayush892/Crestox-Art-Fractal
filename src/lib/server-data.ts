@@ -1,3 +1,4 @@
+
 // This file is marked as `server-only` to ensure it's never bundled on the client.
 import 'server-only';
 
@@ -7,9 +8,8 @@ import { artists as mockArtists, fractals as mockFractals, type Artist, type Fra
 
 // Helper function to safely get data from a collection.
 async function getDataFromCollection<T>(collectionName: string, fallbackData: T[]): Promise<T[]> {
-  const isFirebaseConfigured = !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
-  if (!isFirebaseConfigured) {
+  // If db is null, it means Firebase is not configured or failed to initialize.
+  if (!db) {
     console.warn(`Firebase not configured. Using mock data for ${collectionName}.`);
     return fallbackData;
   }

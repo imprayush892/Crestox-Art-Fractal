@@ -63,10 +63,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const [artists, setArtists] = useState<Artist[]>(initialArtists);
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
 
-  const isFirebaseConfigured = !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
   useEffect(() => {
-    if (!isFirebaseConfigured) {
+    // If db is null, Firebase is not configured or failed to initialize. Do not set up listeners.
+    if (!db) {
       return;
     }
 
@@ -100,11 +99,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       unsubscribeArtists();
       unsubscribeFractals();
     };
-  }, [isFirebaseConfigured]);
+  }, []); // Empty dependency array means this runs once on the client after mount.
   
   useEffect(() => {
     let unsubscribe: () => void = () => {};
-    if (user && isFirebaseConfigured) {
+    // If db is null, Firebase is not configured or failed to initialize.
+    if (user && db) {
       const ownedFractalsRef = firestoreCollection(db, "users", user.uid, "ownedFractals");
       unsubscribe = onSnapshot(ownedFractalsRef, (querySnapshot) => {
         const userFractals = querySnapshot.docs.map(doc => doc.data() as OwnedFractal);
@@ -114,7 +114,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       setCollection([]);
     }
     return () => unsubscribe();
-  }, [user, isFirebaseConfigured]);
+  }, [user]);
 
   const login = () => {
     setUser({ uid: 'mock-user-id' });
@@ -130,7 +130,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     if (!user) {
         throw new Error("User must be logged in to invest.");
     }
-    if (!isFirebaseConfigured) {
+    // If db is null, Firebase is not configured or failed to initialize.
+    if (!db) {
         console.error("Cannot invest: Firebase is not configured.");
         return;
     }
@@ -190,7 +191,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     } catch (e) {
         console.error("Transaction failed: ", e);
     }
-  }, [user, isFirebaseConfigured]);
+  }, [user]);
 
   const holdingsByArtist = new Map<string, number>();
   collection.forEach(fractal => {

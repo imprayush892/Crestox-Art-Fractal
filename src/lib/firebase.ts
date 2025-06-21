@@ -1,9 +1,7 @@
 
 import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 
-// Your web app's Firebase configuration
-// IMPORTANT: Replace with your actual Firebase project configuration.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -13,9 +11,17 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+let db: Firestore | null = null;
 
-const db = getFirestore(app);
+// Only initialize Firebase if the project ID is provided
+if (firebaseConfig.projectId) {
+  try {
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    db = getFirestore(app);
+  } catch (error) {
+    console.error("Firebase initialization failed:", error);
+    // db remains null if initialization fails
+  }
+}
 
 export { db };
