@@ -1,7 +1,16 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Gem } from 'lucide-react';
 
 export function Footer() {
+  const [year, setYear] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
+
   return (
     <footer className="border-t bg-background">
       <div className="container py-8">
@@ -11,7 +20,7 @@ export function Footer() {
             <span className="font-bold text-lg font-headline">Crestox</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Crestox. All rights reserved.
+            © {year} Crestox. All rights reserved.
           </p>
           <nav className="flex gap-4">
             <Link href="#" className="text-sm text-muted-foreground hover:text-primary">Terms of Service</Link>
