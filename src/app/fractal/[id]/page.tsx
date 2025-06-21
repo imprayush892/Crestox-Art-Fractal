@@ -1,14 +1,22 @@
+'use client';
+
 import { artists, fractals } from '@/lib/data';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { FractalCard } from '@/components/fractal-card';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 export default function FractalDetailPage({ params }: { params: { id: string } }) {
+  const { isLoggedIn, isInCollection, addToCollection } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+  
   const fractal = fractals.find(f => f.id === params.id);
   
   if (!fractal) {
@@ -17,6 +25,20 @@ export default function FractalDetailPage({ params }: { params: { id: string } }
 
   const artist = artists.find(a => a.id === fractal.artistId);
   const relatedFractals = fractals.filter(f => f.artistId === fractal.artistId && f.id !== fractal.id).slice(0, 3);
+
+  const inCollection = isInCollection(fractal.id);
+
+  const handleAddToCollection = () => {
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    addToCollection(fractal.id);
+    toast({
+      title: "Added to Collection!",
+      description: `"${fractal.title}" is now in your collection.`,
+    });
+  };
 
   return (
     <div className="container py-12">
@@ -64,7 +86,16 @@ export default function FractalDetailPage({ params }: { params: { id: string } }
             </div>
 
             <div className="mt-10 border-t pt-6">
-                <Button size="lg" className="w-full">Add to Collection</Button>
+                <Button size="lg" className="w-full" onClick={handleAddToCollection} disabled={inCollection}>
+                   {inCollection ? (
+                    <>
+                      <CheckCircle className="mr-2 h-5 w-5" />
+                      In Your Collection
+                    </>
+                  ) : (
+                    'Add to Collection'
+                  )}
+                </Button>
             </div>
           </div>
         </div>

@@ -1,9 +1,27 @@
+'use client';
+
 import { fractals, artists } from '@/lib/data';
 import { FractalCard } from '@/components/fractal-card';
+import { useAuth } from '@/context/auth-context';
+import { useRouter } from 'next/navigation';
+import React, { useEffect } from 'react';
 
 export default function CollectionPage() {
-  const userCollection = fractals.slice(0, 4); 
+  const { isLoggedIn, collection } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      router.push('/login');
+    }
+  }, [isLoggedIn, router]);
+
+  const userCollection = fractals.filter(f => collection.includes(f.id));
   const getArtistById = (artistId: string) => artists.find(a => a.id === artistId);
+
+  if (!isLoggedIn) {
+    return null; // or a loading spinner
+  }
 
   return (
     <div className="container py-12">
