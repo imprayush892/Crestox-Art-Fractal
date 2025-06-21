@@ -78,7 +78,7 @@ export function CollectionClient() {
       <div className="text-center mb-8">
         <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">My Collection</h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-          STAY ON TOP OF ALL YOUR FRACTAL ACTIVITES
+          Stay on top of all your fractal activities.
         </p>
       </div>
       
