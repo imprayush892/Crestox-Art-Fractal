@@ -8,10 +8,11 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
-import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import { InvestmentDialog } from './investment-dialog';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -19,32 +20,33 @@ interface ArtistProfileProps {
 }
 
 export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
-  const { isLoggedIn, isInCollection, addToCollection } = useAuth();
-  const { toast } = useToast();
+  const { isLoggedIn, holdingsByArtist } = useAuth();
   const router = useRouter();
+  const [isInvesting, setIsInvesting] = useState(false);
 
-  const inCollection = isInCollection(artist.id);
+  const ownedShares = holdingsByArtist.get(artist.id) || 0;
 
-  const handleAddToCollection = () => {
+  const handleInvestClick = () => {
     if (!isLoggedIn) {
       router.push(`/login?redirect=/artist/${artist.id}`);
       return;
     }
-    addToCollection(artist.id);
-    toast({
-      title: "Portfolio Fractal Acquired!",
-      description: `You now own a share of ${artist.name}'s portfolio.`,
-    });
+    setIsInvesting(true);
   };
 
   const portfolioValueHistory = artist.priceHistory.map(p => ({ date: p.date, value: p.price }));
 
   return (
     <>
+      <InvestmentDialog
+        artist={artist}
+        isOpen={isInvesting}
+        onClose={() => setIsInvesting(false)}
+      />
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12 mb-12">
         <div className="lg:col-span-3 flex flex-col items-center md:items-start">
             <Avatar className="w-32 h-32 md:w-40 md:h-40 border-4 border-primary shadow-lg">
-              <AvatarImage src={artist.avatar} alt={artist.name} />
+              <AvatarImage src={artist.avatar} alt={artist.name} data-ai-hint="artist avatar"/>
               <AvatarFallback className="text-4xl">{artist.name.substring(0, 2)}</AvatarFallback>
             </Avatar>
             <div className="pt-4 text-center md:text-left">
@@ -69,16 +71,16 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                             ${artist.fractalPrice.toLocaleString()}
                         </div>
                     </div>
-                    <Button size="lg" className="w-full" onClick={handleAddToCollection} disabled={inCollection}>
-                       {inCollection ? (
-                        <>
-                          <CheckCircle className="mr-2 h-5 w-5" />
-                          Owned in Collection
-                        </>
-                      ) : (
-                        'Invest Now'
-                      )}
+                    <Button size="lg" className="w-full" onClick={handleInvestClick}>
+                        <ShoppingCart className="mr-2 h-5 w-5" />
+                        Invest Now
                     </Button>
+                    {ownedShares > 0 && (
+                        <div className="mt-4 text-center text-sm text-green-600 font-medium flex items-center justify-center gap-2">
+                            <CheckCircle className="w-4 h-4" />
+                            You own {ownedShares} fractal{ownedShares > 1 ? 's' : ''} of this portfolio.
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
