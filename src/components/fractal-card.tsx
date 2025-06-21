@@ -26,6 +26,7 @@ export function FractalCard({ fractal, artist }: FractalCardProps) {
           <div className="p-4">
             <h3 className="font-headline text-lg font-bold truncate">{fractal.title}</h3>
             <p className="text-sm text-muted-foreground">by {artist.name}</p>
+            <p className="mt-2 font-semibold text-lg text-foreground">${fractal.price.toLocaleString()}</p>
           </div>
         </CardContent>
       </Card>

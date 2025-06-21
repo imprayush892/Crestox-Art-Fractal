@@ -7,10 +7,14 @@ import { notFound, useRouter, useParams } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowLeft, CheckCircle, Layers } from 'lucide-react';
 import { FractalCard } from '@/components/fractal-card';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { format } from 'date-fns';
 
 export default function FractalDetailPage() {
   const { isLoggedIn, isInCollection, addToCollection } = useAuth();
@@ -86,20 +90,81 @@ export default function FractalDetailPage() {
               <Badge variant="secondary">Algorithmic</Badge>
             </div>
 
-            <div className="mt-10 border-t pt-6">
+            <div className="mt-8 border-t pt-8">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Layers className="w-4 h-4" />
+                    <span>{fractal.availableEditions} of {fractal.totalEditions} available</span>
+                  </div>
+                  <div className="text-2xl font-bold text-primary">
+                    ${fractal.price.toLocaleString()}
+                  </div>
+                </div>
                 <Button size="lg" className="w-full" onClick={handleAddToCollection} disabled={inCollection}>
                    {inCollection ? (
                     <>
                       <CheckCircle className="mr-2 h-5 w-5" />
-                      In Your Collection
+                      Owned in Collection
                     </>
                   ) : (
-                    'Add to Collection'
+                    'Invest Now'
                   )}
                 </Button>
             </div>
           </div>
         </div>
+      </div>
+
+       <div className="mt-16">
+        <h3 className="font-headline text-2xl font-bold mb-4">Price History</h3>
+        <Card>
+          <CardContent className="p-2 md:p-6 pt-6">
+            <ChartContainer
+              config={{
+                price: {
+                  label: "Price",
+                  color: "hsl(var(--primary))",
+                },
+              }}
+              className="h-[250px] w-full"
+            >
+              <LineChart data={fractal.priceHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) => format(new Date(value), "MMM yy")}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) => `$${value.toLocaleString()}`}
+                />
+                <Tooltip
+                  cursor={{
+                    stroke: 'hsl(var(--border))',
+                    strokeWidth: 2,
+                    strokeDasharray: '3 3',
+                  }}
+                  content={<ChartTooltipContent 
+                    indicator="dot"
+                    formatter={(value) => `$${(value as number).toLocaleString()}`}
+                  />}
+                />
+                <Line
+                  dataKey="price"
+                  type="monotone"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  dot={true}
+                />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
       </div>
       
       {relatedFractals.length > 0 && (
