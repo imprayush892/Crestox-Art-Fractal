@@ -1,7 +1,6 @@
 'use client';
 
 import type { Artist, Fractal } from '@/lib/data';
-import { artists as initialArtists, fractals as initialFractals } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 
 export interface OwnedFractal {
@@ -51,7 +50,13 @@ const calculateNewPrice = (P_old: number, Q: number, N: number): number => {
   return Math.round(P_new * 100) / 100;
 };
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+interface AuthProviderProps {
+  children: ReactNode;
+  artists: Artist[];
+  fractals: Fractal[];
+}
+
+export function AuthProvider({ children, artists: initialArtists, fractals: initialFractals }: AuthProviderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
   const [serialCounter, setSerialCounter] = useState(1);
