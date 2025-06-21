@@ -3,7 +3,7 @@
 import { artists, fractals } from '@/lib/data';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,11 @@ import { FractalCard } from '@/components/fractal-card';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 
-export default function FractalDetailPage({ params }: { params: { id: string } }) {
+export default function FractalDetailPage() {
   const { isLoggedIn, isInCollection, addToCollection } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const params = useParams();
   
   const fractal = fractals.find(f => f.id === params.id);
   
