@@ -19,6 +19,8 @@ export interface Fractal {
   aiHint: string;
   width: number;
   height: number;
+  price: number;
+  priceHistory: { date: string; price: number }[];
 }
 
 // --- Data Generation ---
@@ -76,7 +78,7 @@ const shuffleArray = <T>(array: T[]): T[] => {
 const generatePriceHistory = (initialPrice: number): { date: string; price: number }[] => {
     const history: { date: string; price: number }[] = [];
     let currentDate = new Date('2023-01-01');
-    let currentPrice = initialPrice * (Math.random() * 0.4 + 0.3); // Start price between 30% and 70% of final price
+    let currentPrice = initialPrice * (Math.random() * 0.4 + 0.3);
 
     for (let i = 0; i < 4; i++) {
         history.push({
@@ -84,7 +86,7 @@ const generatePriceHistory = (initialPrice: number): { date: string; price: numb
             price: Math.round(currentPrice),
         });
         currentDate.setMonth(currentDate.getMonth() + randomInt(2, 4));
-        currentPrice *= (Math.random() * 0.5 + 1.1); // Increase price by 10-60%
+        currentPrice *= (Math.random() * 0.5 + 1.1);
     }
      history.push({ date: new Date().toISOString().split('T')[0], price: initialPrice });
     return history;
@@ -102,35 +104,34 @@ const generateArtists = (count: number): Artist[] => {
   const selectedNames = shuffledNames.slice(0, count);
 
   return selectedNames.map((name, index) => {
-    const fractalPrice = randomInt(5, 50) * 100;
-    const totalEditions = randomInt(1, 10) * (randomInt(1,3) === 1 ? 100 : 1000);
+    const fractalPrice = randomInt(5, 50) * 10; // Price per portfolio share
+    const totalEditions = randomInt(1, 10) * 1000;
     return {
         id: `artist-${index + 1}`,
         name,
         avatar: 'https://placehold.co/100x100.png',
         bio: getRandom(bios),
         fractalPrice,
-        priceHistory: generatePriceHistory(fractalPrice),
+        priceHistory: generatePriceHistory(fractalPrice * 100), // simulate portfolio value history
         totalEditions,
-        availableEditions: randomInt(10, totalEditions),
+        availableEditions: randomInt(100, totalEditions),
     }
   });
 };
 
 const generateFractals = (count: number, artists: Artist[]): Fractal[] => {
-  const allPossibleTitles: string[] = [];
-  fractalAdjectives.forEach(adjective => {
-    fractalNouns.forEach(noun => {
-      allPossibleTitles.push(`${adjective} ${noun}`);
-    });
-  });
-  
-  const shuffledTitles = shuffleArray(allPossibleTitles);
-  const selectedTitles = shuffledTitles.slice(0, count);
+  const allPossibleTitles = new Set<string>();
+  while (allPossibleTitles.size < count) {
+      const title = `${getRandom(fractalAdjectives)} ${getRandom(fractalNouns)}`;
+      allPossibleTitles.add(title);
+  }
 
-  return selectedTitles.map((title, index) => {
+  const shuffledTitles = Array.from(allPossibleTitles);
+
+  return shuffledTitles.map((title, index) => {
     const width = randomInt(5, 9) * 100;
     const height = randomInt(5, 9) * 100;
+    const price = randomInt(5, 150) * 10;
     return {
         id: `fractal-${String(index + 1).padStart(3, '0')}`,
         title,
@@ -140,6 +141,8 @@ const generateFractals = (count: number, artists: Artist[]): Fractal[] => {
         aiHint: getRandom(aiHints),
         width,
         height,
+        price,
+        priceHistory: generatePriceHistory(price),
     };
   });
 };

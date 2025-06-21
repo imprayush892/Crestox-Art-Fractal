@@ -22,7 +22,6 @@ export function ExploreTool({ fractals, artists }: ExploreToolProps) {
   const filteredAndSortedFractals = useMemo(() => {
     let filtered = [...fractals];
 
-    // Search filter
     if (searchTerm) {
       const lowercasedTerm = searchTerm.toLowerCase();
       filtered = filtered.filter(fractal =>
@@ -32,13 +31,17 @@ export function ExploreTool({ fractals, artists }: ExploreToolProps) {
       );
     }
 
-    // Artist filter
     if (artistFilter !== 'all') {
       filtered = filtered.filter(fractal => fractal.artistId === artistFilter);
     }
 
-    // Sorting
     switch (sortOrder) {
+      case 'price-asc':
+        filtered.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-desc':
+        filtered.sort((a, b) => b.price - a.price);
+        break;
       case 'newest':
       default:
         filtered.sort((a, b) => parseInt(b.id.split('-')[1]) - parseInt(a.id.split('-')[1]));
@@ -81,6 +84,8 @@ export function ExploreTool({ fractals, artists }: ExploreToolProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="price-asc">Price: Low to High</SelectItem>
+              <SelectItem value="price-desc">Price: High to Low</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -6,8 +6,11 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { FractalCard } from '@/components/fractal-card';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
+import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
+import { format } from 'date-fns';
 
 interface FractalDetailProps {
     fractal: Fractal;
@@ -18,11 +21,13 @@ interface FractalDetailProps {
 
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
 
+  const artworkValueHistory = fractal.priceHistory.map(p => ({ date: p.date, value: p.price }));
+
   return (
     <>
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
         <div className="lg:col-span-3">
-          <div className="bg-muted rounded-lg overflow-hidden shadow-lg">
+          <div className="bg-muted rounded-lg overflow-hidden shadow-lg mb-8">
             <Image
               src={fractal.image}
               alt={fractal.title}
@@ -33,6 +38,54 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
               priority
             />
           </div>
+            <h2 className="font-headline text-3xl font-bold mb-6">Artwork Value History</h2>
+            <Card>
+              <CardHeader>
+                  <CardTitle>Value Over Time</CardTitle>
+                  <CardDescription>Historical value of the artwork "{fractal.title}".</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <ChartContainer 
+                      config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
+                      className="h-[300px] w-full"
+                  >
+                      <LineChart data={artworkValueHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                          <XAxis
+                              dataKey="date"
+                              tickLine={false}
+                              axisLine={false}
+                              tickMargin={8}
+                              tickFormatter={(value) => format(new Date(value), "MMM yy")}
+                          />
+                          <YAxis
+                              tickLine={false}
+                              axisLine={false}
+                              tickMargin={8}
+                              tickFormatter={(value) => `$${(value as number).toLocaleString()}`}
+                          />
+                          <Tooltip
+                              cursor={{
+                                  stroke: 'hsl(var(--border))',
+                                  strokeWidth: 2,
+                                  strokeDasharray: '3 3',
+                              }}
+                              content={<ChartTooltipContent
+                                  formatter={(value) => `$${(value as number).toLocaleString()}`}
+                                  indicator="dot"
+                              />}
+                          />
+                          <Line
+                              dataKey="value"
+                              type="monotone"
+                              stroke="hsl(var(--primary))"
+                              strokeWidth={2}
+                              dot={true}
+                          />
+                      </LineChart>
+                  </ChartContainer>
+              </CardContent>
+            </Card>
         </div>
         <div className="lg:col-span-2">
           <div className="sticky top-24">
@@ -52,6 +105,11 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                 </Link>
               </div>
             )}
+
+            <div className="text-4xl font-bold text-primary mt-6">
+                ${fractal.price.toLocaleString()}
+            </div>
+            <p className="text-sm text-muted-foreground">Artwork valuation</p>
 
             <p className="text-lg text-muted-foreground mt-4">{fractal.description}</p>
             
