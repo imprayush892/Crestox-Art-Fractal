@@ -34,7 +34,8 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
     setIsInvesting(true);
   };
 
-  const portfolioValueHistory = artist.priceHistory.map(p => ({ date: p.date, value: p.price }));
+  const fractalPriceHistory = artist.priceHistory.map(p => ({ date: p.date, value: p.price }));
+  const totalValueHistory = artist.totalPortfolioValueHistory.map(p => ({ date: p.date, value: p.value }));
 
   return (
     <>
@@ -98,7 +99,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                   config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
                   className="h-[300px] w-full"
               >
-                  <LineChart data={portfolioValueHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <LineChart data={fractalPriceHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                       <CartesianGrid vertical={false} strokeDasharray="3 3" />
                       <XAxis
                           dataKey="date"
@@ -128,6 +129,57 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                           dataKey="value"
                           type="monotone"
                           stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                          dot={true}
+                      />
+                  </LineChart>
+              </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mb-12">
+        <h2 className="font-headline text-3xl font-bold mb-6">Total Portfolio Valuation</h2>
+        <Card>
+          <CardHeader>
+              <CardTitle>Valuation Over Time</CardTitle>
+              <CardDescription>Historical total valuation of {artist.name}'s entire collection.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <ChartContainer 
+                  config={{ value: { label: "Value", color: "hsl(var(--accent-foreground))" } }} 
+                  className="h-[300px] w-full"
+              >
+                  <LineChart data={totalValueHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                      <XAxis
+                          dataKey="date"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tickFormatter={(value) => format(new Date(value), "MMM yy")}
+                      />
+                      <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tickFormatter={(value) => `$${(value as number).toLocaleString()}`}
+                      />
+                      <Tooltip
+                          cursor={{
+                              stroke: 'hsl(var(--border))',
+                              strokeWidth: 2,
+                              strokeDasharray: '3 3',
+                          }}
+                          content={<ChartTooltipContent
+                              formatter={(value) => `$${(value as number).toLocaleString()}`}
+                              indicator="dot"
+                          />}
+                      />
+                      <Line
+                          dataKey="value"
+                          type="monotone"
+                          stroke="hsl(var(--accent-foreground))"
                           strokeWidth={2}
                           dot={true}
                       />

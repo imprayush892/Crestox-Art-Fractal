@@ -7,6 +7,7 @@ export interface Artist {
   bio: string;
   fractalPrice: number;
   priceHistory: { date: string; price: number }[];
+  totalPortfolioValueHistory: { date: string; value: number }[];
   totalEditions: number;
   availableEditions: number;
 }
@@ -78,19 +79,38 @@ const shuffleArray = <T>(array: T[]): T[] => {
 
 const generatePriceHistory = (initialPrice: number): { date: string; price: number }[] => {
     const history: { date: string; price: number }[] = [];
-    let currentDate = new Date('2023-01-01');
-    let currentPrice = initialPrice * (Math.random() * 0.4 + 0.3);
+    let currentDate = new Date();
+    currentDate.setFullYear(currentDate.getFullYear() - 1);
+    let currentPrice = initialPrice * (Math.random() * 0.4 + 0.8);
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
         history.push({
             date: currentDate.toISOString().split('T')[0],
             price: Math.round(currentPrice * 100) / 100,
         });
-        currentDate.setMonth(currentDate.getMonth() + randomInt(2, 4));
-        currentPrice *= (Math.random() * 0.5 + 1.1);
+        currentDate.setMonth(currentDate.getMonth() + randomInt(2, 3));
+        currentPrice *= (Math.random() * 0.4 + 0.9);
     }
      history.push({ date: new Date().toISOString().split('T')[0], price: Math.round(initialPrice * 100) / 100 });
-    return history;
+    return history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}
+
+const generateTotalValueHistory = (initialValue: number): { date: string; value: number }[] => {
+    const history: { date:string; value: number }[] = [];
+    let currentDate = new Date();
+    currentDate.setFullYear(currentDate.getFullYear() - 1);
+    let currentValue = initialValue * (Math.random() * 0.4 + 0.8);
+
+    for (let i = 0; i < 5; i++) {
+        history.push({
+            date: currentDate.toISOString().split('T')[0],
+            value: Math.round(currentValue),
+        });
+        currentDate.setMonth(currentDate.getMonth() + randomInt(2,3));
+        currentValue *= (Math.random() * 0.4 + 0.9);
+    }
+    history.push({ date: new Date().toISOString().split('T')[0], value: Math.round(initialValue) });
+    return history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
 // Step 1: Generate artists without price-dependent fields.
@@ -152,17 +172,17 @@ const finalArtists: Artist[] = tempArtists.map(artist => {
     const artistFractals = tempFractals.filter(f => f.artistId === artist.id);
     const totalPortfolioValue = artistFractals.reduce((sum, f) => sum + f.price, 0);
 
-    // Per user: fractal value = total portfolio value / total editions
     const initialFractalPrice = totalPortfolioValue > 0 && artist.totalEditions > 0
         ? totalPortfolioValue / artist.totalEditions
-        : 25; // A reasonable fallback price
+        : 25; 
 
     const roundedFractalPrice = Math.round(initialFractalPrice * 100) / 100;
 
     return {
         ...artist,
         fractalPrice: roundedFractalPrice,
-        priceHistory: generatePriceHistory(roundedFractalPrice)
+        priceHistory: generatePriceHistory(roundedFractalPrice),
+        totalPortfolioValueHistory: generateTotalValueHistory(totalPortfolioValue)
     };
 });
 

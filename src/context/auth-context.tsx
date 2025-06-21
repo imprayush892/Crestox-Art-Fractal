@@ -34,19 +34,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  * @returns The new price after the trade.
  */
 const calculateNewPrice = (P_old: number, Q: number, N: number): number => {
-  // Revised model: S_new = S_current * exp(β * sqrt(Q/V)) for a buy.
-  const beta = 1.118; // New calibration constant from the provided model.
+  const beta = 1.118;
   
   if (N === 0 || Q <= 0) {
     return P_old;
   }
 
-  // Q is trade size, N is total shares outstanding (V).
   const fraction = Q / N;
   const impactFactor = Math.exp(beta * Math.sqrt(fraction));
   const P_new = P_old * impactFactor;
 
-  return Math.round(P_new * 100) / 100; // Round to 2 decimal places.
+  return Math.round(P_new * 100) / 100;
 };
 
 
@@ -73,12 +71,13 @@ export function AuthProvider({ children, artists: initialArtists, fractals: init
   const investInPortfolio = useCallback((artistToUpdate: Artist, quantity: number) => {
     const purchasePrice = artistToUpdate.fractalPrice;
 
-    // Use the new price calculation model
     const newPrice = calculateNewPrice(
       artistToUpdate.fractalPrice,
       quantity,
       artistToUpdate.totalEditions
     );
+    
+    const newTotalPortfolioValue = newPrice * artistToUpdate.totalEditions;
     
     setArtists(prevArtists => 
       prevArtists.map(artist => {
@@ -87,11 +86,17 @@ export function AuthProvider({ children, artists: initialArtists, fractals: init
             date: new Date().toISOString(),
             price: newPrice,
           };
+          const newTotalValueHistoryEntry = {
+              date: new Date().toISOString(),
+              value: newTotalPortfolioValue
+          };
+
           return {
             ...artist,
             fractalPrice: newPrice,
             availableEditions: artist.availableEditions - quantity,
             priceHistory: [...artist.priceHistory, newPriceHistoryEntry],
+            totalPortfolioValueHistory: [...artist.totalPortfolioValueHistory, newTotalValueHistoryEntry]
           };
         }
         return artist;
