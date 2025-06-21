@@ -113,7 +113,7 @@ const generateArtists = (count: number): Artist[] => {
         avatar: 'https://placehold.co/100x100.png',
         bio: getRandom(bios),
         fractalPrice,
-        priceHistory: generatePriceHistory(fractalPrice * 100), // simulate portfolio value history
+        priceHistory: generatePriceHistory(fractalPrice), // simulate portfolio value history
         totalEditions,
         availableEditions: randomInt(100, totalEditions),
     }
