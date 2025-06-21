@@ -130,9 +130,62 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     if (!user) {
         throw new Error("User must be logged in to invest.");
     }
-    // If db is null, Firebase is not configured or failed to initialize.
+    
     if (!db) {
-        console.error("Cannot invest: Firebase is not configured.");
+        console.warn("Firebase not configured. Simulating investment locally.");
+
+        const artistIndex = artists.findIndex(a => a.id === artistToUpdate.id);
+        if (artistIndex === -1) {
+            console.error("Artist not found for local simulation.");
+            return;
+        }
+        
+        const currentArtistData = artists[artistIndex];
+        const purchasePrice = currentArtistData.fractalPrice;
+
+        const newPrice = calculateNewPrice(
+            purchasePrice,
+            quantity,
+            currentArtistData.totalEditions
+        );
+        const newTotalPortfolioValue = newPrice * currentArtistData.totalEditions;
+
+        const newPriceHistoryEntry = {
+            date: new Date().toISOString(),
+            price: newPrice,
+        };
+        const newTotalValueHistoryEntry = {
+            date: new Date().toISOString(),
+            value: newTotalPortfolioValue
+        };
+
+        const updatedArtist = {
+            ...currentArtistData,
+            fractalPrice: newPrice,
+            availableEditions: currentArtistData.availableEditions - quantity,
+            priceHistory: [...currentArtistData.priceHistory, newPriceHistoryEntry],
+            totalPortfolioValueHistory: [...currentArtistData.totalPortfolioValueHistory, newTotalValueHistoryEntry]
+        };
+
+        const newArtists = [...artists];
+        newArtists[artistIndex] = updatedArtist;
+        setArtists(newArtists);
+
+        const purchaseDate = new Date().toISOString();
+        const newOwnedFractals: OwnedFractal[] = [];
+        for (let i = 0; i < quantity; i++) {
+            const serialNumber = `CRESTOX-${currentArtistData.id.split('-')[1]}-${String(Date.now() + i).slice(-6)}`;
+            const newFractal: OwnedFractal = {
+                id: `${currentArtistData.id}-${Date.now()}-${i}`,
+                artistId: currentArtistData.id,
+                artistName: currentArtistData.name,
+                purchasePrice: purchasePrice,
+                purchaseDate: purchaseDate,
+                serialNumber: serialNumber,
+            };
+            newOwnedFractals.push(newFractal);
+        }
+        setCollection(prevCollection => [...prevCollection, ...newOwnedFractals]);
         return;
     }
     
@@ -191,7 +244,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     } catch (e) {
         console.error("Transaction failed: ", e);
     }
-  }, [user]);
+  }, [user, artists]);
 
   const holdingsByArtist = new Map<string, number>();
   collection.forEach(fractal => {
