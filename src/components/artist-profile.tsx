@@ -6,6 +6,7 @@ import { FractalCard } from '@/components/fractal-card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
 import { CheckCircle, Layers, ShoppingCart } from 'lucide-react';
@@ -88,104 +89,110 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
       </div>
 
       <div className="mb-12">
-        <h2 className="font-headline text-3xl font-bold mb-6">Portfolio Fractal Value</h2>
+        <h2 className="font-headline text-3xl font-bold mb-6">Portfolio Analytics</h2>
         <Card>
-          <CardHeader>
-              <CardTitle>Value Over Time</CardTitle>
-              <CardDescription>Historical value of one fractal share of {artist.name}'s portfolio.</CardDescription>
-          </CardHeader>
-          <CardContent>
-              <ChartContainer 
-                  config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
-                  className="h-[300px] w-full"
-              >
-                  <LineChart data={fractalPriceHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                      <XAxis
-                          dataKey="date"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tickFormatter={(value) => format(new Date(value), "MMM yy")}
-                      />
-                      <YAxis
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tickFormatter={(value) => `$${(value as number).toLocaleString()}`}
-                      />
-                      <Tooltip
-                          cursor={{
-                              stroke: 'hsl(var(--border))',
-                              strokeWidth: 2,
-                              strokeDasharray: '3 3',
-                          }}
-                          content={<ChartTooltipContent
-                              formatter={(value) => `$${(value as number).toLocaleString()}`}
-                              indicator="dot"
-                          />}
-                      />
-                      <Line
-                          dataKey="value"
-                          type="monotone"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={2}
-                          dot={true}
-                      />
-                  </LineChart>
-              </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mb-12">
-        <h2 className="font-headline text-3xl font-bold mb-6">Total Portfolio Valuation</h2>
-        <Card>
-          <CardHeader>
-              <CardTitle>Valuation Over Time</CardTitle>
-              <CardDescription>Historical total valuation of {artist.name}'s entire collection.</CardDescription>
-          </CardHeader>
-          <CardContent>
-              <ChartContainer 
-                  config={{ value: { label: "Value", color: "hsl(var(--accent-foreground))" } }} 
-                  className="h-[300px] w-full"
-              >
-                  <LineChart data={totalValueHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                      <XAxis
-                          dataKey="date"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tickFormatter={(value) => format(new Date(value), "MMM yy")}
-                      />
-                      <YAxis
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tickFormatter={(value) => `$${(value as number).toLocaleString()}`}
-                      />
-                      <Tooltip
-                          cursor={{
-                              stroke: 'hsl(var(--border))',
-                              strokeWidth: 2,
-                              strokeDasharray: '3 3',
-                          }}
-                          content={<ChartTooltipContent
-                              formatter={(value) => `$${(value as number).toLocaleString()}`}
-                              indicator="dot"
-                          />}
-                      />
-                      <Line
-                          dataKey="value"
-                          type="monotone"
-                          stroke="hsl(var(--accent-foreground))"
-                          strokeWidth={2}
-                          dot={true}
-                      />
-                  </LineChart>
-              </ChartContainer>
-          </CardContent>
+            <Tabs defaultValue="fractal-value">
+                <CardHeader className="p-4 sm:p-6">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="fractal-value">Fractal Value</TabsTrigger>
+                        <TabsTrigger value="total-valuation">Total Valuation</TabsTrigger>
+                    </TabsList>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <TabsContent value="fractal-value" className="mt-0">
+                       <CardDescription className="px-4 sm:px-6 mb-4 text-sm">
+                            Historical value of one fractal share of {artist.name}'s portfolio.
+                        </CardDescription>
+                        <div className="p-4 pt-0 sm:p-6 sm:pt-0">
+                            <ChartContainer 
+                                config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
+                                className="h-[250px] w-full"
+                            >
+                                <LineChart data={fractalPriceHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                                    <XAxis
+                                        dataKey="date"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickMargin={8}
+                                        tickFormatter={(value) => format(new Date(value), "MMM yy")}
+                                    />
+                                    <YAxis
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickMargin={8}
+                                        tickFormatter={(value) => `$${(value as number).toLocaleString()}`}
+                                    />
+                                    <Tooltip
+                                        cursor={{
+                                            stroke: 'hsl(var(--border))',
+                                            strokeWidth: 2,
+                                            strokeDasharray: '3 3',
+                                        }}
+                                        content={<ChartTooltipContent
+                                            formatter={(value) => `$${(value as number).toLocaleString()}`}
+                                            indicator="dot"
+                                        />}
+                                    />
+                                    <Line
+                                        dataKey="value"
+                                        type="monotone"
+                                        stroke="hsl(var(--primary))"
+                                        strokeWidth={2}
+                                        dot={true}
+                                    />
+                                </LineChart>
+                            </ChartContainer>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="total-valuation" className="mt-0">
+                        <CardDescription className="px-4 sm:px-6 mb-4 text-sm">
+                            Historical total valuation of {artist.name}'s entire collection.
+                        </CardDescription>
+                        <div className="p-4 pt-0 sm:p-6 sm:pt-0">
+                            <ChartContainer 
+                                config={{ value: { label: "Value", color: "hsl(var(--accent-foreground))" } }} 
+                                className="h-[250px] w-full"
+                            >
+                                <LineChart data={totalValueHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                                    <XAxis
+                                        dataKey="date"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickMargin={8}
+                                        tickFormatter={(value) => format(new Date(value), "MMM yy")}
+                                    />
+                                    <YAxis
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickMargin={8}
+                                        tickFormatter={(value) => `$${(value as number).toLocaleString()}`}
+                                    />
+                                    <Tooltip
+                                        cursor={{
+                                            stroke: 'hsl(var(--border))',
+                                            strokeWidth: 2,
+                                            strokeDasharray: '3 3',
+                                        }}
+                                        content={<ChartTooltipContent
+                                            formatter={(value) => `$${(value as number).toLocaleString()}`}
+                                            indicator="dot"
+                                        />}
+                                    />
+                                    <Line
+                                        dataKey="value"
+                                        type="monotone"
+                                        stroke="hsl(var(--accent-foreground))"
+                                        strokeWidth={2}
+                                        dot={true}
+                                    />
+                                </LineChart>
+                            </ChartContainer>
+                        </div>
+                    </TabsContent>
+                </CardContent>
+            </Tabs>
         </Card>
       </div>
 
