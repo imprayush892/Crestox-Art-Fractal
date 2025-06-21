@@ -5,7 +5,6 @@ import type { Artist, Fractal } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection as firestoreCollection, doc, onSnapshot, runTransaction } from 'firebase/firestore';
-import { artists as initialArtists, fractals as initialFractals } from '@/lib/data';
 
 export interface OwnedFractal {
   id: string;
@@ -53,45 +52,34 @@ const calculateNewPrice = (P_old: number, Q: number, N: number): number => {
 
 interface AuthProviderProps {
   children: ReactNode;
+  initialArtists: Artist[];
+  initialFractals: Fractal[];
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children, initialArtists, initialFractals }: AuthProviderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<{ uid: string } | null>(null);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [fractals, setFractals] = useState<Fractal[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [artists, setArtists] = useState<Artist[]>(initialArtists);
+  const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
 
   const isFirebaseConfigured = !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
   useEffect(() => {
-    // This effect handles data loading.
-    // It will try to connect to Firebase, but if it fails or isn't configured,
-    // it will fall back to using local mock data.
     if (!isFirebaseConfigured) {
-      console.warn(
-        "Firebase configuration is missing in your .env file. The app is running in offline mode with mock data."
-      );
-      setArtists(initialArtists);
-      setFractals(initialFractals);
-      setIsLoading(false);
-      return; // No cleanup needed for mock data
+      return;
     }
 
-    // If firebase is configured, set up listeners.
     const unsubscribeArtists = onSnapshot(
       firestoreCollection(db, 'artists'),
       (snapshot) => {
         const artistsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Artist));
-        setArtists(artistsData);
-        setIsLoading(false); // Set loading to false once we have a response
+        if (artistsData.length > 0) {
+          setArtists(artistsData);
+        }
       },
       (error) => {
-        console.error("Error listening to 'artists' collection. Falling back to mock data.", error);
-        setArtists(initialArtists);
-        setFractals(initialFractals);
-        setIsLoading(false);
+        console.error("Error listening to 'artists' collection:", error);
       }
     );
 
@@ -99,13 +87,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       firestoreCollection(db, 'fractals'),
       (snapshot) => {
         const fractalsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Fractal));
-        setFractals(fractalsData);
+        if (fractalsData.length > 0) {
+          setFractals(fractalsData);
+        }
       },
       (error) => {
-        console.error("Error listening to 'fractals' collection. Falling back to mock data.", error);
-        // Artists would have already been loaded or fallen back
-        setFractals(initialFractals);
-        setIsLoading(false);
+        console.error("Error listening to 'fractals' collection:", error);
       }
     );
 
@@ -145,7 +132,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     if (!isFirebaseConfigured) {
         console.error("Cannot invest: Firebase is not configured.");
-        // Here you could also implement an offline simulation if desired
         return;
     }
     
@@ -215,7 +201,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!isLoading ? children : null}
+      {children}
     </AuthContext.Provider>
   );
 }

@@ -4,17 +4,21 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/context/auth-context';
+import { getInitialArtists, getInitialFractals } from '@/lib/server-data';
 
 export const metadata: Metadata = {
   title: 'Crestox - Digital Fractal Art Marketplace',
   description: 'Explore, collect, and trade unique AI-generated fractal art.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialArtists = await getInitialArtists();
+  const initialFractals = await getInitialFractals();
+
   return (
     <html lang="en" className="scroll-smooth">
       <head>
@@ -23,7 +27,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body text-foreground antialiased" suppressHydrationWarning>
-        <AuthProvider>
+        <AuthProvider initialArtists={initialArtists} initialFractals={initialFractals}>
           <div className="flex min-h-screen flex-col bg-transparent">
             <Header />
             <main className="flex-1">{children}</main>
