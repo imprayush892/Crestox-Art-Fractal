@@ -4,7 +4,7 @@
 import type { Artist, Fractal } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection as firestoreCollection, doc, onSnapshot, runTransaction, writeBatch, getDoc } from 'firebase/firestore';
+import { collection as firestoreCollection, doc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { artists as initialArtists, fractals as initialFractals } from '@/lib/data';
 
 export interface OwnedFractal {
@@ -66,71 +66,53 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const isFirebaseConfigured = !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
   useEffect(() => {
-    // This effect handles the initial loading of artists and fractals.
+    // This effect handles data loading.
     // It will try to connect to Firebase, but if it fails or isn't configured,
     // it will fall back to using local mock data.
-    const loadInitialData = async () => {
-      if (!isFirebaseConfigured) {
-        console.warn(
-          "Firebase configuration is missing in your .env file. The app is running in offline mode with mock data. Please set up your Firebase project and add the credentials to .env to enable real-time features."
-        );
+    if (!isFirebaseConfigured) {
+      console.warn(
+        "Firebase configuration is missing in your .env file. The app is running in offline mode with mock data."
+      );
+      setArtists(initialArtists);
+      setFractals(initialFractals);
+      setIsLoading(false);
+      return; // No cleanup needed for mock data
+    }
+
+    // If firebase is configured, set up listeners.
+    const unsubscribeArtists = onSnapshot(
+      firestoreCollection(db, 'artists'),
+      (snapshot) => {
+        const artistsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Artist));
+        setArtists(artistsData);
+        setIsLoading(false); // Set loading to false once we have a response
+      },
+      (error) => {
+        console.error("Error listening to 'artists' collection. Falling back to mock data.", error);
         setArtists(initialArtists);
         setFractals(initialFractals);
         setIsLoading(false);
-        return () => {}; // Return empty cleanup function
       }
+    );
 
-      try {
-        // 1. Seed data if it doesn't exist
-        const flagRef = doc(db, 'meta', 'isSeeded');
-        const flagDoc = await getDoc(flagRef);
-
-        if (!flagDoc.exists()) {
-          console.log('Seeding data to Firestore for the first time...');
-          const batch = writeBatch(db);
-          initialArtists.forEach(artist => {
-            batch.set(doc(db, 'artists', artist.id), artist);
-          });
-          initialFractals.forEach(fractal => {
-            batch.set(doc(db, 'fractals', fractal.id), fractal);
-          });
-          batch.set(flagRef, { seeded: true });
-          await batch.commit();
-          console.log('Data seeding complete.');
-        }
-
-        // 2. Set up real-time listeners
-        const unsubscribeArtists = onSnapshot(firestoreCollection(db, 'artists'), (snapshot) => {
-          const artistsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Artist));
-          setArtists(artistsData);
-          if (artistsData.length > 0) setIsLoading(false);
-        });
-
-        const unsubscribeFractals = onSnapshot(firestoreCollection(db, 'fractals'), (snapshot) => {
-          const fractalsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Fractal));
-          setFractals(fractalsData);
-        });
-
-        return () => {
-          unsubscribeArtists();
-          unsubscribeFractals();
-        };
-      } catch (error) {
-        console.error("Error connecting to Firebase. Running in offline mode.", error);
-        console.warn("Please check your Firebase configuration in .env and your Firestore security rules.");
-        setArtists(initialArtists);
+    const unsubscribeFractals = onSnapshot(
+      firestoreCollection(db, 'fractals'),
+      (snapshot) => {
+        const fractalsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Fractal));
+        setFractals(fractalsData);
+      },
+      (error) => {
+        console.error("Error listening to 'fractals' collection. Falling back to mock data.", error);
+        // Artists would have already been loaded or fallen back
         setFractals(initialFractals);
         setIsLoading(false);
-        return () => {}; // Return empty cleanup function
       }
+    );
+
+    return () => {
+      unsubscribeArtists();
+      unsubscribeFractals();
     };
-
-    let cleanup = () => {};
-    loadInitialData().then(cleanupFn => {
-      cleanup = cleanupFn;
-    });
-    
-    return () => cleanup();
   }, [isFirebaseConfigured]);
   
   useEffect(() => {
