@@ -1,7 +1,7 @@
 'use client';
 
-import type { Artist } from '@/lib/data';
-import { artists as initialArtists } from '@/lib/data';
+import type { Artist, Fractal } from '@/lib/data';
+import { artists as initialArtists, fractals as initialFractals } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 
 export interface OwnedFractal {
@@ -21,6 +21,7 @@ interface AuthContextType {
   investInPortfolio: (artist: Artist, quantity: number) => void;
   holdingsByArtist: Map<string, number>;
   artists: Artist[];
+  fractals: Fractal[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
   const [serialCounter, setSerialCounter] = useState(1);
   const [artists, setArtists] = useState<Artist[]>(initialArtists);
+  const [fractals] = useState<Fractal[]>(initialFractals);
 
   const login = () => setIsLoggedIn(true);
   
@@ -114,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout, collection, investInPortfolio, holdingsByArtist, artists }}>
+    <AuthContext.Provider value={{ isLoggedIn, login, logout, collection, investInPortfolio, holdingsByArtist, artists, fractals }}>
       {children}
     </AuthContext.Provider>
   );

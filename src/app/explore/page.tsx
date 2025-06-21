@@ -1,11 +1,10 @@
 'use client';
 
-import { fractals } from '@/lib/data';
 import { ExploreTool } from '@/components/explore-tool';
 import { useAuth } from '@/context/auth-context';
 
 export default function ExplorePage() {
-  const { artists } = useAuth();
+  const { artists, fractals } = useAuth();
 
   return (
     <div className="container py-12">

@@ -1,6 +1,5 @@
 'use client';
 
-import { fractals } from '@/lib/data';
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -9,7 +8,7 @@ import { useAuth } from '@/context/auth-context';
 
 export default function FractalDetailPage() {
   const params = useParams();
-  const { artists } = useAuth();
+  const { artists, fractals } = useAuth();
   
   const id = typeof params.id === 'string' ? params.id : '';
   const fractal = fractals.find(f => f.id === id);

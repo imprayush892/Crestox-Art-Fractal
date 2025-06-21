@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/context/auth-context';
-import { fractals, type Fractal } from '@/lib/data';
+import { type Fractal } from '@/lib/data';
 import { FractalCard } from '@/components/fractal-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -9,7 +9,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
-  const { artists } = useAuth();
+  const { artists, fractals } = useAuth();
   const [displayedFractals, setDisplayedFractals] = useState<Fractal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -18,10 +18,12 @@ export default function Home() {
 
   useEffect(() => {
     // This code runs only on the client, after the component has mounted.
-    const shuffled = [...fractals].sort(() => 0.5 - Math.random());
-    setDisplayedFractals(shuffled.slice(0, 100));
-    setIsLoading(false);
-  }, []); // Empty dependency array ensures this runs only once on mount.
+    if (fractals.length > 0) {
+      const shuffled = [...fractals].sort(() => 0.5 - Math.random());
+      setDisplayedFractals(shuffled.slice(0, 100));
+      setIsLoading(false);
+    }
+  }, [fractals]); 
 
   const renderSkeletons = () => {
     return (
