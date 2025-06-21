@@ -25,6 +25,7 @@
     --ring: 227 70% 38%;
     --radius: 0.5rem;
   }
+
   .dark {
     --background: 227 20% 10%;
     --foreground: 0 0% 98%;
@@ -54,5 +55,6 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: linear-gradient(to bottom, #FDFCF6, #EADDC6);
   }
 }

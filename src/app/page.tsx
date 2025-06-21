@@ -1,18 +1,22 @@
+'use client';
 
-import { fractals, artists } from '@/lib/data';
+import { useAuth } from '@/context/auth-context';
+import { fractals } from '@/lib/data';
 import { FractalCard } from '@/components/fractal-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useMemo } from 'react';
 
 export default function Home() {
-  const artistsMap = new Map(artists.map(a => [a.id, a]));
+  const { artists } = useAuth();
+  
+  const artistsMap = useMemo(() => new Map(artists.map(a => [a.id, a])), [artists]);
   const getArtistById = (artistId: string) => artistsMap.get(artistId);
 
-  // This is a server component, so this will run on every request in dev,
-  // and at build time in prod. For a truly random experience on each refresh in production,
-  // this page might need to be dynamically rendered.
-  const shuffledFractals = [...fractals].sort(() => 0.5 - Math.random());
-  const displayedFractals = shuffledFractals.slice(0, 100);
+  const displayedFractals = useMemo(() => {
+      const shuffled = [...fractals].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, 100);
+  }, []);
 
   return (
     <div className="container py-12">

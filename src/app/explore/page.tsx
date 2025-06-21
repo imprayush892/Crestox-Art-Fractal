@@ -1,7 +1,12 @@
-import { fractals, artists } from '@/lib/data';
+'use client';
+
+import { fractals } from '@/lib/data';
 import { ExploreTool } from '@/components/explore-tool';
+import { useAuth } from '@/context/auth-context';
 
 export default function ExplorePage() {
+  const { artists } = useAuth();
+
   return (
     <div className="container py-12">
       <div className="text-center mb-8">

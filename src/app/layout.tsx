@@ -22,9 +22,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body bg-background text-foreground antialiased" suppressHydrationWarning>
+      <body className="font-body text-foreground antialiased" suppressHydrationWarning>
         <AuthProvider>
-          <div className="flex min-h-screen flex-col">
+          <div className="flex min-h-screen flex-col bg-transparent">
             <Header />
             <main className="flex-1">{children}</main>
             <Footer />

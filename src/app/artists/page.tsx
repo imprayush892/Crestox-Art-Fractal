@@ -1,7 +1,10 @@
-import { artists } from '@/lib/data';
+'use client';
+
 import { ArtistCard } from '@/components/artist-card';
+import { useAuth } from '@/context/auth-context';
 
 export default function ArtistsPage() {
+  const { artists } = useAuth();
   return (
     <div className="container py-12">
       <div className="text-center mb-12">

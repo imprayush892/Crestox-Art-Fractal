@@ -1,6 +1,5 @@
 'use client';
 
-import type { Artist } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo } from 'react';
@@ -10,12 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowDown, ArrowUp, ArrowUpRight, BarChart, DollarSign, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface CollectionClientProps {
-    artists: Artist[];
-}
-
-export function CollectionClient({ artists }: CollectionClientProps) {
-  const { isLoggedIn, collection } = useAuth();
+export function CollectionClient() {
+  const { isLoggedIn, collection, artists } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -44,7 +39,7 @@ export function CollectionClient({ artists }: CollectionClientProps) {
 
 
   if (!isLoggedIn) {
-    return null; // or a loading spinner
+    return null;
   }
 
   return (

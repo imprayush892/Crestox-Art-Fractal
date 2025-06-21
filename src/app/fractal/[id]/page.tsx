@@ -1,11 +1,18 @@
-import { artists, fractals } from '@/lib/data';
+'use client';
+
+import { fractals } from '@/lib/data';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { FractalDetail } from '@/components/fractal-detail';
+import { useAuth } from '@/context/auth-context';
 
-export default function FractalDetailPage({ params }: { params: { id: string } }) {
-  const fractal = fractals.find(f => f.id === params.id);
+export default function FractalDetailPage() {
+  const params = useParams();
+  const { artists } = useAuth();
+  
+  const id = typeof params.id === 'string' ? params.id : '';
+  const fractal = fractals.find(f => f.id === id);
   
   if (!fractal) {
     notFound();
