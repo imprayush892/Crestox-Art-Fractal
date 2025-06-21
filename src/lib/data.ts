@@ -84,69 +84,87 @@ const generatePriceHistory = (initialPrice: number): { date: string; price: numb
     for (let i = 0; i < 4; i++) {
         history.push({
             date: currentDate.toISOString().split('T')[0],
-            price: Math.round(currentPrice),
+            price: Math.round(currentPrice * 100) / 100,
         });
         currentDate.setMonth(currentDate.getMonth() + randomInt(2, 4));
         currentPrice *= (Math.random() * 0.5 + 1.1);
     }
-     history.push({ date: new Date().toISOString().split('T')[0], price: initialPrice });
+     history.push({ date: new Date().toISOString().split('T')[0], price: Math.round(initialPrice * 100) / 100 });
     return history;
 }
 
-const generateArtists = (count: number): Artist[] => {
-  const allPossibleNames: string[] = [];
-  firstNames.forEach(firstName => {
-    lastNames.forEach(lastName => {
-      allPossibleNames.push(`${firstName} ${lastName}`);
+// Step 1: Generate artists without price-dependent fields.
+const tempArtists = (() => {
+    const allPossibleNames: string[] = [];
+    firstNames.forEach(firstName => {
+        lastNames.forEach(lastName => {
+        allPossibleNames.push(`${firstName} ${lastName}`);
+        });
     });
-  });
 
-  const shuffledNames = shuffleArray(allPossibleNames);
-  const selectedNames = shuffledNames.slice(0, count);
+    const shuffledNames = shuffleArray(allPossibleNames);
+    const selectedNames = shuffledNames.slice(0, 20);
 
-  return selectedNames.map((name, index) => {
-    const fractalPrice = randomInt(5, 50) * 10; // Price per portfolio share
-    const totalEditions = randomInt(1, 10) * 1000;
-    return {
-        id: `artist-${index + 1}`,
-        name,
-        avatar: 'https://placehold.co/100x100.png',
-        bio: getRandom(bios),
-        fractalPrice,
-        priceHistory: generatePriceHistory(fractalPrice), // simulate portfolio value history
-        totalEditions,
-        availableEditions: randomInt(100, totalEditions),
+    return selectedNames.map((name, index) => {
+        const totalEditions = randomInt(1, 10) * 1000;
+        return {
+            id: `artist-${index + 1}`,
+            name,
+            avatar: 'https://placehold.co/100x100.png',
+            bio: getRandom(bios),
+            totalEditions,
+            availableEditions: randomInt(100, totalEditions),
+        }
+    });
+})();
+
+
+// Step 2: Generate fractals, assigning them to the temp artists.
+const tempFractals: Fractal[] = (() => {
+    const allPossibleTitles = new Set<string>();
+    while (allPossibleTitles.size < 500) {
+        const title = `${getRandom(fractalAdjectives)} ${getRandom(fractalNouns)}`;
+        allPossibleTitles.add(title);
     }
-  });
-};
+    const shuffledTitles = Array.from(allPossibleTitles);
 
-const generateFractals = (count: number, artists: Artist[]): Fractal[] => {
-  const allPossibleTitles = new Set<string>();
-  while (allPossibleTitles.size < count) {
-      const title = `${getRandom(fractalAdjectives)} ${getRandom(fractalNouns)}`;
-      allPossibleTitles.add(title);
-  }
+    return shuffledTitles.map((title, index) => {
+        const width = randomInt(5, 9) * 100;
+        const height = randomInt(5, 9) * 100;
+        const price = randomInt(5, 150) * 10;
+        return {
+            id: `fractal-${String(index + 1).padStart(3, '0')}`,
+            title,
+            image: `https://placehold.co/${width}x${height}.png`,
+            artistId: getRandom(tempArtists).id,
+            description: getRandom(fractalDescriptions),
+            aiHint: getRandom(aiHints),
+            width,
+            height,
+            price,
+            priceHistory: generatePriceHistory(price),
+        };
+    });
+})();
 
-  const shuffledTitles = Array.from(allPossibleTitles);
+// Step 3: Calculate derived portfolio values and create final artists array.
+const finalArtists: Artist[] = tempArtists.map(artist => {
+    const artistFractals = tempFractals.filter(f => f.artistId === artist.id);
+    const totalPortfolioValue = artistFractals.reduce((sum, f) => sum + f.price, 0);
 
-  return shuffledTitles.map((title, index) => {
-    const width = randomInt(5, 9) * 100;
-    const height = randomInt(5, 9) * 100;
-    const price = randomInt(5, 150) * 10;
+    // Per user: fractal value = total portfolio value / total editions
+    const initialFractalPrice = totalPortfolioValue > 0 && artist.totalEditions > 0
+        ? totalPortfolioValue / artist.totalEditions
+        : 25; // A reasonable fallback price
+
+    const roundedFractalPrice = Math.round(initialFractalPrice * 100) / 100;
+
     return {
-        id: `fractal-${String(index + 1).padStart(3, '0')}`,
-        title,
-        image: `https://placehold.co/${width}x${height}.png`,
-        artistId: getRandom(artists).id,
-        description: getRandom(fractalDescriptions),
-        aiHint: getRandom(aiHints),
-        width,
-        height,
-        price,
-        priceHistory: generatePriceHistory(price),
+        ...artist,
+        fractalPrice: roundedFractalPrice,
+        priceHistory: generatePriceHistory(roundedFractalPrice)
     };
-  });
-};
+});
 
-export const artists: Artist[] = generateArtists(20);
-export const fractals: Fractal[] = generateFractals(500, artists);
+export const artists: Artist[] = finalArtists;
+export const fractals: Fractal[] = tempFractals;
