@@ -4,7 +4,7 @@
 import type { Artist, Fractal } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, doc, onSnapshot, runTransaction, writeBatch, getDocs, getDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, runTransaction, writeBatch, getDoc } from 'firebase/firestore';
 import { artists as initialArtists, fractals as initialFractals } from '@/lib/data';
 
 export interface OwnedFractal {
