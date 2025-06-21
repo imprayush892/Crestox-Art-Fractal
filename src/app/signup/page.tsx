@@ -12,17 +12,19 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/context/auth-context";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
 
 export default function SignupPage() {
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
     login();
-    router.push('/collection');
+    router.push(redirect || '/collection');
   }
 
   return (
@@ -70,7 +72,7 @@ export default function SignupPage() {
           </form>
           <div className="mt-4 text-center text-sm">
             Already have an account?{" "}
-            <Link href="/login" className="underline">
+            <Link href={redirect ? `/login?redirect=${redirect}` : "/login"} className="underline">
               Login
             </Link>
           </div>

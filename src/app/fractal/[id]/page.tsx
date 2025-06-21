@@ -35,7 +35,7 @@ export default function FractalDetailPage() {
 
   const handleAddToCollection = () => {
     if (!isLoggedIn) {
-      router.push('/login');
+      router.push(`/login?redirect=/fractal/${fractal.id}`);
       return;
     }
     addToCollection(fractal.id);
