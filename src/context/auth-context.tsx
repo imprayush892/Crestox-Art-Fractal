@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Artist, Fractal } from '@/lib/data';
@@ -26,11 +27,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * Calculates the new price based on the Revised Multiplicative Impact Function.
- * S_new = S_current * exp(β * sqrt(Q/V))
- * @param P_old The current price of the fractal share (S_current).
+ * Calculates the new price based on the "Revised Multiplicative Impact Function".
+ * This model ensures price changes follow a square-root law for realism.
+ * Formula: S_new = S_current * exp(β * sqrt(Q/V))
+ * - S_current: Current fractal price
+ * - Q: Trade size (quantity of fractals bought)
+ * - V: Total fractals outstanding for the artist
+ * - β: Calibration constant (1.118)
+ * @param P_old The current price of the fractal share.
  * @param Q The trade size (number of shares being bought).
- * @param N The total number of shares outstanding (V).
+ * @param N The total number of shares outstanding.
  * @returns The new price after the trade.
  */
 const calculateNewPrice = (P_old: number, Q: number, N: number): number => {
