@@ -31,14 +31,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
  * Calculates the new price based on the "Revised Multiplicative Impact Function".
- * Formula: S_new = S_current * exp(β * sqrt(Q/V))
+ * S_new = S_current * exp(β * sqrt(Q/V))
  * @param P_old The current price of the fractal share.
  * @param Q The trade size (number of shares being bought).
  * @param N The total number of shares outstanding.
  * @returns The new price after the trade.
  */
 const calculateNewPrice = (P_old: number, Q: number, N: number): number => {
-  const beta = 1.118; // As per the revised model
+  const beta = 1.118; // As per the revised model for Crestox
   
   if (N === 0 || Q <= 0) {
     return P_old;
@@ -63,58 +63,79 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [fractals, setFractals] = useState<Fractal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const isFirebaseConfigured = !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
   useEffect(() => {
-    const seedData = async () => {
-      const flagRef = doc(db, 'meta', 'isSeeded');
-      const flagDoc = await getDoc(flagRef);
+    // This effect handles the initial loading of artists and fractals.
+    // It will try to connect to Firebase, but if it fails or isn't configured,
+    // it will fall back to using local mock data.
+    const loadInitialData = async () => {
+      if (!isFirebaseConfigured) {
+        console.warn(
+          "Firebase configuration is missing in your .env file. The app is running in offline mode with mock data. Please set up your Firebase project and add the credentials to .env to enable real-time features."
+        );
+        setArtists(initialArtists);
+        setFractals(initialFractals);
+        setIsLoading(false);
+        return () => {}; // Return empty cleanup function
+      }
 
-      if (!flagDoc.exists()) {
-        console.log('Seeding data to Firestore for the first time...');
-        const batch = writeBatch(db);
+      try {
+        // 1. Seed data if it doesn't exist
+        const flagRef = doc(db, 'meta', 'isSeeded');
+        const flagDoc = await getDoc(flagRef);
 
-        initialArtists.forEach(artist => {
-          const artistRef = doc(db, 'artists', artist.id);
-          batch.set(artistRef, artist);
+        if (!flagDoc.exists()) {
+          console.log('Seeding data to Firestore for the first time...');
+          const batch = writeBatch(db);
+          initialArtists.forEach(artist => {
+            batch.set(doc(db, 'artists', artist.id), artist);
+          });
+          initialFractals.forEach(fractal => {
+            batch.set(doc(db, 'fractals', fractal.id), fractal);
+          });
+          batch.set(flagRef, { seeded: true });
+          await batch.commit();
+          console.log('Data seeding complete.');
+        }
+
+        // 2. Set up real-time listeners
+        const unsubscribeArtists = onSnapshot(firestoreCollection(db, 'artists'), (snapshot) => {
+          const artistsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Artist));
+          setArtists(artistsData);
+          if (artistsData.length > 0) setIsLoading(false);
         });
 
-        initialFractals.forEach(fractal => {
-          const fractalRef = doc(db, 'fractals', fractal.id);
-          batch.set(fractalRef, fractal);
+        const unsubscribeFractals = onSnapshot(firestoreCollection(db, 'fractals'), (snapshot) => {
+          const fractalsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Fractal));
+          setFractals(fractalsData);
         });
-        
-        batch.set(flagRef, { seeded: true });
-        
-        await batch.commit();
-        console.log('Data seeding complete.');
+
+        return () => {
+          unsubscribeArtists();
+          unsubscribeFractals();
+        };
+      } catch (error) {
+        console.error("Error connecting to Firebase. Running in offline mode.", error);
+        console.warn("Please check your Firebase configuration in .env and your Firestore security rules.");
+        setArtists(initialArtists);
+        setFractals(initialFractals);
+        setIsLoading(false);
+        return () => {}; // Return empty cleanup function
       }
     };
-    seedData();
-  }, []);
 
-  useEffect(() => {
-    const artistsCollectionRef = firestoreCollection(db, 'artists');
-    const unsubscribeArtists = onSnapshot(artistsCollectionRef, (snapshot) => {
-      const artistsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Artist));
-      setArtists(artistsData);
-      if (fractals.length > 0) setIsLoading(false);
+    let cleanup = () => {};
+    loadInitialData().then(cleanupFn => {
+      cleanup = cleanupFn;
     });
-
-    const fractalsCollectionRef = firestoreCollection(db, 'fractals');
-    const unsubscribeFractals = onSnapshot(fractalsCollectionRef, (snapshot) => {
-        const fractalsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Fractal));
-        setFractals(fractalsData);
-        if (artists.length > 0) setIsLoading(false);
-    });
-
-    return () => {
-      unsubscribeArtists();
-      unsubscribeFractals();
-    };
-  }, [artists.length, fractals.length]);
+    
+    return () => cleanup();
+  }, [isFirebaseConfigured]);
   
   useEffect(() => {
     let unsubscribe: () => void = () => {};
-    if (user) {
+    if (user && isFirebaseConfigured) {
       const ownedFractalsRef = firestoreCollection(db, "users", user.uid, "ownedFractals");
       unsubscribe = onSnapshot(ownedFractalsRef, (querySnapshot) => {
         const userFractals = querySnapshot.docs.map(doc => doc.data() as OwnedFractal);
@@ -124,10 +145,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setCollection([]);
     }
     return () => unsubscribe();
-  }, [user]);
+  }, [user, isFirebaseConfigured]);
 
   const login = () => {
-    // In a real app, this would involve Firebase Auth.
     setUser({ uid: 'mock-user-id' });
     setIsLoggedIn(true);
   }
@@ -140,6 +160,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const investInPortfolio = useCallback(async (artistToUpdate: Artist, quantity: number) => {
     if (!user) {
         throw new Error("User must be logged in to invest.");
+    }
+    if (!isFirebaseConfigured) {
+        console.error("Cannot invest: Firebase is not configured.");
+        // Here you could also implement an offline simulation if desired
+        return;
     }
     
     const artistRef = doc(db, 'artists', artistToUpdate.id);
@@ -197,7 +222,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (e) {
         console.error("Transaction failed: ", e);
     }
-  }, [user]);
+  }, [user, isFirebaseConfigured]);
 
   const holdingsByArtist = new Map<string, number>();
   collection.forEach(fractal => {
