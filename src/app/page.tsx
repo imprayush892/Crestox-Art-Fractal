@@ -1,3 +1,4 @@
+
 import { fractals, artists } from '@/lib/data';
 import { FractalCard } from '@/components/fractal-card';
 import { Button } from '@/components/ui/button';
@@ -14,11 +15,15 @@ export default function Home() {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+      <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8 space-y-8">
         {fractals.map((fractal) => {
           const artist = getArtistById(fractal.artistId);
           if (!artist) return null;
-          return <FractalCard key={fractal.id} fractal={fractal} artist={artist} />;
+          return (
+            <div key={fractal.id} className="break-inside-avoid">
+              <FractalCard fractal={fractal} artist={artist} />
+            </div>
+          );
         })}
       </div>
 
