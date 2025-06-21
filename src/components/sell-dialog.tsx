@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Artist } from '@/lib/data';
 import type { OwnedFractal } from '@/context/auth-context';
 import { useAuth } from '@/context/auth-context';
@@ -18,6 +18,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Minus, Plus } from 'lucide-react';
+import { Checkbox } from './ui/checkbox';
 
 interface SellDialogProps {
   artist: Artist | null;
@@ -28,18 +29,38 @@ interface SellDialogProps {
 
 export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialogProps) {
   const [quantity, setQuantity] = useState(1);
+  const [useDefaultPrice, setUseDefaultPrice] = useState(true);
+  const [customPrice, setCustomPrice] = useState<number | string>('');
+
   const { sellFromPortfolio } = useAuth();
   const { toast } = useToast();
 
   const ownedShares = ownedFractals.length;
 
+  useEffect(() => {
+    if (artist && !useDefaultPrice) {
+      setCustomPrice(artist.fractalPrice);
+    } else {
+      setCustomPrice('');
+    }
+  }, [useDefaultPrice, artist]);
+
+  const effectivePrice = useMemo(() => {
+      if (!artist) return 0;
+      if (useDefaultPrice) {
+          return artist.fractalPrice;
+      }
+      return Number(customPrice) || 0;
+  }, [useDefaultPrice, customPrice, artist]);
+
+
   const { totalCost, gainLoss } = useMemo(() => {
     if (!artist || ownedShares === 0) {
-      return { totalCost: 0, averagePurchasePrice: 0, gainLoss: 0 };
+      return { totalCost: 0, gainLoss: 0 };
     }
     const totalPurchaseValue = ownedFractals.reduce((sum, f) => sum + f.purchasePrice, 0);
     const avgPrice = totalPurchaseValue / ownedShares;
-    const totalSellingPrice = quantity * artist.fractalPrice;
+    const totalSellingPrice = quantity * effectivePrice;
     const totalCostOfSoldShares = quantity * avgPrice;
     const gl = totalSellingPrice - totalCostOfSoldShares;
 
@@ -47,7 +68,7 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
       totalCost: totalSellingPrice,
       gainLoss: gl
     };
-  }, [quantity, artist, ownedFractals, ownedShares]);
+  }, [quantity, artist, ownedFractals, ownedShares, effectivePrice]);
 
 
   const handleQuantityChange = (value: number) => {
@@ -58,7 +79,11 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
   
   const handleConfirm = () => {
     if (!artist) return;
-    sellFromPortfolio(artist, quantity);
+    
+    const priceForSale = useDefaultPrice ? undefined : effectivePrice;
+    
+    sellFromPortfolio(artist, quantity, priceForSale);
+
     toast({
       title: 'Sale Successful!',
       description: `You have sold ${quantity} fractal${quantity > 1 ? 's' : ''} of ${artist.name}'s portfolio.`,
@@ -66,9 +91,11 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
     onClose();
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       setQuantity(1);
+      setUseDefaultPrice(true);
+      setCustomPrice('');
     }
   }, [isOpen]);
   
@@ -80,7 +107,7 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
             onClose();
         }
     }}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">Sell Fractals: {artist.name}</DialogTitle>
           <DialogDescription>
@@ -92,6 +119,37 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
                 <span className="text-muted-foreground">Current Price per Fractal</span>
                 <span className="text-xl font-bold">${artist.fractalPrice.toLocaleString()}</span>
             </div>
+
+            <div className="p-4 rounded-lg border space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="custom-price" className="text-left">
+                    Custom Selling Price
+                  </Label>
+                  <Input
+                      id="custom-price"
+                      type="number"
+                      placeholder="Enter custom price"
+                      value={customPrice}
+                      onChange={(e) => setCustomPrice(e.target.value)}
+                      disabled={useDefaultPrice}
+                      className="col-span-3 text-left h-10"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="use-default-price"
+                    checked={useDefaultPrice}
+                    onCheckedChange={(checked) => setUseDefaultPrice(Boolean(checked))}
+                  />
+                  <label
+                    htmlFor="use-default-price"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Use default platform price
+                  </label>
+                </div>
+            </div>
+
             <div className="grid gap-2">
                 <Label htmlFor="quantity" className="text-left">
                 Quantity to Sell
@@ -145,7 +203,7 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
                 Cancel
             </Button>
           </DialogClose>
-          <Button type="button" onClick={handleConfirm}>
+          <Button type="button" onClick={handleConfirm} disabled={!useDefaultPrice && (!customPrice || Number(customPrice) <= 0)}>
             Confirm Sale
           </Button>
         </DialogFooter>

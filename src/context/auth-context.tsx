@@ -21,7 +21,7 @@ interface AuthContextType {
   logout: () => void;
   collection: OwnedFractal[];
   investInPortfolio: (artist: Artist, quantity: number) => Promise<void>;
-  sellFromPortfolio: (artist: Artist, quantity: number) => Promise<void>;
+  sellFromPortfolio: (artist: Artist, quantity: number, sellPrice?: number) => Promise<void>;
   holdingsByArtist: Map<string, number>;
   artists: Artist[];
   fractals: Fractal[];
@@ -261,7 +261,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     }
   }, [user, artists]);
 
-  const sellFromPortfolio = useCallback(async (artistToUpdate: Artist, quantity: number) => {
+  const sellFromPortfolio = useCallback(async (artistToUpdate: Artist, quantity: number, sellPrice?: number) => {
     if (!user) {
         throw new Error("User must be logged in to sell.");
     }
@@ -282,31 +282,39 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         }
 
         const currentArtistData = artists[artistIndex];
-        const circulatingSupply = currentArtistData.totalEditions - currentArtistData.availableEditions;
+        let updatedArtist = { ...currentArtistData };
 
-        const newPrice = calculateNewSellPrice(
-            currentArtistData.fractalPrice,
-            quantity,
-            circulatingSupply
-        );
-        const newTotalPortfolioValue = newPrice * currentArtistData.totalEditions;
+        if (sellPrice === undefined) {
+            const circulatingSupply = currentArtistData.totalEditions - currentArtistData.availableEditions;
+            const newPrice = calculateNewSellPrice(
+                currentArtistData.fractalPrice,
+                quantity,
+                circulatingSupply
+            );
+            const newTotalPortfolioValue = newPrice * currentArtistData.totalEditions;
 
-        const newPriceHistoryEntry = {
-            date: new Date().toISOString(),
-            price: newPrice,
-        };
-        const newTotalValueHistoryEntry = {
-            date: new Date().toISOString(),
-            value: newTotalPortfolioValue
-        };
-        
-        const updatedArtist = {
-            ...currentArtistData,
-            fractalPrice: newPrice,
-            availableEditions: currentArtistData.availableEditions + quantity,
-            priceHistory: [...currentArtistData.priceHistory, newPriceHistoryEntry],
-            totalPortfolioValueHistory: [...currentArtistData.totalPortfolioValueHistory, newTotalValueHistoryEntry]
-        };
+            const newPriceHistoryEntry = {
+                date: new Date().toISOString(),
+                price: newPrice,
+            };
+            const newTotalValueHistoryEntry = {
+                date: new Date().toISOString(),
+                value: newTotalPortfolioValue
+            };
+            
+            updatedArtist = {
+                ...updatedArtist,
+                fractalPrice: newPrice,
+                availableEditions: currentArtistData.availableEditions + quantity,
+                priceHistory: [...currentArtistData.priceHistory, newPriceHistoryEntry],
+                totalPortfolioValueHistory: [...currentArtistData.totalPortfolioValueHistory, newTotalValueHistoryEntry]
+            };
+        } else {
+             updatedArtist = {
+                ...updatedArtist,
+                availableEditions: currentArtistData.availableEditions + quantity,
+            };
+        }
         
         const newArtists = [...artists];
         newArtists[artistIndex] = updatedArtist;
@@ -342,29 +350,34 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 throw new Error("Not enough fractals to sell.");
             }
             
-            const circulatingSupply = currentArtistData.totalEditions - currentArtistData.availableEditions;
-            const newPrice = calculateNewSellPrice(
-                currentArtistData.fractalPrice,
-                quantity,
-                circulatingSupply
-            );
-            const newTotalPortfolioValue = newPrice * currentArtistData.totalEditions;
-            
-            const newPriceHistoryEntry = {
-                date: new Date().toISOString(),
-                price: newPrice,
-            };
-            const newTotalValueHistoryEntry = {
-                date: new Date().toISOString(),
-                value: newTotalPortfolioValue
-            };
-            
-            transaction.update(artistRef, {
-                fractalPrice: newPrice,
+            const updatePayload: any = {
                 availableEditions: currentArtistData.availableEditions + quantity,
-                priceHistory: [...currentArtistData.priceHistory, newPriceHistoryEntry],
-                totalPortfolioValueHistory: [...currentArtistData.totalPortfolioValueHistory, newTotalValueHistoryEntry]
-            });
+            };
+
+            if (sellPrice === undefined) {
+                const circulatingSupply = currentArtistData.totalEditions - currentArtistData.availableEditions;
+                const newPrice = calculateNewSellPrice(
+                    currentArtistData.fractalPrice,
+                    quantity,
+                    circulatingSupply
+                );
+                const newTotalPortfolioValue = newPrice * currentArtistData.totalEditions;
+                
+                const newPriceHistoryEntry = {
+                    date: new Date().toISOString(),
+                    price: newPrice,
+                };
+                const newTotalValueHistoryEntry = {
+                    date: new Date().toISOString(),
+                    value: newTotalPortfolioValue
+                };
+                
+                updatePayload.fractalPrice = newPrice;
+                updatePayload.priceHistory = [...currentArtistData.priceHistory, newPriceHistoryEntry];
+                updatePayload.totalPortfolioValueHistory = [...currentArtistData.totalPortfolioValueHistory, newTotalValueHistoryEntry]
+            }
+            
+            transaction.update(artistRef, updatePayload);
             
             userFractalsSnapshot.docs.forEach(doc => {
                 transaction.delete(doc.ref);
