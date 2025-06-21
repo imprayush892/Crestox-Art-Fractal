@@ -5,10 +5,13 @@ import { Gem, Menu, User, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuth } from '@/context/auth-context';
+import { useRouter } from 'next/navigation';
 
 export function Header() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isLoggedIn, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const router = useRouter();
 
   const navLinks = [
     { href: '/', label: 'Browse' },
@@ -19,7 +22,11 @@ export function Header() {
     { href: '/collection', label: 'My Collection' },
   ];
   
-  const toggleLogin = () => setIsLoggedIn(!isLoggedIn);
+  const handleLogout = () => {
+    logout();
+    closeMenu();
+    router.push('/');
+  };
 
   const closeMenu = () => setIsMobileMenuOpen(false);
 
@@ -46,15 +53,17 @@ export function Header() {
           <div className="flex items-center gap-4">
             {isLoggedIn ? (
               <>
-                <Button onClick={toggleLogin} variant="secondary">Logout</Button>
+                <Button onClick={handleLogout} variant="secondary">Logout</Button>
                 <Avatar>
-                  <AvatarImage src="https://placehold.co/40x40.png" alt="User" />
+                  <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />
                   <AvatarFallback><User className="w-4 h-4"/></AvatarFallback>
                 </Avatar>
               </>
             ) : (
               <>
-                <Button onClick={toggleLogin} variant="ghost">Login</Button>
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Login</Link>
+                </Button>
                 <Button asChild>
                   <Link href="/signup">Sign Up</Link>
                 </Button>
@@ -101,16 +110,16 @@ export function Header() {
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-2 font-medium">
                             <Avatar>
-                              <AvatarImage src="https://placehold.co/40x40.png" alt="User" />
+                              <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />
                               <AvatarFallback>U</AvatarFallback>
                             </Avatar>
                             <span>User Profile</span>
                         </div>
-                        <Button onClick={() => { toggleLogin(); closeMenu(); }} variant="secondary">Logout</Button>
+                        <Button onClick={handleLogout} variant="secondary">Logout</Button>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-2">
-                      <Button onClick={() => { toggleLogin(); closeMenu(); }} variant="outline">Login</Button>
+                      <Button asChild><Link href="/login" onClick={closeMenu}>Login</Link></Button>
                       <Button asChild><Link href="/signup" onClick={closeMenu}>Sign Up</Link></Button>
                     </div>
                   )}
