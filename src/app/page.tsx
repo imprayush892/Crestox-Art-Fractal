@@ -1,22 +1,40 @@
 'use client';
 
 import { useAuth } from '@/context/auth-context';
-import { fractals } from '@/lib/data';
+import { fractals, type Fractal } from '@/lib/data';
 import { FractalCard } from '@/components/fractal-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
   const { artists } = useAuth();
-  
+  const [displayedFractals, setDisplayedFractals] = useState<Fractal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const artistsMap = useMemo(() => new Map(artists.map(a => [a.id, a])), [artists]);
   const getArtistById = (artistId: string) => artistsMap.get(artistId);
 
-  const displayedFractals = useMemo(() => {
-      const shuffled = [...fractals].sort(() => 0.5 - Math.random());
-      return shuffled.slice(0, 100);
-  }, []);
+  useEffect(() => {
+    // This code runs only on the client, after the component has mounted.
+    const shuffled = [...fractals].sort(() => 0.5 - Math.random());
+    setDisplayedFractals(shuffled.slice(0, 100));
+    setIsLoading(false);
+  }, []); // Empty dependency array ensures this runs only once on mount.
+
+  const renderSkeletons = () => {
+    return (
+        <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8 space-y-8">
+            {[...Array(12)].map((_, i) => (
+                <div key={i} className="break-inside-avoid">
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            ))}
+        </div>
+    );
+  };
+
 
   return (
     <div className="container py-12">
@@ -27,17 +45,19 @@ export default function Home() {
         </p>
       </div>
       
-      <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8 space-y-8">
-        {displayedFractals.map((fractal) => {
-          const artist = getArtistById(fractal.artistId);
-          if (!artist) return null;
-          return (
-            <div key={fractal.id} className="break-inside-avoid">
-              <FractalCard fractal={fractal} artist={artist} />
-            </div>
-          );
-        })}
-      </div>
+      {isLoading ? renderSkeletons() : (
+        <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8 space-y-8">
+          {displayedFractals.map((fractal) => {
+            const artist = getArtistById(fractal.artistId);
+            if (!artist) return null;
+            return (
+              <div key={fractal.id} className="break-inside-avoid">
+                <FractalCard fractal={fractal} artist={artist} />
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="text-center mt-16">
         <Button size="lg" variant="outline" asChild>
