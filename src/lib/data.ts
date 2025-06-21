@@ -20,248 +20,115 @@ export interface Fractal {
   availableEditions: number;
 }
 
-export const artists: Artist[] = [
-  {
-    id: 'artist-1',
-    name: 'Helena Synthesis',
-    avatar: 'https://placehold.co/100x100.png',
-    bio: 'An algorithmic artist exploring the chaotic beauty of mathematical structures. Helena\'s work is a dance between order and randomness, creating digital tapestries that feel both alien and deeply familiar.',
-  },
-  {
-    id: 'artist-2',
-    name: 'Julian Recursion',
-    avatar: 'https://placehold.co/100x100.png',
-    bio: 'With a background in computer graphics and a passion for nature, Julian generates fractals that mimic organic forms. From galactic spirals to microscopic life, his art finds the universe in the equations.',
-  },
+// --- Data Generation ---
+
+const firstNames = ['Aether', 'Lux', 'Helena', 'Julian', 'Orion', 'Celeste', 'Kai', 'Lyra', 'Jasper', 'Seraphina', 'Axel', 'Aurora', 'Ronan', 'Elara', 'Silas', 'Nova', 'Felix', 'Astrid', 'Leo', 'Iris'];
+const lastNames = ['Synthesis', 'Recursion', 'Flux', 'Prism', 'Vector', 'Matrix', 'Quasar', 'Nebula', 'Byte', 'Pixel', 'Cipher', 'Genesis', 'Echo', 'Mirage', 'Vertex', 'Core', 'Node', 'Render', 'Shader', 'Mesh'];
+const bios = [
+  'An algorithmic artist exploring chaotic beauty in mathematical structures.',
+  'Finds the universe in equations, mimicking organic forms from nature.',
+  'A digital painter who uses code as a brush to create vibrant, abstract landscapes.',
+  'Focuses on the interplay of light and shadow in generative art.',
+  'Explores the geometry of nature through recursive algorithms.',
+  'Creates mesmerizing patterns that evoke a sense of infinite complexity.',
+  'A pioneer in AI-assisted art, collaborating with machines to create new forms.',
+  'Blends traditional art principles with cutting-edge technology.',
+  'Their work is a meditation on the nature of reality and perception.',
+  'Specializes in creating immersive, large-scale digital installations.'
 ];
 
-export const fractals: Fractal[] = [
-  {
-    id: 'fractal-001',
-    title: 'Galactic Bloom',
-    image: 'https://placehold.co/600x800.png',
-    artistId: 'artist-1',
-    description: 'A swirling nebula of color, where new universes seem to blossom from a central point of infinite density. This piece captures the explosive energy of creation.',
-    aiHint: 'nebula space',
-    price: 1500,
-    width: 600,
-    height: 800,
-    totalEditions: 100,
-    availableEditions: 82,
-    priceHistory: [
-      { date: '2023-01-15', price: 500 },
-      { date: '2023-04-20', price: 750 },
-      { date: '2023-08-01', price: 1200 },
-      { date: '2024-01-10', price: 1500 },
-    ]
-  },
-  {
-    id: 'fractal-002',
-    title: 'Crystalline Web',
-    image: 'https://placehold.co/700x500.png',
-    artistId: 'artist-1',
-    description: 'An intricate lattice of light that spiders across the canvas. It represents the interconnectedness of all things in a digital, geometric form.',
-    aiHint: 'crystal lattice',
-    price: 2200,
-    width: 700,
-    height: 500,
-    totalEditions: 50,
-    availableEditions: 34,
-    priceHistory: [
-      { date: '2023-02-10', price: 1000 },
-      { date: '2023-06-15', price: 1500 },
-      { date: '2023-11-25', price: 1800 },
-      { date: '2024-02-18', price: 2200 },
-    ]
-  },
-  {
-    id: 'fractal-003',
-    title: 'Solar Flare',
-    image: 'https://placehold.co/600x600.png',
-    artistId: 'artist-2',
-    description: 'A moment of intense energy erupting from a star, captured in fractal form. The colors are hot, the forms are wild and untamed.',
-    aiHint: 'sun fire',
-    price: 950,
-    width: 600,
-    height: 600,
-    totalEditions: 200,
-    availableEditions: 150,
-    priceHistory: [
-      { date: '2023-03-05', price: 300 },
-      { date: '2023-07-12', price: 550 },
-      { date: '2023-12-01', price: 800 },
-      { date: '2024-03-01', price: 950 },
-    ]
-  },
-  {
-    id: 'fractal-004',
-    title: 'Oceanic Depth',
-    image: 'https://placehold.co/500x700.png',
-    artistId: 'artist-2',
-    description: 'This piece plunges the viewer into the deep, mysterious blues of the ocean floor, revealing patterns that mimic bioluminescent creatures and coral reefs.',
-    aiHint: 'deep ocean',
-    price: 1800,
-    width: 500,
-    height: 700,
-    totalEditions: 75,
-    availableEditions: 61,
-    priceHistory: [
-      { date: '2023-01-25', price: 600 },
-      { date: '2023-05-30', price: 900 },
-      { date: '2023-10-10', price: 1400 },
-      { date: '2024-02-20', price: 1800 },
-    ]
-  },
-  {
-    id: 'fractal-005',
-    title: 'Veridian Maze',
-    image: 'https://placehold.co/800x600.png',
-    artistId: 'artist-1',
-    description: 'A complex, labyrinthine pattern in shades of green and gold. It evokes the feeling of being lost in an ancient, enchanted forest.',
-    aiHint: 'green maze',
-    price: 3100,
-    width: 800,
-    height: 600,
-    totalEditions: 25,
-    availableEditions: 11,
-    priceHistory: [
-      { date: '2023-04-01', price: 1500 },
-      { date: '2023-08-11', price: 2000 },
-      { date: '2023-12-19', price: 2600 },
-      { date: '2024-03-15', price: 3100 },
-    ]
-  },
-  {
-    id: 'fractal-006',
-    title: 'Axiom\'s Edge',
-    image: 'https://placehold.co/600x600.png',
-    artistId: 'artist-2',
-    description: 'Sharp, clean lines define this fractal, which explores the stark beauty of mathematical proofs and the certainty of axioms.',
-    aiHint: 'geometric shapes',
-    price: 700,
-    width: 600,
-    height: 600,
-    totalEditions: 250,
-    availableEditions: 243,
-    priceHistory: [
-      { date: '2023-02-01', price: 250 },
-      { date: '2023-06-08', price: 400 },
-      { date: '2023-10-14', price: 650 },
-      { date: '2024-01-22', price: 700 },
-    ]
-  },
-  {
-    id: 'fractal-007',
-    title: 'Digital Petal',
-    image: 'https://placehold.co/600x700.png',
-    artistId: 'artist-1',
-    description: 'A delicate, unfolding form that resembles the petal of a flower from another dimension. Soft pastels and gentle curves define this artwork.',
-    aiHint: 'flower petal',
-    price: 1100,
-    width: 600,
-    height: 700,
-    totalEditions: 150,
-    availableEditions: 101,
-    priceHistory: [
-      { date: '2023-03-20', price: 400 },
-      { date: '2023-07-28', price: 600 },
-      { date: '2023-11-05', price: 900 },
-      { date: '2024-02-14', price: 1100 },
-    ]
-  },
-  {
-    id: 'fractal-008',
-    title: 'Chaos Theory',
-    image: 'https://placehold.co/800x800.png',
-    artistId: 'artist-2',
-    description: 'A visual representation of the butterfly effect. Seemingly random swirls coalesce into a grand, unpredictable, but beautiful structure.',
-    aiHint: 'abstract chaos',
-    price: 4500,
-    width: 800,
-    height: 800,
-    totalEditions: 10,
-    availableEditions: 3,
-    priceHistory: [
-      { date: '2023-01-01', price: 2000 },
-      { date: '2023-05-15', price: 2800 },
-      { date: '2023-09-20', price: 3500 },
-      { date: '2024-01-25', price: 4500 },
-    ]
-  },
-  {
-    id: 'fractal-009',
-    title: 'Frozen Flame',
-    image: 'https://placehold.co/700x600.png',
-    artistId: 'artist-1',
-    description: 'Contrasting cool blues and fiery oranges battle for dominance in a pattern that is both icy and incandescent.',
-    aiHint: 'fire ice',
-    price: 1900,
-    width: 700,
-    height: 600,
-    totalEditions: 80,
-    availableEditions: 55,
-    priceHistory: [
-      { date: '2023-04-10', price: 800 },
-      { date: '2023-08-18', price: 1100 },
-      { date: '2023-12-28', price: 1600 },
-      { date: '2024-03-21', price: 1900 },
-    ]
-  },
-  {
-    id: 'fractal-010',
-    title: 'Nautilus Spiral',
-    image: 'https://placehold.co/600x600.png',
-    artistId: 'artist-2',
-    description: 'Inspired by the logarithmic spirals found in nature, this piece is a calming, hypnotic journey into a shell-like form.',
-    aiHint: 'shell spiral',
-    price: 850,
-    width: 600,
-    height: 600,
-    totalEditions: 300,
-    availableEditions: 210,
-    priceHistory: [
-      { date: '2023-02-15', price: 400 },
-      { date: '2023-06-22', price: 550 },
-      { date: '2023-11-01', price: 700 },
-      { date: '2024-02-28', price: 850 },
-    ]
-  },
-  {
-    id: 'fractal-011',
-    title: 'Ruby Matrix',
-    image: 'https://placehold.co/800x700.png',
-    artistId: 'artist-1',
-    description: 'A geometric landscape dominated by deep red hues, resembling a network of interconnected crystals.',
-    aiHint: 'red crystal',
-    price: 2500,
-    width: 800,
-    height: 700,
-    totalEditions: 40,
-    availableEditions: 19,
-    priceHistory: [
-      { date: '2023-03-12', price: 1200 },
-      { date: '2023-07-19', price: 1600 },
-      { date: '2023-11-29', price: 2100 },
-      { date: '2024-03-08', price: 2500 },
-    ]
-  },
-  {
-    id: 'fractal-012',
-    title: 'Celestial Mechanics',
-    image: 'https://placehold.co/900x600.png',
-    artistId: 'artist-2',
-    description: 'This fractal maps the orbital paths of unknown planets and stars, creating a beautiful and complex astronomical chart.',
-    aiHint: 'planets orbit',
-    price: 3800,
-    width: 900,
-    height: 600,
-    totalEditions: 15,
-    availableEditions: 8,
-    priceHistory: [
-      { date: '2023-01-30', price: 1800 },
-      { date: '2023-06-05', price: 2400 },
-      { date: '2023-10-11', price: 3100 },
-      { date: '2024-02-05', price: 3800 },
-    ]
-  }
+const fractalAdjectives = ['Quantum', 'Cosmic', 'Galactic', 'Ephemeral', 'Crystalline', 'Solar', 'Veridian', 'Abyssal', 'Axiomatic', 'Digital', 'Chromatic', 'Ethereal', 'Chaotic', 'Frozen', 'Celestial', 'Prismatic', 'Lucid', 'Obsidian', 'Golden', 'Silent'];
+const fractalNouns = ['Bloom', 'Web', 'Flare', 'Depth', 'Maze', 'Edge', 'Petal', 'Theory', 'Flame', 'Spiral', 'Matrix', 'Mechanics', 'Echo', 'Dream', 'Cascade', 'Rift', 'Monolith', 'Serenity', 'Vortex', 'Symmetry'];
+const fractalDescriptions = [
+  'A swirling nebula of color, where new universes blossom from a central point.',
+  'An intricate lattice of light that spiders across the canvas, connecting all things.',
+  'A moment of intense energy erupting from a star, captured in fractal form.',
+  'Plunges the viewer into the deep, mysterious blues of an alien ocean floor.',
+  'A complex, labyrinthine pattern that evokes the feeling of a digital forest.',
+  'Sharp, clean lines that explore the stark beauty of mathematical proofs.',
+  'A delicate, unfolding form resembling a flower petal from another dimension.',
+  'A visual representation of the butterfly effect, where chaos finds order.',
+  'Contrasting cool and fiery hues battle for dominance in a pattern of beautiful conflict.',
+  'A calming, hypnotic journey into a logarithmic form found throughout nature.',
+  'A geometric landscape dominated by deep hues, resembling a network of crystals.',
+  'This fractal maps the orbital paths of unknown planets, an astronomical chart of the imagination.',
+  'The visual sound of a single moment, rippling outwards through spacetime.',
+  'A piece that seems to shift and change, a lucid dream caught in digital amber.',
+  'An endless waterfall of light and color, frozen in a single, breathtaking instant.'
 ];
+const aiHints = [
+  'nebula space', 'crystal lattice', 'sun fire', 'deep ocean', 'green maze', 'geometric shapes', 'flower petal', 'abstract chaos', 'fire ice', 'shell spiral', 'red crystal', 'planets orbit', 'sound wave', 'dreamy abstract', 'waterfall light'
+];
+
+const getRandom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const randomInt = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
+
+const generateArtists = (count: number): Artist[] => {
+  const artists: Artist[] = [];
+  const usedNames = new Set<string>();
+
+  while (artists.length < count) {
+    const name = `${getRandom(firstNames)} ${getRandom(lastNames)}`;
+    if (!usedNames.has(name)) {
+      usedNames.add(name);
+      artists.push({
+        id: `artist-${artists.length + 1}`,
+        name,
+        avatar: 'https://placehold.co/100x100.png',
+        bio: getRandom(bios),
+      });
+    }
+  }
+  return artists;
+};
+
+const generatePriceHistory = (initialPrice: number): { date: string; price: number }[] => {
+    const history: { date: string; price: number }[] = [];
+    let currentDate = new Date('2023-01-01');
+    let currentPrice = initialPrice * (Math.random() * 0.4 + 0.3); // Start price between 30% and 70% of final price
+
+    for (let i = 0; i < 4; i++) {
+        history.push({
+            date: currentDate.toISOString().split('T')[0],
+            price: Math.round(currentPrice),
+        });
+        currentDate.setMonth(currentDate.getMonth() + randomInt(2, 4));
+        currentPrice *= (Math.random() * 0.5 + 1.1); // Increase price by 10-60%
+    }
+     history.push({ date: new Date().toISOString().split('T')[0], price: initialPrice });
+    return history;
+}
+
+const generateFractals = (count: number, artists: Artist[]): Fractal[] => {
+  const fractals: Fractal[] = [];
+  const usedTitles = new Set<string>();
+
+  while (fractals.length < count) {
+    const title = `${getRandom(fractalAdjectives)} ${getRandom(fractalNouns)}`;
+    if (!usedTitles.has(title)) {
+      usedTitles.add(title);
+      const width = randomInt(5, 9) * 100;
+      const height = randomInt(5, 9) * 100;
+      const price = randomInt(5, 50) * 100;
+      const totalEditions = randomInt(1, 10) * (randomInt(1,3) === 1 ? 1 : 10);
+      fractals.push({
+        id: `fractal-${String(fractals.length + 1).padStart(3, '0')}`,
+        title,
+        image: `https://placehold.co/${width}x${height}.png`,
+        artistId: getRandom(artists).id,
+        description: getRandom(fractalDescriptions),
+        aiHint: getRandom(aiHints),
+        price,
+        width,
+        height,
+        priceHistory: generatePriceHistory(price),
+        totalEditions,
+        availableEditions: randomInt(1, totalEditions),
+      });
+    }
+  }
+  return fractals;
+};
+
+export const artists: Artist[] = generateArtists(20);
+export const fractals: Fractal[] = generateFractals(500, artists);
