@@ -4,7 +4,7 @@
 import type { Artist, Fractal } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, doc, onSnapshot, runTransaction, writeBatch, getDoc } from 'firebase/firestore';
+import { collection as firestoreCollection, doc, onSnapshot, runTransaction, writeBatch, getDoc } from 'firebase/firestore';
 import { artists as initialArtists, fractals as initialFractals } from '@/lib/data';
 
 export interface OwnedFractal {
@@ -38,7 +38,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  * @returns The new price after the trade.
  */
 const calculateNewPrice = (P_old: number, Q: number, N: number): number => {
-  const beta = 1.118;
+  const beta = 1.118; // As per the revised model
   
   if (N === 0 || Q <= 0) {
     return P_old;
@@ -62,7 +62,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [fractals, setFractals] = useState<Fractal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [serialCounter, setSerialCounter] = useState(1);
 
   useEffect(() => {
     const seedData = async () => {
@@ -93,14 +92,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    const artistsCollectionRef = collection(db, 'artists');
+    const artistsCollectionRef = firestoreCollection(db, 'artists');
     const unsubscribeArtists = onSnapshot(artistsCollectionRef, (snapshot) => {
       const artistsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Artist));
       setArtists(artistsData);
       if (fractals.length > 0) setIsLoading(false);
     });
 
-    const fractalsCollectionRef = collection(db, 'fractals');
+    const fractalsCollectionRef = firestoreCollection(db, 'fractals');
     const unsubscribeFractals = onSnapshot(fractalsCollectionRef, (snapshot) => {
         const fractalsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Fractal));
         setFractals(fractalsData);
@@ -116,7 +115,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let unsubscribe: () => void = () => {};
     if (user) {
-      const ownedFractalsRef = collection(db, "users", user.uid, "ownedFractals");
+      const ownedFractalsRef = firestoreCollection(db, "users", user.uid, "ownedFractals");
       unsubscribe = onSnapshot(ownedFractalsRef, (querySnapshot) => {
         const userFractals = querySnapshot.docs.map(doc => doc.data() as OwnedFractal);
         setCollection(userFractals);
@@ -179,11 +178,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 totalPortfolioValueHistory: [...currentArtistData.totalPortfolioValueHistory, newTotalValueHistoryEntry]
             });
             
-            let currentSerial = Date.now(); // Using timestamp for a simple unique-ish serial
             const purchaseDate = new Date().toISOString();
 
             for (let i = 0; i < quantity; i++) {
-                const serialNumber = `CRESTOX-${currentArtistData.id.split('-')[1]}-${String(currentSerial + i).slice(-6)}`;
+                const serialNumber = `CRESTOX-${currentArtistData.id.split('-')[1]}-${String(Date.now() + i).slice(-6)}`;
                 const newFractal: OwnedFractal = {
                     id: `${currentArtistData.id}-${Date.now()}-${i}`,
                     artistId: currentArtistData.id,
@@ -192,7 +190,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     purchaseDate: purchaseDate,
                     serialNumber: serialNumber,
                 };
-                const newFractalRef = doc(collection(db, 'users', user.uid, 'ownedFractals'));
+                const newFractalRef = doc(firestoreCollection(db, 'users', user.uid, 'ownedFractals'));
                 transaction.set(newFractalRef, newFractal);
             }
         });
