@@ -1,5 +1,6 @@
 import { fractals, artists } from '@/lib/data';
 import { FractalCard } from '@/components/fractal-card';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   const getArtistById = (artistId: string) => artists.find(a => a.id === artistId);
@@ -19,6 +20,10 @@ export default function Home() {
           if (!artist) return null;
           return <FractalCard key={fractal.id} fractal={fractal} artist={artist} />;
         })}
+      </div>
+
+      <div className="text-center mt-16">
+        <Button size="lg" variant="outline">Explore More</Button>
       </div>
     </div>
   );

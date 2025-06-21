@@ -49,18 +49,19 @@ export default function FractalDetailPage() {
     <div className="container py-12">
         <Link href="/" className="inline-flex items-center gap-2 mb-8 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="w-4 h-4" />
-          Back to Browse
+          Back to Explore
         </Link>
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
         <div className="lg:col-span-3">
-          <div className="aspect-square bg-muted rounded-lg overflow-hidden shadow-lg">
+          <div className="bg-muted rounded-lg overflow-hidden shadow-lg">
             <Image
               src={fractal.image}
               alt={fractal.title}
-              width={1000}
-              height={1000}
-              className="w-full h-full object-cover"
+              width={fractal.width}
+              height={fractal.height}
+              className="w-full h-auto object-cover"
               data-ai-hint={fractal.aiHint}
+              priority
             />
           </div>
         </div>

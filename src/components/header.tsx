@@ -14,7 +14,8 @@ export function Header() {
   const router = useRouter();
 
   const navLinks = [
-    { href: '/', label: 'Browse' },
+    { href: '/', label: 'Explore Art' },
+    { href: '/artists', label: 'Artists' },
     { href: '/suggestions', label: 'AI Suggestions' },
   ];
 

@@ -13,6 +13,8 @@ export interface Fractal {
   description: string;
   aiHint: string;
   price: number;
+  width: number;
+  height: number;
   priceHistory: { date: string; price: number }[];
   totalEditions: number;
   availableEditions: number;
@@ -37,11 +39,13 @@ export const fractals: Fractal[] = [
   {
     id: 'fractal-001',
     title: 'Galactic Bloom',
-    image: 'https://placehold.co/600x600.png',
+    image: 'https://placehold.co/600x800.png',
     artistId: 'artist-1',
     description: 'A swirling nebula of color, where new universes seem to blossom from a central point of infinite density. This piece captures the explosive energy of creation.',
     aiHint: 'nebula space',
     price: 1500,
+    width: 600,
+    height: 800,
     totalEditions: 100,
     availableEditions: 82,
     priceHistory: [
@@ -54,11 +58,13 @@ export const fractals: Fractal[] = [
   {
     id: 'fractal-002',
     title: 'Crystalline Web',
-    image: 'https://placehold.co/600x600.png',
+    image: 'https://placehold.co/700x500.png',
     artistId: 'artist-1',
     description: 'An intricate lattice of light that spiders across the canvas. It represents the interconnectedness of all things in a digital, geometric form.',
     aiHint: 'crystal lattice',
     price: 2200,
+    width: 700,
+    height: 500,
     totalEditions: 50,
     availableEditions: 34,
     priceHistory: [
@@ -76,6 +82,8 @@ export const fractals: Fractal[] = [
     description: 'A moment of intense energy erupting from a star, captured in fractal form. The colors are hot, the forms are wild and untamed.',
     aiHint: 'sun fire',
     price: 950,
+    width: 600,
+    height: 600,
     totalEditions: 200,
     availableEditions: 150,
     priceHistory: [
@@ -88,11 +96,13 @@ export const fractals: Fractal[] = [
   {
     id: 'fractal-004',
     title: 'Oceanic Depth',
-    image: 'https://placehold.co/600x600.png',
+    image: 'https://placehold.co/500x700.png',
     artistId: 'artist-2',
     description: 'This piece plunges the viewer into the deep, mysterious blues of the ocean floor, revealing patterns that mimic bioluminescent creatures and coral reefs.',
     aiHint: 'deep ocean',
     price: 1800,
+    width: 500,
+    height: 700,
     totalEditions: 75,
     availableEditions: 61,
     priceHistory: [
@@ -105,11 +115,13 @@ export const fractals: Fractal[] = [
   {
     id: 'fractal-005',
     title: 'Veridian Maze',
-    image: 'https://placehold.co/600x600.png',
+    image: 'https://placehold.co/800x600.png',
     artistId: 'artist-1',
     description: 'A complex, labyrinthine pattern in shades of green and gold. It evokes the feeling of being lost in an ancient, enchanted forest.',
     aiHint: 'green maze',
     price: 3100,
+    width: 800,
+    height: 600,
     totalEditions: 25,
     availableEditions: 11,
     priceHistory: [
@@ -127,6 +139,8 @@ export const fractals: Fractal[] = [
     description: 'Sharp, clean lines define this fractal, which explores the stark beauty of mathematical proofs and the certainty of axioms.',
     aiHint: 'geometric shapes',
     price: 700,
+    width: 600,
+    height: 600,
     totalEditions: 250,
     availableEditions: 243,
     priceHistory: [
@@ -139,11 +153,13 @@ export const fractals: Fractal[] = [
   {
     id: 'fractal-007',
     title: 'Digital Petal',
-    image: 'https://placehold.co/600x600.png',
+    image: 'https://placehold.co/600x700.png',
     artistId: 'artist-1',
     description: 'A delicate, unfolding form that resembles the petal of a flower from another dimension. Soft pastels and gentle curves define this artwork.',
     aiHint: 'flower petal',
     price: 1100,
+    width: 600,
+    height: 700,
     totalEditions: 150,
     availableEditions: 101,
     priceHistory: [
@@ -156,11 +172,13 @@ export const fractals: Fractal[] = [
   {
     id: 'fractal-008',
     title: 'Chaos Theory',
-    image: 'https://placehold.co/600x600.png',
+    image: 'https://placehold.co/800x800.png',
     artistId: 'artist-2',
     description: 'A visual representation of the butterfly effect. Seemingly random swirls coalesce into a grand, unpredictable, but beautiful structure.',
     aiHint: 'abstract chaos',
     price: 4500,
+    width: 800,
+    height: 800,
     totalEditions: 10,
     availableEditions: 3,
     priceHistory: [
@@ -173,11 +191,13 @@ export const fractals: Fractal[] = [
   {
     id: 'fractal-009',
     title: 'Frozen Flame',
-    image: 'https://placehold.co/600x600.png',
+    image: 'https://placehold.co/700x600.png',
     artistId: 'artist-1',
     description: 'Contrasting cool blues and fiery oranges battle for dominance in a pattern that is both icy and incandescent.',
     aiHint: 'fire ice',
     price: 1900,
+    width: 700,
+    height: 600,
     totalEditions: 80,
     availableEditions: 55,
     priceHistory: [
@@ -195,6 +215,8 @@ export const fractals: Fractal[] = [
     description: 'Inspired by the logarithmic spirals found in nature, this piece is a calming, hypnotic journey into a shell-like form.',
     aiHint: 'shell spiral',
     price: 850,
+    width: 600,
+    height: 600,
     totalEditions: 300,
     availableEditions: 210,
     priceHistory: [
@@ -207,11 +229,13 @@ export const fractals: Fractal[] = [
   {
     id: 'fractal-011',
     title: 'Ruby Matrix',
-    image: 'https://placehold.co/600x600.png',
+    image: 'https://placehold.co/800x700.png',
     artistId: 'artist-1',
     description: 'A geometric landscape dominated by deep red hues, resembling a network of interconnected crystals.',
     aiHint: 'red crystal',
     price: 2500,
+    width: 800,
+    height: 700,
     totalEditions: 40,
     availableEditions: 19,
     priceHistory: [
@@ -224,11 +248,13 @@ export const fractals: Fractal[] = [
   {
     id: 'fractal-012',
     title: 'Celestial Mechanics',
-    image: 'https://placehold.co/600x600.png',
+    image: 'https://placehold.co/900x600.png',
     artistId: 'artist-2',
     description: 'This fractal maps the orbital paths of unknown planets and stars, creating a beautiful and complex astronomical chart.',
     aiHint: 'planets orbit',
     price: 3800,
+    width: 900,
+    height: 600,
     totalEditions: 15,
     availableEditions: 8,
     priceHistory: [

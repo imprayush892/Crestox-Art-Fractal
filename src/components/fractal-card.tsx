@@ -13,20 +13,21 @@ export function FractalCard({ fractal, artist }: FractalCardProps) {
     <Link href={`/fractal/${fractal.id}`} className="group block">
       <Card className="overflow-hidden transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1">
         <CardContent className="p-0">
-          <div className="aspect-square overflow-hidden">
+           <div className="relative overflow-hidden">
             <Image
               src={fractal.image}
               alt={fractal.title}
-              width={600}
-              height={600}
-              className="object-cover w-full h-full transition-transform duration-300 ease-in-out group-hover:scale-105"
+              width={fractal.width}
+              height={fractal.height}
+              className="object-cover w-full h-auto transition-transform duration-300 ease-in-out group-hover:scale-105"
               data-ai-hint={fractal.aiHint}
             />
-          </div>
-          <div className="p-4">
-            <h3 className="font-headline text-lg font-bold truncate">{fractal.title}</h3>
-            <p className="text-sm text-muted-foreground">by {artist.name}</p>
-            <p className="mt-2 font-semibold text-lg text-foreground">${fractal.price.toLocaleString()}</p>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-4 group-hover:translate-y-0">
+                <h3 className="font-headline text-lg font-bold truncate">{fractal.title}</h3>
+                <p className="text-sm text-white/90">by {artist.name}</p>
+                <p className="mt-2 font-semibold text-lg">${fractal.price.toLocaleString()}</p>
+            </div>
           </div>
         </CardContent>
       </Card>
