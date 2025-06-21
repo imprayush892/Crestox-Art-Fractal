@@ -1,6 +1,8 @@
+'use client';
+
 import { artists, fractals } from '@/lib/data';
 import Image from 'next/image';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FractalCard } from '@/components/fractal-card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -8,7 +10,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { format } from 'date-fns';
 
-export default function ArtistProfilePage({ params }: { params: { id:string } }) {
+export default function ArtistProfilePage() {
+  const params = useParams();
   const artist = artists.find(a => a.id === params.id);
 
   if (!artist) {
