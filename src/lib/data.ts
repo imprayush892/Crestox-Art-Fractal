@@ -1,3 +1,4 @@
+
 export interface Artist {
   id: string;
   name: string;
@@ -63,23 +64,37 @@ const aiHints = [
 const getRandom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const randomInt = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
 
-const generateArtists = (count: number): Artist[] => {
-  const artists: Artist[] = [];
-  const usedNames = new Set<string>();
+const shuffleArray = <T>(array: T[]): T[] => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
 
-  while (artists.length < count) {
-    const name = `${getRandom(firstNames)} ${getRandom(lastNames)}`;
-    if (!usedNames.has(name)) {
-      usedNames.add(name);
-      artists.push({
-        id: `artist-${artists.length + 1}`,
-        name,
-        avatar: 'https://placehold.co/100x100.png',
-        bio: getRandom(bios),
-      });
+const generateArtists = (count: number): Artist[] => {
+  const allPossibleNames: string[] = [];
+  for (const firstName of firstNames) {
+    for (const lastName of lastNames) {
+      allPossibleNames.push(`${firstName} ${lastName}`);
     }
   }
-  return artists;
+
+  if (count > allPossibleNames.length) {
+    console.warn(`Requested ${count} artists, but only ${allPossibleNames.length} unique names can be generated. Returning all possible unique artists.`);
+    count = allPossibleNames.length;
+  }
+
+  const shuffledNames = shuffleArray(allPossibleNames);
+  const selectedNames = shuffledNames.slice(0, count);
+
+  return selectedNames.map((name, index) => ({
+    id: `artist-${index + 1}`,
+    name,
+    avatar: 'https://placehold.co/100x100.png',
+    bio: getRandom(bios),
+  }));
 };
 
 const generatePriceHistory = (initialPrice: number): { date: string; price: number }[] => {
@@ -100,19 +115,28 @@ const generatePriceHistory = (initialPrice: number): { date: string; price: numb
 }
 
 const generateFractals = (count: number, artists: Artist[]): Fractal[] => {
-  const fractals: Fractal[] = [];
-  const usedTitles = new Set<string>();
+  const allPossibleTitles: string[] = [];
+  for (const adjective of fractalAdjectives) {
+    for (const noun of fractalNouns) {
+      allPossibleTitles.push(`${adjective} ${noun}`);
+    }
+  }
+  
+  if (count > allPossibleTitles.length) {
+      console.warn(`Requested ${count} fractals, but only ${allPossibleTitles.length} unique titles can be generated. Returning all possible unique fractals.`);
+      count = allPossibleTitles.length;
+  }
 
-  while (fractals.length < count) {
-    const title = `${getRandom(fractalAdjectives)} ${getRandom(fractalNouns)}`;
-    if (!usedTitles.has(title)) {
-      usedTitles.add(title);
-      const width = randomInt(5, 9) * 100;
-      const height = randomInt(5, 9) * 100;
-      const price = randomInt(5, 50) * 100;
-      const totalEditions = randomInt(1, 10) * (randomInt(1,3) === 1 ? 1 : 10);
-      fractals.push({
-        id: `fractal-${String(fractals.length + 1).padStart(3, '0')}`,
+  const shuffledTitles = shuffleArray(allPossibleTitles);
+  const selectedTitles = shuffledTitles.slice(0, count);
+
+  return selectedTitles.map((title, index) => {
+    const width = randomInt(5, 9) * 100;
+    const height = randomInt(5, 9) * 100;
+    const price = randomInt(5, 50) * 100;
+    const totalEditions = randomInt(1, 10) * (randomInt(1,3) === 1 ? 1 : 10);
+    return {
+        id: `fractal-${String(index + 1).padStart(3, '0')}`,
         title,
         image: `https://placehold.co/${width}x${height}.png`,
         artistId: getRandom(artists).id,
@@ -124,11 +148,11 @@ const generateFractals = (count: number, artists: Artist[]): Fractal[] => {
         priceHistory: generatePriceHistory(price),
         totalEditions,
         availableEditions: randomInt(1, totalEditions),
-      });
-    }
-  }
-  return fractals;
+    };
+  });
 };
 
 export const artists: Artist[] = generateArtists(20);
 export const fractals: Fractal[] = generateFractals(500, artists);
+
+    
