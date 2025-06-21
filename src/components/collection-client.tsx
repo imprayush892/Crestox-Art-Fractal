@@ -76,9 +76,9 @@ export function CollectionClient() {
   return (
     <>
       <div className="text-center mb-8">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">My Portfolio</h1>
+        <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">My Collection</h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-          A dashboard of your fractal investments.
+          STAY ON TOP OF ALL YOUR FRACTAL ACTIVITES
         </p>
       </div>
       
