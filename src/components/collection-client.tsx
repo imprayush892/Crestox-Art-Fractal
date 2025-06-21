@@ -1,28 +1,28 @@
 'use client';
 
-import type { Fractal, Artist } from '@/lib/data';
-import { FractalCard } from '@/components/fractal-card';
+import type { Artist } from '@/lib/data';
+import { ArtistCard } from '@/components/artist-card';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
+import Link from 'next/link';
+import { Button } from './ui/button';
 
 interface CollectionClientProps {
-    fractals: Fractal[];
     artists: Artist[];
 }
 
-export function CollectionClient({ fractals, artists }: CollectionClientProps) {
+export function CollectionClient({ artists }: CollectionClientProps) {
   const { isLoggedIn, collection } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoggedIn) {
-      router.push('/login');
+      router.push('/login?redirect=/collection');
     }
   }, [isLoggedIn, router]);
 
-  const userCollection = fractals.filter(f => collection.includes(f.id));
-  const getArtistById = (artistId: string) => artists.find(a => a.id === artistId);
+  const userPortfolio = artists.filter(a => collection.includes(a.id));
 
   if (!isLoggedIn) {
     return null; // or a loading spinner
@@ -31,24 +31,25 @@ export function CollectionClient({ fractals, artists }: CollectionClientProps) {
   return (
     <>
       <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">My Collection</h1>
+        <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">My Portfolio</h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-          A personal gallery of the fractal worlds you've chosen.
+          A gallery of the artist portfolios you have invested in.
         </p>
       </div>
       
-      {userCollection.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-          {userCollection.map((fractal) => {
-            const artist = getArtistById(fractal.artistId);
-            if (!artist) return null;
-            return <FractalCard key={fractal.id} fractal={fractal} artist={artist} />;
-          })}
+      {userPortfolio.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {userPortfolio.map((artist) => (
+            <ArtistCard key={artist.id} artist={artist} />
+          ))}
         </div>
       ) : (
         <div className="text-center py-16 border-2 border-dashed rounded-lg">
-            <h2 className="text-xl font-semibold">Your collection is empty.</h2>
-            <p className="mt-2 text-muted-foreground">Start exploring to find art that resonates with you.</p>
+            <h2 className="text-xl font-semibold">Your portfolio is empty.</h2>
+            <p className="mt-2 text-muted-foreground">Start exploring artists to begin your collection.</p>
+             <Button asChild className="mt-6">
+                <Link href="/artists">Meet the Artists</Link>
+            </Button>
         </div>
       )}
     </>

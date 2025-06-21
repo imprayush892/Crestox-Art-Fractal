@@ -7,6 +7,11 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { format } from 'date-fns';
+import { Button } from './ui/button';
+import { CheckCircle, Layers } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -14,45 +19,84 @@ interface ArtistProfileProps {
 }
 
 export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
+  const { isLoggedIn, isInCollection, addToCollection } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
 
-  const allPricePoints = artistFractals.flatMap(f => f.priceHistory);
-  const uniqueDates = [...new Set(allPricePoints.map(p => p.date))].sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
+  const inCollection = isInCollection(artist.id);
 
-  const portfolioHistory = uniqueDates.map(date => {
-      const portfolioValue = artistFractals.reduce((total, fractal) => {
-          const pricePointsOnOrBefore = fractal.priceHistory.filter(p => new Date(p.date) <= new Date(date));
-          const lastPricePoint = pricePointsOnOrBefore.length > 0 ? pricePointsOnOrBefore[pricePointsOnOrBefore.length - 1] : null;
-          return total + (lastPricePoint ? lastPricePoint.price : 0);
-      }, 0);
-      return { date, value: portfolioValue };
-  });
+  const handleAddToCollection = () => {
+    if (!isLoggedIn) {
+      router.push(`/login?redirect=/artist/${artist.id}`);
+      return;
+    }
+    addToCollection(artist.id);
+    toast({
+      title: "Portfolio Fractal Acquired!",
+      description: `You now own a share of ${artist.name}'s portfolio.`,
+    });
+  };
+
+  const portfolioValueHistory = artist.priceHistory.map(p => ({ date: p.date, value: p.price }));
 
   return (
     <>
-      <div className="flex flex-col md:flex-row items-start gap-8 md:gap-12 mb-12">
-        <Avatar className="w-32 h-32 md:w-40 md:h-40 border-4 border-primary shadow-lg">
-          <AvatarImage src={artist.avatar} alt={artist.name} />
-          <AvatarFallback className="text-4xl">{artist.name.substring(0, 2)}</AvatarFallback>
-        </Avatar>
-        <div className="pt-4">
-          <h1 className="font-headline text-4xl md:text-5xl font-bold">{artist.name}</h1>
-          <p className="mt-4 max-w-2xl text-lg text-muted-foreground">{artist.bio}</p>
+      <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12 mb-12">
+        <div className="lg:col-span-3 flex flex-col items-center md:items-start">
+            <Avatar className="w-32 h-32 md:w-40 md:h-40 border-4 border-primary shadow-lg">
+              <AvatarImage src={artist.avatar} alt={artist.name} />
+              <AvatarFallback className="text-4xl">{artist.name.substring(0, 2)}</AvatarFallback>
+            </Avatar>
+            <div className="pt-4 text-center md:text-left">
+              <h1 className="font-headline text-4xl md:text-5xl font-bold">{artist.name}</h1>
+              <p className="mt-4 max-w-2xl text-lg text-muted-foreground">{artist.bio}</p>
+            </div>
+        </div>
+
+        <div className="lg:col-span-2">
+           <Card className="sticky top-24">
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl">Invest in the Portfolio</CardTitle>
+                    <CardDescription>Purchase a "fractal" to own a share of this artist's entire collection.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                            <Layers className="w-4 h-4" />
+                            <span>{artist.availableEditions.toLocaleString()} of {artist.totalEditions.toLocaleString()} available</span>
+                        </div>
+                        <div className="text-3xl font-bold text-primary">
+                            ${artist.fractalPrice.toLocaleString()}
+                        </div>
+                    </div>
+                    <Button size="lg" className="w-full" onClick={handleAddToCollection} disabled={inCollection}>
+                       {inCollection ? (
+                        <>
+                          <CheckCircle className="mr-2 h-5 w-5" />
+                          Owned in Collection
+                        </>
+                      ) : (
+                        'Invest Now'
+                      )}
+                    </Button>
+                </CardContent>
+            </Card>
         </div>
       </div>
 
       <div className="mb-12">
-        <h2 className="font-headline text-3xl font-bold mb-6">Portfolio Value</h2>
+        <h2 className="font-headline text-3xl font-bold mb-6">Portfolio Fractal Value</h2>
         <Card>
           <CardHeader>
-              <CardTitle>Portfolio Value Over Time</CardTitle>
-              <CardDescription>Aggregated value of all artworks by {artist.name}.</CardDescription>
+              <CardTitle>Value Over Time</CardTitle>
+              <CardDescription>Historical value of one fractal share of {artist.name}'s portfolio.</CardDescription>
           </CardHeader>
           <CardContent>
               <ChartContainer 
                   config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
                   className="h-[300px] w-full"
               >
-                  <LineChart data={portfolioHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <LineChart data={portfolioValueHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                       <CartesianGrid vertical={false} strokeDasharray="3 3" />
                       <XAxis
                           dataKey="date"
@@ -65,7 +109,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                           tickLine={false}
                           axisLine={false}
                           tickMargin={8}
-                          tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                          tickFormatter={(value) => `$${(value as number).toLocaleString()}`}
                       />
                       <Tooltip
                           cursor={{
@@ -83,7 +127,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                           type="monotone"
                           stroke="hsl(var(--primary))"
                           strokeWidth={2}
-                          dot={false}
+                          dot={true}
                       />
                   </LineChart>
               </ChartContainer>
@@ -92,10 +136,12 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
       </div>
 
       <div>
-        <h2 className="font-headline text-3xl font-bold mb-8 border-b pb-4">Artwork by {artist.name}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+        <h2 className="font-headline text-3xl font-bold mb-8 border-b pb-4">Artworks by {artist.name}</h2>
+        <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8 space-y-8">
             {artistFractals.map((fractal) => (
-                <FractalCard key={fractal.id} fractal={fractal} artist={artist} />
+                <div key={fractal.id} className="break-inside-avoid">
+                  <FractalCard fractal={fractal} artist={artist} />
+                </div>
             ))}
         </div>
       </div>

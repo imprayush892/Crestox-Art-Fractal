@@ -3,18 +3,11 @@
 import type { Artist, Fractal } from '@/lib/data';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle, Layers } from 'lucide-react';
 import { FractalCard } from '@/components/fractal-card';
-import { useAuth } from '@/context/auth-context';
-import { useToast } from '@/hooks/use-toast';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { format } from 'date-fns';
 
 interface FractalDetailProps {
     fractal: Fractal;
@@ -24,23 +17,6 @@ interface FractalDetailProps {
 }
 
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
-  const { isLoggedIn, isInCollection, addToCollection } = useAuth();
-  const { toast } = useToast();
-  const router = useRouter();
-
-  const inCollection = isInCollection(fractal.id);
-
-  const handleAddToCollection = () => {
-    if (!isLoggedIn) {
-      router.push(`/login?redirect=/fractal/${fractal.id}`);
-      return;
-    }
-    addToCollection(fractal.id);
-    toast({
-      title: "Added to Collection!",
-      description: `"${fractal.title}" is now in your collection.`,
-    });
-  };
 
   return (
     <>
@@ -61,104 +37,42 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
         <div className="lg:col-span-2">
           <div className="sticky top-24">
             <h1 className="font-headline text-4xl font-bold">{fractal.title}</h1>
-            <p className="text-lg text-muted-foreground mt-2">{fractal.description}</p>
             
             {artist && (
-              <div className="mt-6">
+              <div className="mt-4">
                 <Link href={`/artist/${artist.id}`} className="group inline-flex items-center gap-3">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={artist.avatar} alt={artist.name} />
                     <AvatarFallback>{artist.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-sm text-muted-foreground">Artist</p>
-                    <p className="font-semibold group-hover:text-primary transition-colors">{artist.name}</p>
+                    <p className="text-sm text-muted-foreground">From the portfolio of</p>
+                    <p className="font-semibold text-lg group-hover:text-primary transition-colors">{artist.name}</p>
                   </div>
                 </Link>
               </div>
             )}
+
+            <p className="text-lg text-muted-foreground mt-4">{fractal.description}</p>
             
-            <div className="mt-8 flex flex-wrap gap-2">
+            <div className="mt-6 flex flex-wrap gap-2">
               <Badge variant="secondary">Fractal</Badge>
               <Badge variant="secondary">Digital Art</Badge>
               <Badge variant="secondary">Algorithmic</Badge>
             </div>
 
-            <div className="mt-8 border-t pt-8">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="text-sm text-muted-foreground flex items-center gap-2">
-                    <Layers className="w-4 h-4" />
-                    <span>{fractal.availableEditions} of {fractal.totalEditions} available</span>
-                  </div>
-                  <div className="text-2xl font-bold text-primary">
-                    ${fractal.price.toLocaleString()}
-                  </div>
+            {artist && (
+                <div className="mt-8 border-t pt-8">
+                    <Button size="lg" className="w-full" asChild>
+                        <Link href={`/artist/${artist.id}`}>
+                            Invest in Artist&apos;s Portfolio
+                        </Link>
+                    </Button>
+                     <p className="text-center text-xs text-muted-foreground mt-2">Invest in a share of this artist&apos;s entire collection.</p>
                 </div>
-                <Button size="lg" className="w-full" onClick={handleAddToCollection} disabled={inCollection}>
-                   {inCollection ? (
-                    <>
-                      <CheckCircle className="mr-2 h-5 w-5" />
-                      Owned in Collection
-                    </>
-                  ) : (
-                    'Invest Now'
-                  )}
-                </Button>
-            </div>
+            )}
           </div>
         </div>
-      </div>
-
-       <div className="mt-16">
-        <h3 className="font-headline text-2xl font-bold mb-4">Price History</h3>
-        <Card>
-          <CardContent className="p-2 md:p-6 pt-6">
-            <ChartContainer
-              config={{
-                price: {
-                  label: "Price",
-                  color: "hsl(var(--primary))",
-                },
-              }}
-              className="h-[250px] w-full"
-            >
-              <LineChart data={fractal.priceHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => format(new Date(value), "MMM yy")}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => `$${value.toLocaleString()}`}
-                />
-                <Tooltip
-                  cursor={{
-                    stroke: 'hsl(var(--border))',
-                    strokeWidth: 2,
-                    strokeDasharray: '3 3',
-                  }}
-                  content={<ChartTooltipContent 
-                    indicator="dot"
-                    formatter={(value) => `$${(value as number).toLocaleString()}`}
-                  />}
-                />
-                <Line
-                  dataKey="price"
-                  type="monotone"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  dot={true}
-                />
-              </LineChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
       </div>
       
       {relatedFractals.length > 0 && (
