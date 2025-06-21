@@ -16,10 +16,10 @@ export default function Home() {
 
   return (
     <div className="container py-12">
-      <div className="text-center mb-12">
-        <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">Explore the Digital Canvas</h1>
-        <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-          Discover a universe of infinite detail and mesmerizing beauty in our curated collection of fractal art.
+      <div className="flex flex-col items-center justify-center text-center min-h-[50vh] mb-12">
+        <h1 className="font-headline text-5xl md:text-6xl font-bold tracking-tight">Democratizing Art</h1>
+        <p className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground">
+          Crestox is a revolutionary platform dedicated to making the world of art accessible. We believe in the power of art to inspire, connect, and transform.
         </p>
       </div>
       
