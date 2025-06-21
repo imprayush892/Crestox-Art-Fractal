@@ -10,11 +10,13 @@ import { ArrowUpRight, BarChart, DollarSign, TrendingUp, Wallet } from 'lucide-r
 import type { OwnedFractal } from '@/context/auth-context';
 import type { Artist } from '@/lib/data';
 import { ArtistHoldingsDialog } from './artist-holdings-dialog';
+import { SellDialog } from './sell-dialog';
 
 export function CollectionClient() {
   const { isLoggedIn, collection, artists } = useAuth();
   const router = useRouter();
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
+  const [artistToSell, setArtistToSell] = useState<Artist | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -67,6 +69,17 @@ export function CollectionClient() {
   };
   
   const ownedFractalsForSelectedArtist = selectedArtist ? collectionByArtist[selectedArtist.id] || [] : [];
+
+  const handleSellClick = (e: React.MouseEvent, artist: Artist) => {
+    e.stopPropagation();
+    setArtistToSell(artist);
+  }
+
+  const handleCloseSellDialog = () => {
+    setArtistToSell(null);
+  }
+  
+  const ownedFractalsForSellDialog = artistToSell ? collectionByArtist[artistToSell.id] || [] : [];
 
 
   if (!isLoggedIn) {
@@ -138,17 +151,16 @@ export function CollectionClient() {
                   return (
                     <Card 
                         key={artistId} 
-                        className="flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
-                        onClick={() => handleCardClick(artistId)}
+                        className="flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
                     >
-                        <CardHeader className="flex-row items-center gap-4">
+                        <CardHeader className="flex-row items-center gap-4 cursor-pointer" onClick={() => handleCardClick(artistId)}>
                             <Wallet className="w-8 h-8 text-primary"/>
                             <div>
                                 <CardTitle className="font-headline text-2xl">{artist.name}</CardTitle>
                                 <CardDescription>{fractalsByArtist.length} Fractal{fractalsByArtist.length > 1 ? 's' : ''} Owned</CardDescription>
                             </div>
                         </CardHeader>
-                        <CardContent className="grid gap-4 flex-grow">
+                        <CardContent className="grid gap-4 flex-grow cursor-pointer" onClick={() => handleCardClick(artistId)}>
                              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                                 <span className="text-sm text-muted-foreground">Total Invested</span>
                                 <span className="font-semibold">${totalInvestment.toLocaleString()}</span>
@@ -163,9 +175,14 @@ export function CollectionClient() {
                                 <span>Gain/Loss:</span>
                                 <span>${gainLoss.toLocaleString(undefined, { signDisplay: 'always' })}</span>
                             </div>
-                            <Link href={`/artist/${artist.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 mt-4 text-primary hover:underline text-xs">
-                                View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
-                            </Link>
+                            <div className="flex justify-between items-center w-full mt-4">
+                                <Link href={`/artist/${artist.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-primary hover:underline text-xs">
+                                    View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
+                                </Link>
+                                <Button size="sm" variant="outline" onClick={(e) => handleSellClick(e, artist)}>
+                                    <DollarSign className="mr-1 h-3 w-3" /> Sell
+                                </Button>
+                            </div>
                         </CardFooter>
                     </Card>
                   )
@@ -176,6 +193,12 @@ export function CollectionClient() {
                 onClose={handleCloseDialog}
                 artist={selectedArtist}
                 ownedFractals={ownedFractalsForSelectedArtist}
+            />
+            <SellDialog
+                isOpen={!!artistToSell}
+                onClose={handleCloseSellDialog}
+                artist={artistToSell}
+                ownedFractals={ownedFractalsForSellDialog}
             />
         </>
       ) : (
