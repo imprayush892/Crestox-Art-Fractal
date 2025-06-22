@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -37,6 +38,7 @@ const profileFormSchema = z.object({
   location: z.string().max(100).optional(),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   style: z.string().max(100).optional(),
+  awardsAndExhibitions: z.string().max(1000).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -61,6 +63,7 @@ export default function CreateArtistProfilePage() {
       location: "",
       website: "",
       style: "",
+      awardsAndExhibitions: "",
     },
     mode: "onChange",
   });
@@ -136,6 +139,26 @@ export default function CreateArtistProfilePage() {
                     </FormControl>
                      <FormDescription>
                       Share your story, your process, and what inspires you.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="awardsAndExhibitions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Awards & Exhibitions</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="List any notable awards, exhibitions, or publications..."
+                        className="resize-y min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      This adds to your credibility and is factored into artwork evaluations.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

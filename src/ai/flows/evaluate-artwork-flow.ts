@@ -11,16 +11,16 @@ import {z} from 'genkit';
 import { type AIScorecardBreakdown } from '@/lib/data';
 
 const rubric = [
-    { id: 1, criterion: 'Artist Reputation/Notability', type: 'Manual', weight: 10 },
-    { id: 2, criterion: 'Awards & Exhibitions', type: 'Manual', weight: 4 },
-    { id: 3, criterion: 'Subject/Cultural Significance', type: 'Manual', weight: 3 },
-    { id: 4, criterion: 'Personal/Emotional Significance', type: 'Manual', weight: 2 },
-    { id: 5, criterion: 'Time Spent / Effort', type: 'Manual', weight: 3 },
-    { id: 6, criterion: 'Artist’s Intent/Theme', type: 'Manual', weight: 2 },
-    { id: 7, criterion: 'Uniqueness/Originality', type: 'Manual', weight: 2 },
-    { id: 8, criterion: 'Biographical/Contextual Relevance', type: 'Manual', weight: 1 },
-    { id: 9, criterion: 'Commission/Patronage', type: 'Manual', weight: 1 },
-    { id: 10, criterion: 'Title/Statement Significance', type: 'Manual', weight: 1 },
+    { id: 1, criterion: 'Artist Reputation/Notability', type: 'AI', weight: 10 },
+    { id: 2, criterion: 'Awards & Exhibitions', type: 'AI', weight: 4 },
+    { id: 3, criterion: 'Subject/Cultural Significance', type: 'AI', weight: 3 },
+    { id: 4, criterion: 'Personal/Emotional Significance', type: 'AI', weight: 2 },
+    { id: 5, criterion: 'Time Spent / Effort', type: 'AI', weight: 3 },
+    { id: 6, criterion: 'Artist’s Intent/Theme', type: 'AI', weight: 2 },
+    { id: 7, criterion: 'Uniqueness/Originality', type: 'AI', weight: 2 },
+    { id: 8, criterion: 'Biographical/Contextual Relevance', type: 'AI', weight: 1 },
+    { id: 9, criterion: 'Commission/Patronage', type: 'AI', weight: 1 },
+    { id: 10, criterion: 'Title/Statement Significance', type: 'AI', weight: 1 },
     { id: 11, criterion: 'Rule-of-Thirds Alignment', type: 'AI', weight: 1 },
     { id: 12, criterion: 'Symmetry/Visual Balance', type: 'AI', weight: 1 },
     { id: 13, criterion: 'Focal Point Clarity', type: 'AI', weight: 1 },
@@ -114,12 +114,20 @@ const rubric = [
 ];
 
 const EvaluateArtworkInputSchema = z.object({
-  photoDataUri: z
-    .string()
-    .describe(
-      "A photo of the artwork, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
+  photoDataUri: z.string().describe(
+    "A photo of the artwork, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+  ),
+  title: z.string(),
+  description: z.string(),
+  subjectSignificance: z.string().optional(),
+  personalSignificance: z.string().optional(),
+  timeEffort: z.string().optional(),
+  biographicalContext: z.string().optional(),
+  commissionPatronage: z.string().optional(),
+  artistBio: z.string(),
+  awardsAndExhibitions: z.string().optional(),
 });
+
 
 const AiCriterionScoreSchema = z.object({
   id: z.number().describe('The ID of the criterion from the rubric (e.g., 11 for Rule-of-Thirds).'),
@@ -146,17 +154,41 @@ const evaluationPrompt = ai.definePrompt({
   name: 'evaluateArtworkPrompt',
   input: {schema: EvaluateArtworkInputSchema},
   output: {schema: ArtworkAnalysisSchema},
-  prompt: `You are an expert art evaluator with deep knowledge of art history, composition, and materials science. Your task is to analyze the provided artwork image and score it based on a comprehensive 100-point rubric.
+  prompt: `You are an expert art evaluator and appraiser with deep knowledge of art history, composition, and materials science. Your task is to analyze the provided artwork image and associated context, then score it based on a comprehensive 100-point rubric.
 
-You must only evaluate the criteria marked as "AI". For each AI criterion, provide a score from 0 to 10 based on your expert analysis of the image. You must return an array of scores, where each object contains the criterion ID and your assigned score.
+You must provide a score from 0 to 10 for every single criterion marked with type "AI" in the rubric below.
+
+**Evaluation Instructions:**
+1.  **Image-Based Criteria:** For criteria related to composition, color, texture, technique, condition, and material, your primary source is the artwork image.
+2.  **Context-Based Criteria:** For criteria related to the artist and the artwork's narrative, you must evaluate the provided text. Score based on the quality, credibility, and relevance of the information in relation to the artwork image. For example, a high score for "Artist's Intent" requires a compelling statement that is clearly reflected in the visual work.
+3.  **Inferred Criteria:** For criteria like "Artist Reputation" and "Uniqueness", synthesize information from the artist's bio, awards, and the artwork itself to make an expert judgment.
 
 **Evaluation Rubric:**
-(The full rubric is provided to you for context on weights and criteria, but you will only score items with Type='AI')
+(You will score ALL items with Type='AI')
 ${rubric.map(item => `| ${item.id} | ${item.criterion} | ${item.type} | ${item.weight}% |`).join('\n')}
 
-Please analyze the following artwork and return your scores for all AI criteria.
+---
+**CONTEXT FOR EVALUATION**
 
-Artwork to analyze: {{media url=photoDataUri}}
+**Artwork Information:**
+- Title: {{{title}}}
+- Description (Artist's Intent/Theme): {{{description}}}
+- Subject/Cultural Significance Statement: {{{subjectSignificance}}}
+- Personal/Emotional Significance Statement: {{{personalSignificance}}}
+- Time Spent / Effort Statement: {{{timeEffort}}}
+- Biographical/Contextual Relevance Statement: {{{biographicalContext}}}
+- Commission/Patronage Statement: {{{commissionPatronage}}}
+
+**Artist Information:**
+- Artist Bio: {{{artistBio}}}
+- Artist Awards & Exhibitions: {{{awardsAndExhibitions}}}
+
+---
+**ARTWORK TO ANALYZE**
+{{media url=photoDataUri}}
+
+---
+Please analyze the artwork and context, then return your scores for all AI criteria.
 `,
 });
 
@@ -174,12 +206,14 @@ const evaluateArtworkFlow = ai.defineFlow(
     
     const breakdown: AIScorecardBreakdown[] = [];
     let totalWeightedScore = 0;
+    let totalPossibleWeight = 0;
 
     const aiScores = new Map(output.scores.map(item => [item.id, item.score]));
 
     rubric.forEach(item => {
         if (item.type === 'AI') {
             const score = aiScores.get(item.id);
+            totalPossibleWeight += item.weight;
             if (score !== undefined) {
                 // Normalize score to 0-1 and multiply by its weight percentage.
                 const weightedScore = (score / 10) * item.weight;
@@ -195,11 +229,9 @@ const evaluateArtworkFlow = ai.defineFlow(
         }
     });
 
-    const finalScore = Math.round(totalWeightedScore);
+    const finalScore = totalPossibleWeight > 0 ? Math.round((totalWeightedScore / totalPossibleWeight) * 100) : 0;
 
     let grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
-    // Grading thresholds are based on the final score, which is on a 100-point scale.
-    // The AI contributes a maximum of 71 points. We grade based on the achieved points.
     if (finalScore > 80) grade = 'AAA';
     else if (finalScore > 60) grade = 'AA';
     else if (finalScore > 40) grade = 'A+';

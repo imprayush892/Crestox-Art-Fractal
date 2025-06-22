@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm, Controller } from 'react-hook-form';
@@ -42,6 +43,7 @@ const profileFormSchema = z.object({
   location: z.string().max(100).optional(),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   style: z.string().max(100).optional(),
+  awardsAndExhibitions: z.string().max(1000).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -62,6 +64,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
       location: artist.location || "",
       website: artist.website || "",
       style: artist.style || "",
+      awardsAndExhibitions: artist.awardsAndExhibitions || "",
     },
     mode: "onChange",
   });
@@ -75,6 +78,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
         location: artist.location || "",
         website: artist.website || "",
         style: artist.style || "",
+        awardsAndExhibitions: artist.awardsAndExhibitions || "",
       });
       setAvatarPreview(artist.avatar || null);
     }
@@ -106,6 +110,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
         location: data.location,
         website: data.website,
         style: data.style,
+        awardsAndExhibitions: data.awardsAndExhibitions,
       });
       toast({
         title: "Profile Updated!",
@@ -192,6 +197,27 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
               </FormControl>
                <FormDescription>
                 Share your story, your process, and what inspires you.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="awardsAndExhibitions"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Awards & Exhibitions</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="List any notable awards, exhibitions, or publications..."
+                  className="resize-y min-h-[100px]"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                This adds to your credibility and is factored into artwork evaluations.
               </FormDescription>
               <FormMessage />
             </FormItem>

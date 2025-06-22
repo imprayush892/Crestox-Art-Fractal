@@ -1,4 +1,5 @@
 
+
 export interface AIScorecardBreakdown {
   id: number;
   criterion: string;
@@ -16,6 +17,7 @@ export interface Artist {
   location?: string;
   website?: string;
   style?: string;
+  awardsAndExhibitions?: string;
   fractalPrice: number;
   priceHistory: { date: string; price: number }[];
   totalPortfolioValueHistory: { date: string; value: number }[];
@@ -59,6 +61,12 @@ const bios = [
 ];
 const locations = ['Berlin, Germany', 'Tokyo, Japan', 'New York, USA', 'London, UK', 'Virtual Realm', 'Cyber City', 'The Void'];
 const styles = ['Generative', 'Abstract', 'Algorithmic', 'Surreal', 'Minimalist', 'Glitch Art'];
+const awards = [
+    'Winner of the 2023 Algorithmic Art Prize.',
+    'Featured in the "Digital Dreams" exhibition at the Modern Art Gallery.',
+    'Recipient of the "Innovator in Code" grant.',
+    'Work acquired by the National Museum of Digital Art.'
+];
 
 const fractalAdjectives = ['Quantum', 'Cosmic', 'Galactic', 'Ephemeral', 'Crystalline', 'Solar', 'Veridian', 'Abyssal', 'Axiomatic', 'Digital', 'Chromatic', 'Ethereal', 'Chaotic', 'Frozen', 'Celestial', 'Prismatic', 'Lucid', 'Obsidian', 'Golden', 'Silent', 'Pulsing', 'Nebulous', 'Luminous', 'Woven', 'Glimmering'];
 const fractalNouns = ['Bloom', 'Web', 'Flare', 'Depth', 'Maze', 'Edge', 'Petal', 'Theory', 'Flame', 'Spiral', 'Matrix', 'Mechanics', 'Echo', 'Dream', 'Cascade', 'Rift', 'Monolith', 'Serenity', 'Vortex', 'Symmetry', 'Tapestry', 'Equation', 'Nebula', 'Singularity', 'Horizon'];
@@ -153,6 +161,7 @@ const tempArtists = (() => {
             location: getRandom(locations),
             website: `https://example.com/${name.replace(/\s+/g, '-').toLowerCase()}`,
             style: `${getRandom(styles)}, ${getRandom(styles)}`,
+            awardsAndExhibitions: getRandom(awards),
             totalEditions,
             availableEditions: randomInt(100, totalEditions),
         }

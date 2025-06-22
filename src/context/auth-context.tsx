@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { Artist, Fractal, AIScorecardBreakdown } from '@/lib/data';
@@ -35,7 +36,15 @@ type NewArtworkData = {
     estimatedValue: number;
     editionsToIssue: number;
     image: string; // data URI
+    subjectSignificance?: string;
+    personalSignificance?: string;
+    timeEffort?: string;
+    biographicalContext?: string;
+    commissionPatronage?: string;
 };
+
+type CreateArtistProfileData = Omit<Artist, 'id'|'avatar'|'fractalPrice'|'priceHistory'|'totalPortfolioValueHistory'|'totalEditions'|'availableEditions'|'userId'>;
+
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -54,7 +63,7 @@ interface AuthContextType {
   watchlist: string[];
   addToWatchlist: (artistId: string) => void;
   removeFromWatchlist: (artistId: string) => void;
-  createArtistProfile: (profileData: Omit<Artist, 'id'|'avatar'|'fractalPrice'|'priceHistory'|'totalPortfolioValueHistory'|'totalEditions'|'availableEditions'|'userId'>) => Promise<void>;
+  createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
   updateArtistProfile: (profileData: Partial<Omit<Artist, 'id' | 'userId'>>) => Promise<void>;
   addArtwork: (artworkData: NewArtworkData, evaluation: { aiScore: number, aiGrade: string, aiScorecard: AIScorecardBreakdown[] }) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: { title: string; description: string; }) => Promise<void>;
@@ -151,7 +160,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     setArtistProfile(null);
   };
 
-  const createArtistProfile = useCallback(async (profileData: Omit<Artist, 'id'|'avatar'|'fractalPrice'|'priceHistory'|'totalPortfolioValueHistory'|'totalEditions'|'availableEditions'|'userId'>) => {
+  const createArtistProfile = useCallback(async (profileData: CreateArtistProfileData) => {
     if (!user) throw new Error("User must be logged in to create a profile.");
 
     const newArtistData: Omit<Artist, 'id'> = {
@@ -161,6 +170,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         location: profileData.location,
         website: profileData.website,
         style: profileData.style,
+        awardsAndExhibitions: profileData.awardsAndExhibitions,
         avatar: 'https://placehold.co/100x100.png',
         fractalPrice: 0,
         priceHistory: [],

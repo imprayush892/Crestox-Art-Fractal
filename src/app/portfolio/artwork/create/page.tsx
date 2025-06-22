@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm, Controller } from 'react-hook-form';
@@ -17,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -41,6 +43,11 @@ const artworkFormSchema = z.object({
       (file) => ACCEPTED_IMAGE_TYPES.includes(file?.type),
       ".jpg, .jpeg, .png and .webp files are accepted."
     ),
+  subjectSignificance: z.string().max(500).optional(),
+  personalSignificance: z.string().max(500).optional(),
+  timeEffort: z.string().max(500).optional(),
+  biographicalContext: z.string().max(500).optional(),
+  commissionPatronage: z.string().max(500).optional(),
 });
 
 type ArtworkFormValues = z.infer<typeof artworkFormSchema>;
@@ -90,6 +97,11 @@ export default function CreateArtworkPage() {
       estimatedValue: 1000,
       editionsToIssue: 100,
       image: undefined,
+      subjectSignificance: "",
+      personalSignificance: "",
+      timeEffort: "",
+      biographicalContext: "",
+      commissionPatronage: "",
     }
   });
 
@@ -106,7 +118,7 @@ export default function CreateArtworkPage() {
   };
 
   async function onSubmit(data: ArtworkFormValues) {
-    if (!addArtwork) {
+    if (!addArtwork || !artistProfile) {
         toast({ variant: 'destructive', title: 'Error', description: 'Creation function not available.'});
         return;
     }
@@ -118,7 +130,20 @@ export default function CreateArtworkPage() {
         reader.onloadend = async () => {
             const imageDataUri = reader.result as string;
 
-            const evaluationResult = await evaluateArtwork({ photoDataUri: imageDataUri });
+            const evaluationInput = {
+                photoDataUri: imageDataUri,
+                title: data.title,
+                description: data.description,
+                subjectSignificance: data.subjectSignificance,
+                personalSignificance: data.personalSignificance,
+                timeEffort: data.timeEffort,
+                biographicalContext: data.biographicalContext,
+                commissionPatronage: data.commissionPatronage,
+                artistBio: artistProfile.bio,
+                awardsAndExhibitions: artistProfile.awardsAndExhibitions
+            };
+
+            const evaluationResult = await evaluateArtwork(evaluationInput);
             setProgress(100);
 
             await addArtwork(
@@ -222,7 +247,7 @@ export default function CreateArtworkPage() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel>Description / Artist's Statement</FormLabel>
                         <FormControl>
                           <Textarea
                             placeholder="Describe your artwork, its inspiration, and the process..."
@@ -268,6 +293,81 @@ export default function CreateArtworkPage() {
                       )}
                     />
                   </div>
+
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                      <AccordionTrigger>
+                        <h3 className="text-lg font-medium">Optional: Add Detailed Context for AI Evaluation</h3>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-6 pt-6">
+                        <FormField
+                            control={form.control}
+                            name="subjectSignificance"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Subject/Cultural Significance</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Explain any historical, cultural, or notable relevance of your artwork's subject." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="personalSignificance"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Personal/Emotional Significance</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Describe the personal story or emotional meaning behind this piece." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="timeEffort"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Time Spent / Effort</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., 80 hours of rendering, 3 months of concept work" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="biographicalContext"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Biographical/Contextual Relevance</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="How does this artwork relate to a specific period in your life or a broader art movement?" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="commissionPatronage"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Commission/Patronage Information</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., Commissioned by the Museum of Digital Art" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </div>
               </fieldset>
 
