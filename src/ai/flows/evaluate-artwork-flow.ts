@@ -1,10 +1,9 @@
+
 'use server';
 /**
  * @fileOverview An artwork evaluation AI agent.
  *
  * - evaluateArtwork - A function that handles the artwork evaluation process.
- * - EvaluateArtworkInput - The input type for the evaluateArtwork function.
- * - EvaluateArtworkOutput - The return type for the evaluateArtwork function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -121,14 +120,6 @@ const EvaluateArtworkInputSchema = z.object({
       "A photo of the artwork, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
-type EvaluateArtworkInput = z.infer<typeof EvaluateArtworkInputSchema>;
-
-
-interface EvaluateArtworkOutput {
-  finalScore: number;
-  grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
-  breakdown: AIScorecardBreakdown[];
-}
 
 const AiCriterionScoreSchema = z.object({
   id: z.number().describe('The ID of the criterion from the rubric (e.g., 11 for Rule-of-Thirds).'),
@@ -139,9 +130,14 @@ const ArtworkAnalysisSchema = z.object({
     scores: z.array(AiCriterionScoreSchema).describe('An array of scores for each AI-evaluated criterion.'),
 });
 
+interface EvaluateArtworkOutput {
+    finalScore: number;
+    grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
+    breakdown: AIScorecardBreakdown[];
+}
 
 export async function evaluateArtwork(
-  input: EvaluateArtworkInput
+  input: z.infer<typeof EvaluateArtworkInputSchema>
 ): Promise<EvaluateArtworkOutput> {
   return evaluateArtworkFlow(input);
 }
@@ -185,7 +181,8 @@ const evaluateArtworkFlow = ai.defineFlow(
         if (item.type === 'AI') {
             const score = aiScores.get(item.id);
             if (score !== undefined) {
-                const weightedScore = score * item.weight;
+                // Normalize score to 0-1 and multiply by its weight percentage.
+                const weightedScore = (score / 10) * item.weight;
                 totalWeightedScore += weightedScore;
                 breakdown.push({
                     id: item.id,
@@ -201,6 +198,8 @@ const evaluateArtworkFlow = ai.defineFlow(
     const finalScore = Math.round(totalWeightedScore);
 
     let grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
+    // Grading thresholds are based on the final score, which is on a 100-point scale.
+    // The AI contributes a maximum of 71 points. We grade based on the achieved points.
     if (finalScore > 80) grade = 'AAA';
     else if (finalScore > 60) grade = 'AA';
     else if (finalScore > 40) grade = 'A+';
