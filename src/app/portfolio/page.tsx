@@ -179,7 +179,9 @@ export default function PortfolioPage() {
                                     <TableCell className="font-medium">{fractal.title}</TableCell>
                                     <TableCell>${fractal.price.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="outline" size="sm" disabled>Edit</Button>
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link href={`/portfolio/artwork/edit/${fractal.id}`}>Edit</Link>
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             )) : (

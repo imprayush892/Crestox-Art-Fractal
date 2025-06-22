@@ -4,7 +4,7 @@
 import type { Artist, Fractal } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection, addDoc, updateDoc } from 'firebase/firestore';
+import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection, addDoc, updateDoc, getDoc } from 'firebase/firestore';
 
 export interface ResaleListing {
   id: string;
@@ -57,6 +57,7 @@ interface AuthContextType {
   createArtistProfile: (profileData: Omit<Artist, 'id'|'avatar'|'fractalPrice'|'priceHistory'|'totalPortfolioValueHistory'|'totalEditions'|'availableEditions'|'userId'>) => Promise<void>;
   updateArtistProfile: (profileData: Partial<Omit<Artist, 'id' | 'userId'>>) => Promise<void>;
   addArtwork: (artworkData: NewArtworkData) => Promise<void>;
+  updateArtworkDetails: (artworkId: string, data: { title: string; description: string; }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -285,6 +286,34 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         }
     }
   }, [user, artistProfile, artists]);
+
+  const updateArtworkDetails = useCallback(async (artworkId: string, data: { title: string; description: string; }) => {
+    if (!user || !artistProfile) throw new Error("Artist profile not found.");
+
+    if (db) {
+        const artworkRef = doc(db, 'fractals', artworkId);
+        const artworkDoc = await getDoc(artworkRef);
+
+        if (!artworkDoc.exists() || artworkDoc.data().artistId !== artistProfile.id) {
+            throw new Error("Artwork not found or you do not have permission to edit it.");
+        }
+        
+        await updateDoc(artworkRef, {
+            title: data.title,
+            description: data.description,
+        });
+
+    } else {
+        console.warn("Firebase not configured. Simulating artwork update locally.");
+        setFractals(prevFractals =>
+            prevFractals.map(f =>
+                f.id === artworkId && f.artistId === artistProfile.id
+                    ? { ...f, title: data.title, description: data.description }
+                    : f
+            )
+        );
+    }
+  }, [user, artistProfile]);
 
   const addToWatchlist = (artistId: string) => {
     setWatchlist(prev => [...new Set([...prev, artistId])]);
@@ -592,7 +621,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       }
   });
 
-  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile, updateArtistProfile, addArtwork };
+  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile, updateArtistProfile, addArtwork, updateArtworkDetails };
 
   return (
     <AuthContext.Provider value={value}>
