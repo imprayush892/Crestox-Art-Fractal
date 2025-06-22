@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Artist, Fractal } from '@/lib/data';
+import type { Artist, Fractal, AIScorecardBreakdown } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection, addDoc, updateDoc, getDoc } from 'firebase/firestore';
@@ -56,7 +56,7 @@ interface AuthContextType {
   removeFromWatchlist: (artistId: string) => void;
   createArtistProfile: (profileData: Omit<Artist, 'id'|'avatar'|'fractalPrice'|'priceHistory'|'totalPortfolioValueHistory'|'totalEditions'|'availableEditions'|'userId'>) => Promise<void>;
   updateArtistProfile: (profileData: Partial<Omit<Artist, 'id' | 'userId'>>) => Promise<void>;
-  addArtwork: (artworkData: NewArtworkData, aiScore: number, aiGrade: string) => Promise<void>;
+  addArtwork: (artworkData: NewArtworkData, evaluation: { aiScore: number, aiGrade: string, aiScorecard: AIScorecardBreakdown[] }) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: { title: string; description: string; }) => Promise<void>;
 }
 
@@ -197,7 +197,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     }
   }, [user, artistProfile]);
   
-  const addArtwork = useCallback(async (artworkData: NewArtworkData, aiScore: number, aiGrade: string) => {
+  const addArtwork = useCallback(async (artworkData: NewArtworkData, evaluation: { aiScore: number, aiGrade: string, aiScorecard: AIScorecardBreakdown[] }) => {
     if (!user || !artistProfile) throw new Error("Artist profile not found.");
 
     if (db) {
@@ -223,8 +223,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 priceHistory: [{ date: new Date().toISOString(), price: artworkData.estimatedValue }],
                 editions: 1,
                 editionsAvailable: 1,
-                aiScore: aiScore,
-                aiGrade: aiGrade,
+                aiScore: evaluation.aiScore,
+                aiGrade: evaluation.aiGrade,
+                aiScorecard: evaluation.aiScorecard,
             };
             const newFractalRef = doc(fractalCollectionRef);
             transaction.set(newFractalRef, newFractalData);
@@ -263,8 +264,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             priceHistory: [{ date: new Date().toISOString(), price: artworkData.estimatedValue }],
             editions: 1,
             editionsAvailable: 1,
-            aiScore: aiScore,
-            aiGrade: aiGrade,
+            aiScore: evaluation.aiScore,
+            aiGrade: evaluation.aiGrade,
+            aiScorecard: evaluation.aiScorecard,
         };
         setFractals(prev => [...prev, createdFractal]);
 

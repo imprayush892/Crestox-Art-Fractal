@@ -1,4 +1,12 @@
 
+export interface AIScorecardBreakdown {
+  id: number;
+  criterion: string;
+  score: number;
+  weight: number;
+  weightedScore: number;
+}
+
 export interface Artist {
   id: string;
   userId?: string;
@@ -30,6 +38,7 @@ export interface Fractal {
   editionsAvailable?: number;
   aiScore?: number;
   aiGrade?: string;
+  aiScorecard?: AIScorecardBreakdown[];
 }
 
 // --- Data Generation ---

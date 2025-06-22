@@ -9,8 +9,112 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { type AIScorecardBreakdown } from '@/lib/data';
 
-const EvaluateArtworkInputSchema = z.object({
+const rubric = [
+    { id: 1, criterion: 'Artist Reputation/Notability', type: 'Manual', weight: 10 },
+    { id: 2, criterion: 'Awards & Exhibitions', type: 'Manual', weight: 4 },
+    { id: 3, criterion: 'Subject/Cultural Significance', type: 'Manual', weight: 3 },
+    { id: 4, criterion: 'Personal/Emotional Significance', type: 'Manual', weight: 2 },
+    { id: 5, criterion: 'Time Spent / Effort', type: 'Manual', weight: 3 },
+    { id: 6, criterion: 'Artist’s Intent/Theme', type: 'Manual', weight: 2 },
+    { id: 7, criterion: 'Uniqueness/Originality', type: 'Manual', weight: 2 },
+    { id: 8, criterion: 'Biographical/Contextual Relevance', type: 'Manual', weight: 1 },
+    { id: 9, criterion: 'Commission/Patronage', type: 'Manual', weight: 1 },
+    { id: 10, criterion: 'Title/Statement Significance', type: 'Manual', weight: 1 },
+    { id: 11, criterion: 'Rule-of-Thirds Alignment', type: 'AI', weight: 1 },
+    { id: 12, criterion: 'Symmetry/Visual Balance', type: 'AI', weight: 1 },
+    { id: 13, criterion: 'Focal Point Clarity', type: 'AI', weight: 1 },
+    { id: 14, criterion: 'Leading Lines', type: 'AI', weight: 1 },
+    { id: 15, criterion: 'Depth/Perspective Cues', type: 'AI', weight: 1 },
+    { id: 16, criterion: 'Visual Complexity / Detail', type: 'AI', weight: 1 },
+    { id: 17, criterion: 'Negative Space Utilization', type: 'AI', weight: 1 },
+    { id: 18, criterion: 'Subject Scale / Proportion', type: 'AI', weight: 1 },
+    { id: 19, criterion: 'Pattern/Shape Repetition', type: 'AI', weight: 1 },
+    { id: 20, criterion: 'Unique Viewpoint / Angle', type: 'AI', weight: 1 },
+    { id: 21, criterion: 'Color Harmony', type: 'AI', weight: 0.5 },
+    { id: 22, criterion: 'Dominant Hue Proportion', type: 'AI', weight: 0.5 },
+    { id: 23, criterion: 'Color Saturation', type: 'AI', weight: 0.5 },
+    { id: 24, criterion: 'Luminance Contrast', type: 'AI', weight: 0.5 },
+    { id: 25, criterion: 'Brightness Distribution', type: 'AI', weight: 0.5 },
+    { id: 26, criterion: 'Warm/Cool Color Balance', type: 'AI', weight: 0.5 },
+    { id: 27, criterion: 'Color Variety', type: 'AI', weight: 0.5 },
+    { id: 28, criterion: 'Hue Distribution Uniformity', type: 'AI', weight: 0.5 },
+    { id: 29, criterion: 'Tone Distribution', type: 'AI', weight: 0.5 },
+    { id: 30, criterion: 'Exposure Quality', type: 'AI', weight: 0.5 },
+    { id: 31, criterion: 'Brushstroke Texture (Surface Topography)', type: 'AI', weight: 1 },
+    { id: 32, criterion: 'Stroke Direction Consistency', type: 'AI', weight: 1 },
+    { id: 33, criterion: 'Edge Neatness / Line Precision', type: 'AI', weight: 1 },
+    { id: 34, criterion: 'Gradient Smoothness', type: 'AI', weight: 1 },
+    { id: 35, criterion: 'Stroke Thickness Uniformity', type: 'AI', weight: 1 },
+    { id: 36, criterion: 'Fine Detail Clarity', type: 'AI', weight: 1 },
+    { id: 37, criterion: 'Smudge/Blur Detection', type: 'AI', weight: 1 },
+    { id: 38, criterion: 'Paint Drip/Run Detection', type: 'AI', weight: 1 },
+    { id: 39, criterion: 'Overpaint/Correction Marks', type: 'AI', weight: 1 },
+    { id: 40, criterion: 'Surface Relief / Impasto Presence', type: 'AI', weight: 1 },
+    { id: 41, criterion: 'Impasto Uniformity', type: 'AI', weight: 1 },
+    { id: 42, criterion: 'Finishing Style (Matte vs Gloss)', type: 'AI', weight: 1 },
+    { id: 43, criterion: 'Blending Quality', type: 'AI', weight: 1 },
+    { id: 44, criterion: 'Medium Identification', type: 'AI', weight: 1 },
+    { id: 45, criterion: 'Brush vs Pen Stroke Identification', type: 'AI', weight: 1 },
+    { id: 46, criterion: 'Substrate/Support Type', type: 'AI', weight: 1 },
+    { id: 47, criterion: 'Canvas Weave Clarity', type: 'AI', weight: 0.5 },
+    { id: 48, criterion: 'Wood Grain Visibility', type: 'AI', weight: 0.5 },
+    { id: 49, criterion: 'Frame Presence & Quality', type: 'AI', weight: 0.5 },
+    { id: 50, criterion: 'Frame Condition', type: 'AI', weight: 0.5 },
+    { id: 51, criterion: 'Patina/Finish Consistency (Metal)', type: 'AI', weight: 0.5 },
+    { id: 52, criterion: 'Pigment Granularity', type: 'AI', weight: 0.5 },
+    { id: 53, criterion: 'Adhesive/Joints (Collage/Sculpture)', type: 'AI', weight: 0.5 },
+    { id: 54, criterion: 'Foundry/Casting Marks', type: 'AI', weight: 1 },
+    { id: 55, criterion: 'Joint Seams (Sculptures)', type: 'AI', weight: 0.5 },
+    { id: 56, criterion: 'Signature Presence', type: 'AI', weight: 2 },
+    { id: 57, criterion: 'Signature Style Match', type: 'AI', weight: 1 },
+    { id: 58, criterion: 'Date/Inscription Consistency', type: 'AI', weight: 1 },
+    { id: 59, criterion: 'Certificate Authenticity', type: 'AI', weight: 1 },
+    { id: 60, criterion: 'Provenance/Label Detection', type: 'AI', weight: 1 },
+    { id: 61, criterion: 'Edition/Serial Number', type: 'AI', weight: 1 },
+    { id: 62, criterion: 'Watermark (Paper)', type: 'AI', weight: 1 },
+    { id: 63, criterion: 'Gallery/Museum Stamps', type: 'AI', weight: 1 },
+    { id: 64, criterion: 'Style Consistency', type: 'AI', weight: 1 },
+    { id: 65, criterion: 'Forgery Artifact Detection', type: 'AI', weight: 1 },
+    { id: 66, criterion: 'Artist’s Monogram or Mark', type: 'AI', weight: 1 },
+    { id: 67, criterion: 'Hidden/Underpainting Signature', type: 'AI', weight: 1 },
+    { id: 68, criterion: 'Inventory/Accession Number', type: 'AI', weight: 1 },
+    { id: 69, criterion: 'Digital/QR Authentication', type: 'AI', weight: 1 },
+    { id: 70, criterion: 'Craquelure (Fine Cracks)', type: 'AI', weight: 1 },
+    { id: 71, criterion: 'Large Splits/Cracks', type: 'AI', weight: 1 },
+    { id: 72, criterion: 'Paint Loss / Bare Areas', type: 'AI', weight: 1 },
+    { id: 73, criterion: 'Paint Flaking', type: 'AI', weight: 0.5 },
+    { id: 74, criterion: 'Fading / Color Discoloration', type: 'AI', weight: 0.5 },
+    { id: 75, criterion: 'Stains / Dirt Spots', type: 'AI', weight: 0.5 },
+    { id: 76, criterion: 'Tears / Holes', type: 'AI', weight: 1 },
+    { id: 77, criterion: 'Edge/Corner Damage', type: 'AI', weight: 0.5 },
+    { id: 78, criterion: 'Surface Grime or Yellowed Varnish', type: 'AI', weight: 0.5 },
+    { id: 79, criterion: 'Warping / Bulging', type: 'AI', weight: 1 },
+    { id: 80, criterion: 'Missing Sculpture Parts', type: 'AI', weight: 1 },
+    { id: 81, criterion: 'Rust / Metal Corrosion', type: 'AI', weight: 1 },
+    { id: 82, criterion: 'Mold / Mildew', type: 'AI', weight: 1 },
+    { id: 83, criterion: 'Water Damage / Blistering', type: 'AI', weight: 1 },
+    { id: 84, criterion: 'Varnish Cracking', type: 'AI', weight: 0.5 },
+    { id: 85, criterion: 'Over-Cleaning Damage', type: 'AI', weight: 0.5 },
+    { id: 86, criterion: 'Foxing / Age Spots', type: 'AI', weight: 0.5 },
+    { id: 87, criterion: 'Frame or Mount Damage', type: 'AI', weight: 0.5 },
+    { id: 88, criterion: 'Sunlight Bleaching', type: 'AI', weight: 0.5 },
+    { id: 89, criterion: 'Surface Abrasion / Scratches', type: 'AI', weight: 0.5 },
+    { id: 90, criterion: 'Canvas/Panel Distortion', type: 'AI', weight: 0.5 },
+    { id: 91, criterion: 'Underpainting / Pentimenti Visible', type: 'AI', weight: 0.5 },
+    { id: 92, criterion: 'Lining or Patch Evidence', type: 'AI', weight: 0.5 },
+    { id: 93, criterion: 'Insect/Animal Damage', type: 'AI', weight: 0.5 },
+    { id: 94, criterion: 'Salt Efflorescence', type: 'AI', weight: 0.5 },
+    { id: 95, criterion: 'Uneven Tint / Discoloration', type: 'AI', weight: 0.5 },
+    { id: 96, criterion: 'UV Fluorescence Anomalies', type: 'AI', weight: 0.5 },
+    { id: 97, criterion: 'Paint Bleed (Water Runs)', type: 'AI', weight: 0.5 },
+    { id: 98, criterion: 'Loose/Flaking Paint', type: 'AI', weight: 0.5 },
+    { id: 99, criterion: 'Pigment Blooming', type: 'AI', weight: 0.5 },
+    { id: 100, criterion: 'Residue / Tape Marks', type: 'AI', weight: 0.5 },
+];
+
+export const EvaluateArtworkInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
@@ -19,15 +123,22 @@ const EvaluateArtworkInputSchema = z.object({
 });
 export type EvaluateArtworkInput = z.infer<typeof EvaluateArtworkInputSchema>;
 
-const EvaluateArtworkOutputSchema = z.object({
-  finalScore: z
-    .number()
-    .describe('The final weighted score of the artwork from 0 to 100.'),
-  grade: z
-    .enum(['AAA', 'AA', 'A+', 'A', 'A-'])
-    .describe('The final grade assigned to the artwork.'),
+
+export interface EvaluateArtworkOutput {
+  finalScore: number;
+  grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
+  breakdown: AIScorecardBreakdown[];
+}
+
+const AiCriterionScoreSchema = z.object({
+  id: z.number().describe('The ID of the criterion from the rubric (e.g., 11 for Rule-of-Thirds).'),
+  score: z.number().min(0).max(10).describe('The score assigned by the AI for this criterion (0-10).'),
 });
-export type EvaluateArtworkOutput = z.infer<typeof EvaluateArtworkOutputSchema>;
+
+const ArtworkAnalysisSchema = z.object({
+    scores: z.array(AiCriterionScoreSchema).describe('An array of scores for each AI-evaluated criterion.'),
+});
+
 
 export async function evaluateArtwork(
   input: EvaluateArtworkInput
@@ -35,127 +146,19 @@ export async function evaluateArtwork(
   return evaluateArtworkFlow(input);
 }
 
-const prompt = ai.definePrompt({
+const evaluationPrompt = ai.definePrompt({
   name: 'evaluateArtworkPrompt',
   input: {schema: EvaluateArtworkInputSchema},
-  output: {schema: EvaluateArtworkOutputSchema},
+  output: {schema: ArtworkAnalysisSchema},
   prompt: `You are an expert art evaluator with deep knowledge of art history, composition, and materials science. Your task is to analyze the provided artwork image and score it based on a comprehensive 100-point rubric.
 
-You must only evaluate the criteria marked as "AI". For each AI criterion, provide a score from 0 to 10. You must then calculate the final weighted score by multiplying each criterion's score by its weight and summing the results. Based on the final weighted score, assign a grade.
+You must only evaluate the criteria marked as "AI". For each AI criterion, provide a score from 0 to 10 based on your expert analysis of the image. You must return an array of scores, where each object contains the criterion ID and your assigned score.
 
 **Evaluation Rubric:**
+(The full rubric is provided to you for context on weights and criteria, but you will only score items with Type='AI')
+${rubric.map(item => `| ${item.id} | ${item.criterion} | ${item.type} | ${item.weight}% |`).join('\n')}
 
-| # | Criterion | Type | Weight (%) |
-|---|---|---|---:|
-| 1 | Artist Reputation/Notability | Manual | 10 |
-| 2 | Awards & Exhibitions | Manual | 4 |
-| 3 | Subject/Cultural Significance | Manual | 3 |
-| 4 | Personal/Emotional Significance | Manual | 2 |
-| 5 | Time Spent / Effort | Manual | 3 |
-| 6 | Artist’s Intent/Theme | Manual | 2 |
-| 7 | Uniqueness/Originality | Manual | 2 |
-| 8 | Biographical/Contextual Relevance | Manual | 1 |
-| 9 | Commission/Patronage | Manual | 1 |
-| 10 | Title/Statement Significance | Manual | 1 |
-| 11 | Rule-of-Thirds Alignment | AI | 1 |
-| 12 | Symmetry/Visual Balance | AI | 1 |
-| 13 | Focal Point Clarity | AI | 1 |
-| 14 | Leading Lines | AI | 1 |
-| 15 | Depth/Perspective Cues | AI | 1 |
-| 16 | Visual Complexity / Detail | AI | 1 |
-| 17 | Negative Space Utilization | AI | 1 |
-| 18 | Subject Scale / Proportion | AI | 1 |
-| 19 | Pattern/Shape Repetition | AI | 1 |
-| 20 | Unique Viewpoint / Angle | AI | 1 |
-| 21 | Color Harmony | AI | 0.5 |
-| 22 | Dominant Hue Proportion | AI | 0.5 |
-| 23 | Color Saturation | AI | 0.5 |
-| 24 | Luminance Contrast | AI | 0.5 |
-| 25 | Brightness Distribution | AI | 0.5 |
-| 26 | Warm/Cool Color Balance | AI | 0.5 |
-| 27 | Color Variety | AI | 0.5 |
-| 28 | Hue Distribution Uniformity | AI | 0.5 |
-| 29 | Tone Distribution | AI | 0.5 |
-| 30 | Exposure Quality | AI | 0.5 |
-| 31 | Brushstroke Texture (Surface Topography) | AI | 1 |
-| 32 | Stroke Direction Consistency | AI | 1 |
-| 33 | Edge Neatness / Line Precision | AI | 1 |
-| 34 | Gradient Smoothness | AI | 1 |
-| 35 | Stroke Thickness Uniformity | AI | 1 |
-| 36 | Fine Detail Clarity | AI | 1 |
-| 37 | Smudge/Blur Detection | AI | 1 |
-| 38 | Paint Drip/Run Detection | AI | 1 |
-| 39 | Overpaint/Correction Marks | AI | 1 |
-| 40 | Surface Relief / Impasto Presence | AI | 1 |
-| 41 | Impasto Uniformity | AI | 1 |
-| 42 | Finishing Style (Matte vs Gloss) | AI | 1 |
-| 43 | Blending Quality | AI | 1 |
-| 44 | Medium Identification | AI | 1 |
-| 45 | Brush vs Pen Stroke Identification | AI | 1 |
-| 46 | Substrate/Support Type | AI | 1 |
-| 47 | Canvas Weave Clarity | AI | 0.5 |
-| 48 | Wood Grain Visibility | AI | 0.5 |
-| 49 | Frame Presence & Quality | AI | 0.5 |
-| 50 | Frame Condition | AI | 0.5 |
-| 51 | Patina/Finish Consistency (Metal) | AI | 0.5 |
-| 52 | Pigment Granularity | AI | 0.5 |
-| 53 | Adhesive/Joints (Collage/Sculpture) | AI | 0.5 |
-| 54 | Foundry/Casting Marks | AI | 1 |
-| 55 | Joint Seams (Sculptures) | AI | 0.5 |
-| 56 | Signature Presence | AI | 2 |
-| 57 | Signature Style Match | AI | 1 |
-| 58 | Date/Inscription Consistency | AI | 1 |
-| 59 | Certificate Authenticity | AI | 1 |
-| 60 | Provenance/Label Detection | AI | 1 |
-| 61 | Edition/Serial Number | AI | 1 |
-| 62 | Watermark (Paper) | AI | 1 |
-| 63 | Gallery/Museum Stamps | AI | 1 |
-| 64 | Style Consistency | AI | 1 |
-| 65 | Forgery Artifact Detection | AI | 1 |
-| 66 | Artist’s Monogram or Mark | AI | 1 |
-| 67 | Hidden/Underpainting Signature | AI | 1 |
-| 68 | Inventory/Accession Number | AI | 1 |
-| 69 | Digital/QR Authentication | AI | 1 |
-| 70 | Craquelure (Fine Cracks) | AI | 1 |
-| 71 | Large Splits/Cracks | AI | 1 |
-| 72 | Paint Loss / Bare Areas | AI | 1 |
-| 73 | Paint Flaking | AI | 0.5 |
-| 74 | Fading / Color Discoloration | AI | 0.5 |
-| 75 | Stains / Dirt Spots | AI | 0.5 |
-| 76 | Tears / Holes | AI | 1 |
-| 77 | Edge/Corner Damage | AI | 0.5 |
-| 78 | Surface Grime or Yellowed Varnish | AI | 0.5 |
-| 79 | Warping / Bulging | AI | 1 |
-| 80 | Missing Sculpture Parts | AI | 1 |
-| 81 | Rust / Metal Corrosion | AI | 1 |
-| 82 | Mold / Mildew | AI | 1 |
-| 83 | Water Damage / Blistering | AI | 1 |
-| 84 | Varnish Cracking | AI | 0.5 |
-| 85 | Over-Cleaning Damage | AI | 0.5 |
-| 86 | Foxing / Age Spots | AI | 0.5 |
-| 87 | Frame or Mount Damage | AI | 0.5 |
-| 88 | Sunlight Bleaching | AI | 0.5 |
-| 89 | Surface Abrasion / Scratches | AI | 0.5 |
-| 90 | Canvas/Panel Distortion | AI | 0.5 |
-| 91 | Underpainting / Pentimenti Visible | AI | 0.5 |
-| 92 | Lining or Patch Evidence | AI | 0.5 |
-| 93 | Insect/Animal Damage | AI | 0.5 |
-| 94 | Salt Efflorescence | AI | 0.5 |
-| 95 | Uneven Tint / Discoloration | AI | 0.5 |
-| 96 | UV Fluorescence Anomalies | AI | 0.5 |
-| 97 | Paint Bleed (Water Runs) | AI | 0.5 |
-| 98 | Loose/Flaking Paint | AI | 0.5 |
-| 99 | Pigment Blooming | AI | 0.5 |
-| 100 | Residue / Tape Marks | AI | 0.5 |
-
-**Grading Scale:**
-- 81-100: AAA
-- 61-80: AA
-- 41-60: A+
-- 21-40: A
-- 0-20: A-
-
-Please analyze the following artwork and provide the final calculated score and grade.
+Please analyze the following artwork and return your scores for all AI criteria.
 
 Artwork to analyze: {{media url=photoDataUri}}
 `,
@@ -165,10 +168,45 @@ const evaluateArtworkFlow = ai.defineFlow(
   {
     name: 'evaluateArtworkFlow',
     inputSchema: EvaluateArtworkInputSchema,
-    outputSchema: EvaluateArtworkOutputSchema,
+    outputSchema: z.any(), // Output is manually constructed
   },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
+  async (input): Promise<EvaluateArtworkOutput> => {
+    const { output } = await evaluationPrompt(input);
+    if (!output) {
+      throw new Error("AI analysis failed to return scores.");
+    }
+    
+    const breakdown: AIScorecardBreakdown[] = [];
+    let totalWeightedScore = 0;
+
+    const aiScores = new Map(output.scores.map(item => [item.id, item.score]));
+
+    rubric.forEach(item => {
+        if (item.type === 'AI') {
+            const score = aiScores.get(item.id);
+            if (score !== undefined) {
+                const weightedScore = score * item.weight;
+                totalWeightedScore += weightedScore;
+                breakdown.push({
+                    id: item.id,
+                    criterion: item.criterion,
+                    score: score,
+                    weight: item.weight,
+                    weightedScore: weightedScore
+                });
+            }
+        }
+    });
+
+    const finalScore = Math.round(totalWeightedScore);
+
+    let grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
+    if (finalScore > 80) grade = 'AAA';
+    else if (finalScore > 60) grade = 'AA';
+    else if (finalScore > 40) grade = 'A+';
+    else if (finalScore > 20) grade = 'A';
+    else grade = 'A-';
+    
+    return { finalScore, grade, breakdown };
   }
 );

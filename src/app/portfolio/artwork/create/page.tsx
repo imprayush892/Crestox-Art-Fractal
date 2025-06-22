@@ -24,6 +24,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, UploadCloud, X, Wand2 } from 'lucide-react';
 import Image from 'next/image';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
+import { Progress } from '@/components/ui/progress';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -50,6 +51,7 @@ export default function CreateArtworkPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -60,6 +62,25 @@ export default function CreateArtworkPage() {
     }
   }, [isLoggedIn, artistProfile, router]);
   
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isSubmitting) {
+      setProgress(13); // Initial progress
+      timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 95) {
+            clearInterval(timer);
+            return prev;
+          }
+          return prev + 5;
+        });
+      }, 800);
+    } else {
+      setProgress(0);
+    }
+    return () => clearInterval(timer);
+  }, [isSubmitting]);
+
   const form = useForm<ArtworkFormValues>({
     resolver: zodResolver(artworkFormSchema),
     mode: "onChange",
@@ -97,15 +118,16 @@ export default function CreateArtworkPage() {
         reader.onloadend = async () => {
             const imageDataUri = reader.result as string;
 
-            // Step 1: Evaluate artwork
-            toast({ title: "AI Evaluation In Progress...", description: "Our AI is analyzing your artwork. This may take a moment." });
             const evaluationResult = await evaluateArtwork({ photoDataUri: imageDataUri });
+            setProgress(100);
 
-            // Step 2: Add artwork with evaluation results
             await addArtwork(
               { ...data, image: imageDataUri }, 
-              evaluationResult.finalScore, 
-              evaluationResult.grade
+              {
+                aiScore: evaluationResult.finalScore,
+                aiGrade: evaluationResult.grade,
+                aiScorecard: evaluationResult.breakdown,
+              }
             );
 
             toast({
@@ -121,8 +143,7 @@ export default function CreateArtworkPage() {
             title: "Uh oh! Something went wrong.",
             description: "There was a problem adding your artwork. Please try again.",
         });
-    } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   }
   
@@ -159,7 +180,7 @@ export default function CreateArtworkPage() {
                               {imagePreview ? (
                                 <div className="relative w-full h-full">
                                     <Image src={imagePreview} alt="Preview" fill style={{ objectFit: 'contain' }} />
-                                    <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 z-10 h-8 w-8" onClick={() => { form.setValue('image', null); setImagePreview(null); }}>
+                                    <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 z-10 h-8 w-8" onClick={() => { form.setValue('image', null); setImagePreview(null); }} disabled={isSubmitting}>
                                         <X className="h-4 w-4"/>
                                     </Button>
                                 </div>
@@ -170,7 +191,7 @@ export default function CreateArtworkPage() {
                                   <p className="text-xs text-muted-foreground">PNG, JPG, or WEBP (MAX. 5MB)</p>
                                 </div>
                               )}
-                              <input id="dropzone-file" type="file" className="hidden" onChange={handleImageChange} accept="image/png, image/jpeg, image/webp" />
+                              <input id="dropzone-file" type="file" className="hidden" onChange={handleImageChange} accept="image/png, image/jpeg, image/webp" disabled={isSubmitting}/>
                            </label>
                           </>
                         )}
@@ -181,70 +202,83 @@ export default function CreateArtworkPage() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Chromatic Bloom" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe your artwork, its inspiration, and the process..."
-                        className="resize-y min-h-[120px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <FormField
-                  control={form.control}
-                  name="estimatedValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estimated Value ($)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="1000" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        The value this piece adds to your portfolio.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="editionsToIssue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>New Portfolio Fractals to Issue</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="100" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        New 'fractals' to add to your total supply.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <fieldset disabled={isSubmitting}>
+                <div className="space-y-8">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Chromatic Bloom" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Describe your artwork, its inspiration, and the process..."
+                            className="resize-y min-h-[120px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <FormField
+                      control={form.control}
+                      name="estimatedValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Estimated Value ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="1000" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            The value this piece adds to your portfolio.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="editionsToIssue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>New Portfolio Fractals to Issue</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="100" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            New 'fractals' to add to your total supply.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </fieldset>
+
+              {isSubmitting && (
+                  <div className="space-y-2 pt-4">
+                      <Progress value={progress} className="w-full" />
+                      <p className="text-sm text-muted-foreground text-center animate-pulse">
+                          AI evaluation in progress... This may take up to a minute. Please don't leave the page.
+                      </p>
+                  </div>
+              )}
 
               <Button type="submit" disabled={isSubmitting} size="lg">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
