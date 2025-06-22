@@ -29,6 +29,14 @@ export interface OwnedFractal {
   listingId?: string;
 }
 
+type NewArtworkData = {
+    title: string;
+    description: string;
+    price: number;
+    editions: number;
+    image: string; // data URI
+};
+
 interface AuthContextType {
   isLoggedIn: boolean;
   user: { uid: string } | null;
@@ -46,8 +54,9 @@ interface AuthContextType {
   watchlist: string[];
   addToWatchlist: (artistId: string) => void;
   removeFromWatchlist: (artistId: string) => void;
-  createArtistProfile: (profileData: { name: string; bio: string }) => Promise<void>;
-  updateArtistProfile: (profileData: { name: string; bio: string; avatar: string; }) => Promise<void>;
+  createArtistProfile: (profileData: Omit<Artist, 'id'|'avatar'|'fractalPrice'|'priceHistory'|'totalPortfolioValueHistory'|'totalEditions'|'availableEditions'|'userId'>) => Promise<void>;
+  updateArtistProfile: (profileData: Partial<Omit<Artist, 'id' | 'userId'>>) => Promise<void>;
+  addArtwork: (artworkData: NewArtworkData) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -130,10 +139,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             setArtistProfile(null);
         }
     } else {
-        // In local/mock mode, a new user never has an existing artist profile
-        setArtistProfile(null);
+        const existingProfile = artists.find(a => a.userId === mockUser.uid);
+        setArtistProfile(existingProfile || null);
     }
-  }, []);
+  }, [artists]);
   
   const logout = () => {
     setUser(null);
@@ -141,13 +150,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     setArtistProfile(null);
   };
 
-  const createArtistProfile = useCallback(async (profileData: { name: string, bio: string }) => {
+  const createArtistProfile = useCallback(async (profileData: Omit<Artist, 'id'|'avatar'|'fractalPrice'|'priceHistory'|'totalPortfolioValueHistory'|'totalEditions'|'availableEditions'|'userId'>) => {
     if (!user) throw new Error("User must be logged in to create a profile.");
 
     const newArtistData: Omit<Artist, 'id'> = {
         userId: user.uid,
         name: profileData.name,
         bio: profileData.bio,
+        location: profileData.location,
+        website: profileData.website,
+        style: profileData.style,
         avatar: 'https://placehold.co/100x100.png',
         fractalPrice: 0,
         priceHistory: [],
@@ -160,7 +172,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         const docRef = await addDoc(collection(db, 'artists'), newArtistData);
         const createdArtist: Artist = { ...newArtistData, id: docRef.id };
         setArtistProfile(createdArtist);
-        setArtists(prev => [...prev, createdArtist]);
     } else {
         console.warn("Firebase not configured. Simulating artist creation locally.");
         const createdArtist: Artist = { ...newArtistData, id: `local-artist-${Date.now()}` };
@@ -170,21 +181,47 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
   }, [user]);
   
-  const updateArtistProfile = useCallback(async (profileData: { name: string; bio: string; avatar: string; }) => {
+  const updateArtistProfile = useCallback(async (profileData: Partial<Omit<Artist, 'id' | 'userId'>>) => {
     if (!user || !artistProfile) throw new Error("User or artist profile not available for update.");
-
-    const newProfileData = { ...artistProfile, ...profileData };
-
+    
     if (db) {
         const artistRef = doc(db, 'artists', artistProfile.id);
         await updateDoc(artistRef, profileData);
-        // The onSnapshot listener for the 'artists' collection will handle updating the 'artists' array.
-        // We need to manually update the specific 'artistProfile' state for the current user.
-        setArtistProfile(newProfileData);
+        setArtistProfile(prev => prev ? { ...prev, ...profileData } : null);
     } else {
         console.warn("Firebase not configured. Simulating profile update locally.");
-        setArtistProfile(newProfileData);
-        setArtists(prev => prev.map(a => a.id === artistProfile.id ? newProfileData : a));
+        const updatedProfile = { ...artistProfile, ...profileData };
+        setArtistProfile(updatedProfile);
+        setArtists(prev => prev.map(a => a.id === artistProfile.id ? updatedProfile : a));
+    }
+  }, [user, artistProfile]);
+  
+  const addArtwork = useCallback(async (artworkData: NewArtworkData) => {
+    if (!user || !artistProfile) throw new Error("Artist profile not found.");
+
+    const newFractal: Omit<Fractal, 'id'> = {
+        title: artworkData.title,
+        image: artworkData.image,
+        artistId: artistProfile.id,
+        description: artworkData.description,
+        aiHint: 'custom artwork',
+        width: 1000, // default or calculated
+        height: 1000, // default or calculated
+        price: artworkData.price,
+        priceHistory: [{ date: new Date().toISOString(), price: artworkData.price }],
+        editions: artworkData.editions,
+        editionsAvailable: artworkData.editions,
+    };
+
+    if (db) {
+        await addDoc(collection(db, 'fractals'), newFractal);
+    } else {
+        console.warn("Firebase not configured. Simulating artwork creation locally.");
+        const createdFractal: Fractal = {
+            ...newFractal,
+            id: `local-fractal-${Date.now()}`
+        };
+        setFractals(prev => [...prev, createdFractal]);
     }
   }, [user, artistProfile]);
 
@@ -494,7 +531,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       }
   });
 
-  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile, updateArtistProfile };
+  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile, updateArtistProfile, addArtwork };
 
   return (
     <AuthContext.Provider value={value}>

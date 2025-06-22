@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -33,6 +34,9 @@ const profileFormSchema = z.object({
   }).min(10, {
     message: "Bio must be at least 10 characters.",
   }),
+  location: z.string().max(100).optional(),
+  website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  style: z.string().max(100).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -54,6 +58,9 @@ export default function CreateArtistProfilePage() {
     defaultValues: {
       name: "",
       bio: "",
+      location: "",
+      website: "",
+      style: "",
     },
     mode: "onChange",
   });
@@ -129,6 +136,48 @@ export default function CreateArtistProfilePage() {
                     </FormControl>
                      <FormDescription>
                       Share your story, your process, and what inspires you.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Berlin, Germany" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Website / Social Link</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://your-portfolio.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="style"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Artistic Style</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Generative, Abstract, Algorithmic" {...field} />
+                    </FormControl>
+                     <FormDescription>
+                      Comma-separated keywords describing your art.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

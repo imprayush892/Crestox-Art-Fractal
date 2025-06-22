@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Artist, Fractal } from '@/lib/data';
@@ -9,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart, Star } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
@@ -66,7 +67,29 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
             </Avatar>
             <div className="pt-4 text-center md:text-left">
               <h1 className="font-headline text-4xl md:text-5xl font-bold">{artist.name}</h1>
-              <p className="mt-4 max-w-2xl text-lg text-muted-foreground">{artist.bio}</p>
+              <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 text-muted-foreground">
+                {artist.location && (
+                    <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>{artist.location}</span>
+                    </div>
+                )}
+                {artist.style && (
+                    <div className="flex items-center gap-2">
+                        <Palette className="w-4 h-4" />
+                        <span>{artist.style}</span>
+                    </div>
+                )}
+                {artist.website && (
+                    <div className="flex items-center gap-2">
+                        <LinkIcon className="w-4 h-4" />
+                        <a href={artist.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline">
+                            Portfolio
+                        </a>
+                    </div>
+                )}
+              </div>
+              <p className="mt-4 max-w-2xl text-lg text-foreground/80">{artist.bio}</p>
             </div>
         </div>
 

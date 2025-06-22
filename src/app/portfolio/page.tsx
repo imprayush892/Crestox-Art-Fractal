@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,9 +12,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DollarSign, Eye, ImageIcon, Palette, Settings, TrendingUp, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { ArtistSettingsForm } from '@/components/artist-settings-form';
+import Image from 'next/image';
 
 export default function PortfolioPage() {
-  const { isLoggedIn, artistProfile } = useAuth();
+  const { isLoggedIn, artistProfile, fractals } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -21,6 +23,11 @@ export default function PortfolioPage() {
       router.push('/login?redirect=/portfolio');
     }
   }, [isLoggedIn, router]);
+  
+  const artistFractals = useMemo(() => {
+    if (!artistProfile) return [];
+    return fractals.filter(f => f.artistId === artistProfile.id);
+  }, [fractals, artistProfile]);
 
   if (!isLoggedIn) {
     return null; // Or a loading spinner
@@ -44,7 +51,10 @@ export default function PortfolioPage() {
   }
   
   const currentPortfolioValue = artistProfile.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
-  const fractalsSold = artistProfile.totalEditions - artistProfile.availableEditions;
+  const fractalsSoldCount = artistFractals.reduce((acc, fractal) => {
+    return acc + (fractal.editions ?? 0) - (fractal.editionsAvailable ?? 0);
+  }, 0);
+  
   // This is a placeholder for now, as earnings tracking is not yet implemented.
   const totalEarnings = 0;
 
@@ -70,14 +80,13 @@ export default function PortfolioPage() {
       </div>
 
       <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-4">
-          <TabsTrigger value="overview"><TrendingUp className="mr-2" /> Overview</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
+          <TabsTrigger value="overview"><TrendingUp className="mr-2" /> Overview & Earnings</TabsTrigger>
           <TabsTrigger value="artworks"><Palette className="mr-2" /> My Artworks</TabsTrigger>
-          <TabsTrigger value="earnings"><DollarSign className="mr-2" /> Sales & Earnings</TabsTrigger>
           <TabsTrigger value="settings"><Settings className="mr-2" /> Profile Settings</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="overview" className="mt-6">
+        <TabsContent value="overview" className="mt-6 space-y-6">
           <Card>
             <CardHeader>
                 <CardTitle>Portfolio Overview</CardTitle>
@@ -111,13 +120,23 @@ export default function PortfolioPage() {
                             <TrendingUp className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">+{fractalsSold.toLocaleString()}</div>
-                             <p className="text-xs text-muted-foreground">All-time sales from your portfolio</p>
+                            <div className="text-2xl font-bold">+{fractalsSoldCount.toLocaleString()}</div>
+                             <p className="text-xs text-muted-foreground">All-time sales from your artworks</p>
                         </CardContent>
                     </Card>
                 </div>
             </CardContent>
           </Card>
+           <Card>
+                 <CardHeader>
+                    <CardTitle>Sales & Payouts</CardTitle>
+                    <CardDescription>Track your sales and manage payouts. A verified identity is required for payouts.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                   <p className="text-sm text-muted-foreground">This section will show detailed sales history and allow you to withdraw your earnings. This feature is coming soon.</p>
+                   <Button disabled>Withdraw Earnings</Button>
+                </CardContent>
+            </Card>
         </TabsContent>
 
         <TabsContent value="artworks" className="mt-6">
@@ -125,44 +144,47 @@ export default function PortfolioPage() {
                 <CardHeader className="flex-row items-center justify-between">
                     <div>
                         <CardTitle>My Artworks</CardTitle>
-                        <CardDescription>Manage your listed fractals and portfolios. This is where you would list new art.</CardDescription>
+                        <CardDescription>Manage your listed fractals.</CardDescription>
                     </div>
-                     <Button><ImageIcon className="mr-2"/>Add New Artwork</Button>
+                     <Button asChild>
+                        <Link href="/portfolio/artwork/create">
+                            <ImageIcon className="mr-2"/>Add New Artwork
+                        </Link>
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Artwork/Portfolio</TableHead>
-                                <TableHead>Fractal Price</TableHead>
+                                <TableHead className="w-[80px] hidden md:table-cell">Image</TableHead>
+                                <TableHead>Artwork</TableHead>
+                                <TableHead>Price</TableHead>
                                 <TableHead>Available / Total Editions</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                             <TableRow>
-                                <TableCell className="font-medium">{artistProfile.name}'s Portfolio</TableCell>
-                                <TableCell>${artistProfile.fractalPrice.toFixed(2)}</TableCell>
-                                <TableCell>{artistProfile.availableEditions.toLocaleString()} / {artistProfile.totalEditions.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="outline" size="sm" disabled>Edit</Button>
-                                </TableCell>
-                            </TableRow>
+                            {artistFractals.length > 0 ? artistFractals.map(fractal => (
+                                <TableRow key={fractal.id}>
+                                    <TableCell className="hidden md:table-cell">
+                                        <Image src={fractal.image} alt={fractal.title} width={40} height={40} className="rounded-md object-cover" />
+                                    </TableCell>
+                                    <TableCell className="font-medium">{fractal.title}</TableCell>
+                                    <TableCell>${fractal.price.toFixed(2)}</TableCell>
+                                    <TableCell>{fractal.editionsAvailable?.toLocaleString()} / {fractal.editions?.toLocaleString()}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="outline" size="sm" disabled>Edit</Button>
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center h-24">
+                                        You haven't listed any artwork yet.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
-                </CardContent>
-            </Card>
-        </TabsContent>
-
-        <TabsContent value="earnings" className="mt-6">
-            <Card>
-                 <CardHeader>
-                    <CardTitle>Sales & Earnings</CardTitle>
-                    <CardDescription>Track your sales and manage payouts. A verified identity is required for payouts.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                   <p className="text-sm text-muted-foreground">This section will show detailed sales history and allow you to withdraw your earnings. This feature is coming soon.</p>
-                   <Button disabled>Withdraw Earnings</Button>
                 </CardContent>
             </Card>
         </TabsContent>

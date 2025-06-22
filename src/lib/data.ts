@@ -1,11 +1,13 @@
 
-
 export interface Artist {
   id: string;
   userId?: string;
   name: string;
   avatar: string;
   bio: string;
+  location?: string;
+  website?: string;
+  style?: string;
   fractalPrice: number;
   priceHistory: { date: string; price: number }[];
   totalPortfolioValueHistory: { date: string; value: number }[];
@@ -24,6 +26,8 @@ export interface Fractal {
   height: number;
   price: number;
   priceHistory: { date: string; price: number }[];
+  editions?: number;
+  editionsAvailable?: number;
 }
 
 // --- Data Generation ---
@@ -42,6 +46,8 @@ const bios = [
   'Their work is a meditation on the nature of reality and perception.',
   'Specializes in creating immersive, large-scale digital installations.'
 ];
+const locations = ['Berlin, Germany', 'Tokyo, Japan', 'New York, USA', 'London, UK', 'Virtual Realm', 'Cyber City', 'The Void'];
+const styles = ['Generative', 'Abstract', 'Algorithmic', 'Surreal', 'Minimalist', 'Glitch Art'];
 
 const fractalAdjectives = ['Quantum', 'Cosmic', 'Galactic', 'Ephemeral', 'Crystalline', 'Solar', 'Veridian', 'Abyssal', 'Axiomatic', 'Digital', 'Chromatic', 'Ethereal', 'Chaotic', 'Frozen', 'Celestial', 'Prismatic', 'Lucid', 'Obsidian', 'Golden', 'Silent', 'Pulsing', 'Nebulous', 'Luminous', 'Woven', 'Glimmering'];
 const fractalNouns = ['Bloom', 'Web', 'Flare', 'Depth', 'Maze', 'Edge', 'Petal', 'Theory', 'Flame', 'Spiral', 'Matrix', 'Mechanics', 'Echo', 'Dream', 'Cascade', 'Rift', 'Monolith', 'Serenity', 'Vortex', 'Symmetry', 'Tapestry', 'Equation', 'Nebula', 'Singularity', 'Horizon'];
@@ -133,6 +139,9 @@ const tempArtists = (() => {
             name,
             avatar: 'https://placehold.co/100x100.png',
             bio: getRandom(bios),
+            location: getRandom(locations),
+            website: `https://example.com/${name.replace(/\s+/g, '-').toLowerCase()}`,
+            style: `${getRandom(styles)}, ${getRandom(styles)}`,
             totalEditions,
             availableEditions: randomInt(100, totalEditions),
         }
@@ -153,6 +162,7 @@ const tempFractals: Fractal[] = (() => {
         const width = randomInt(5, 9) * 100;
         const height = randomInt(5, 9) * 100;
         const price = randomInt(5, 150) * 10;
+        const editions = randomInt(1, 20) * 5;
         return {
             id: `fractal-${String(index + 1).padStart(3, '0')}`,
             title,
@@ -164,6 +174,8 @@ const tempFractals: Fractal[] = (() => {
             height,
             price,
             priceHistory: generatePriceHistory(price),
+            editions: editions,
+            editionsAvailable: randomInt(0, editions),
         };
     });
 })();
