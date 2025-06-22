@@ -114,17 +114,17 @@ const rubric = [
     { id: 100, criterion: 'Residue / Tape Marks', type: 'AI', weight: 0.5 },
 ];
 
-export const EvaluateArtworkInputSchema = z.object({
+const EvaluateArtworkInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
       "A photo of the artwork, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
-export type EvaluateArtworkInput = z.infer<typeof EvaluateArtworkInputSchema>;
+type EvaluateArtworkInput = z.infer<typeof EvaluateArtworkInputSchema>;
 
 
-export interface EvaluateArtworkOutput {
+interface EvaluateArtworkOutput {
   finalScore: number;
   grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
   breakdown: AIScorecardBreakdown[];

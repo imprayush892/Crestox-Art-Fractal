@@ -19,7 +19,7 @@ const GenerateArtworkSuggestionsInputSchema = z.object({
     .array(z.string())
     .describe('The list of fractal artwork IDs the collector has saved.'),
 });
-export type GenerateArtworkSuggestionsInput = z.infer<
+type GenerateArtworkSuggestionsInput = z.infer<
   typeof GenerateArtworkSuggestionsInputSchema
 >;
 
@@ -30,7 +30,7 @@ const GenerateArtworkSuggestionsOutputSchema = z.object({
       'The list of suggested fractal artwork IDs based on the collector viewing history and saved collections.'
     ),
 });
-export type GenerateArtworkSuggestionsOutput = z.infer<
+type GenerateArtworkSuggestionsOutput = z.infer<
   typeof GenerateArtworkSuggestionsOutputSchema
 >;
 
