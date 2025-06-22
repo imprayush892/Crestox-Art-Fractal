@@ -32,9 +32,11 @@ export default function PortfolioPage() {
         <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
           You are not currently registered as an artist. Join our community to showcase and sell your fractal art.
         </p>
-        <Button size="lg" className="mt-8">
-          <UserPlus className="mr-2" />
-          Create Artist Profile
+        <Button size="lg" className="mt-8" asChild>
+          <Link href="/portfolio/create">
+            <UserPlus className="mr-2" />
+            Create Artist Profile
+          </Link>
         </Button>
       </div>
     );

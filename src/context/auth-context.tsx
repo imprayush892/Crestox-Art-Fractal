@@ -4,7 +4,7 @@
 import type { Artist, Fractal } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection } from 'firebase/firestore';
+import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection, addDoc } from 'firebase/firestore';
 
 export interface ResaleListing {
   id: string;
@@ -33,7 +33,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   user: { uid: string } | null;
   artistProfile: Artist | null;
-  login: () => void;
+  login: () => Promise<void>;
   logout: () => void;
   collection: OwnedFractal[];
   investInPortfolio: (artist: Artist, quantity: number) => Promise<void>;
@@ -46,6 +46,7 @@ interface AuthContextType {
   watchlist: string[];
   addToWatchlist: (artistId: string) => void;
   removeFromWatchlist: (artistId: string) => void;
+  createArtistProfile: (profileData: { name: string; bio: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -108,19 +109,65 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     return () => unsubscribe();
   }, [user]);
 
-  const login = () => {
-    setUser({ uid: 'mock-user-id' });
+  const login = useCallback(async () => {
+    const mockUser = { uid: 'mock-user-id' };
+    setUser(mockUser);
     setIsLoggedIn(true);
-    // For this prototype, we assume a new user does not have an artist profile.
-    // They can create one from the "My Portfolio" page.
-    setArtistProfile(null);
-  }
+
+    if (db) {
+        try {
+            const artistsQuery = query(collection(db, 'artists'), where('userId', '==', mockUser.uid), limit(1));
+            const snapshot = await getDocs(artistsQuery);
+            if (!snapshot.empty) {
+                const userArtistProfile = { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as Artist;
+                setArtistProfile(userArtistProfile);
+            } else {
+                setArtistProfile(null);
+            }
+        } catch(e) {
+            console.error("Error fetching artist profile:", e);
+            setArtistProfile(null);
+        }
+    } else {
+        // In local/mock mode, a new user never has an existing artist profile
+        setArtistProfile(null);
+    }
+  }, []);
   
   const logout = () => {
     setUser(null);
     setIsLoggedIn(false);
     setArtistProfile(null);
   };
+
+  const createArtistProfile = useCallback(async (profileData: { name: string, bio: string }) => {
+    if (!user) throw new Error("User must be logged in to create a profile.");
+
+    const newArtistData: Omit<Artist, 'id'> = {
+        userId: user.uid,
+        name: profileData.name,
+        bio: profileData.bio,
+        avatar: 'https://placehold.co/100x100.png',
+        fractalPrice: 0,
+        priceHistory: [],
+        totalPortfolioValueHistory: [],
+        totalEditions: 0,
+        availableEditions: 0,
+    };
+    
+    if (db) {
+        const docRef = await addDoc(collection(db, 'artists'), newArtistData);
+        const createdArtist: Artist = { ...newArtistData, id: docRef.id };
+        setArtistProfile(createdArtist);
+        setArtists(prev => [...prev, createdArtist]);
+    } else {
+        console.warn("Firebase not configured. Simulating artist creation locally.");
+        const createdArtist: Artist = { ...newArtistData, id: `local-artist-${Date.now()}` };
+        setArtistProfile(createdArtist);
+        setArtists(prev => [...prev, createdArtist]);
+    }
+
+  }, [user]);
   
   const addToWatchlist = (artistId: string) => {
     setWatchlist(prev => [...new Set([...prev, artistId])]);
@@ -428,7 +475,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       }
   });
 
-  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist };
+  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile };
 
   return (
     <AuthContext.Provider value={value}>

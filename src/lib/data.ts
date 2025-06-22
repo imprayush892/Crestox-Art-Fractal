@@ -2,6 +2,7 @@
 
 export interface Artist {
   id: string;
+  userId?: string;
   name: string;
   avatar: string;
   bio: string;
