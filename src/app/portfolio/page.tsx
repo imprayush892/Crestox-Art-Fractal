@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DollarSign, Eye, ImageIcon, Palette, Settings, TrendingUp, UserPlus } from 'lucide-react';
+import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, TrendingUp, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { ArtistSettingsForm } from '@/components/artist-settings-form';
 import Image from 'next/image';
@@ -51,9 +51,7 @@ export default function PortfolioPage() {
   }
   
   const currentPortfolioValue = artistProfile.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
-  const fractalsSoldCount = artistFractals.reduce((acc, fractal) => {
-    return acc + (fractal.editions ?? 0) - (fractal.editionsAvailable ?? 0);
-  }, 0);
+  const fractalsSoldCount = artistProfile.totalEditions - artistProfile.availableEditions;
   
   // This is a placeholder for now, as earnings tracking is not yet implemented.
   const totalEarnings = 0;
@@ -93,7 +91,7 @@ export default function PortfolioPage() {
                 <CardDescription>A summary of your performance on the platform.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
@@ -101,7 +99,27 @@ export default function PortfolioPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">${currentPortfolioValue.toLocaleString()}</div>
-                            <p className="text-xs text-muted-foreground">Based on current fractal prices</p>
+                            <p className="text-xs text-muted-foreground">Based on artwork valuations</p>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium">Available Fractals</CardTitle>
+                            <Layers className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{artistProfile.availableEditions.toLocaleString()}</div>
+                            <p className="text-xs text-muted-foreground">Portfolio shares available to buy</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium">Fractals Sold</CardTitle>
+                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">+{fractalsSoldCount.toLocaleString()}</div>
+                             <p className="text-xs text-muted-foreground">Total shares sold from your portfolio</p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -112,16 +130,6 @@ export default function PortfolioPage() {
                         <CardContent>
                             <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
                              <p className="text-xs text-muted-foreground">After platform fees</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">Fractals Sold</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">+{fractalsSoldCount.toLocaleString()}</div>
-                             <p className="text-xs text-muted-foreground">All-time sales from your artworks</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -144,7 +152,7 @@ export default function PortfolioPage() {
                 <CardHeader className="flex-row items-center justify-between">
                     <div>
                         <CardTitle>My Artworks</CardTitle>
-                        <CardDescription>Manage your listed fractals.</CardDescription>
+                        <CardDescription>Manage your listed artworks.</CardDescription>
                     </div>
                      <Button asChild>
                         <Link href="/portfolio/artwork/create">
@@ -158,8 +166,7 @@ export default function PortfolioPage() {
                             <TableRow>
                                 <TableHead className="w-[80px] hidden md:table-cell">Image</TableHead>
                                 <TableHead>Artwork</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Available / Total Editions</TableHead>
+                                <TableHead>Valuation</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -171,14 +178,13 @@ export default function PortfolioPage() {
                                     </TableCell>
                                     <TableCell className="font-medium">{fractal.title}</TableCell>
                                     <TableCell>${fractal.price.toFixed(2)}</TableCell>
-                                    <TableCell>{fractal.editionsAvailable?.toLocaleString()} / {fractal.editions?.toLocaleString()}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="outline" size="sm" disabled>Edit</Button>
                                     </TableCell>
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24">
+                                    <TableCell colSpan={4} className="text-center h-24">
                                         You haven't listed any artwork yet.
                                     </TableCell>
                                 </TableRow>
