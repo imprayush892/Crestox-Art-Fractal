@@ -32,8 +32,8 @@ export interface OwnedFractal {
 type NewArtworkData = {
     title: string;
     description: string;
-    price: number;
-    editions: number;
+    estimatedValue: number;
+    editionsToIssue: number;
     image: string; // data URI
 };
 
@@ -199,31 +199,92 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const addArtwork = useCallback(async (artworkData: NewArtworkData) => {
     if (!user || !artistProfile) throw new Error("Artist profile not found.");
 
-    const newFractal: Omit<Fractal, 'id'> = {
-        title: artworkData.title,
-        image: artworkData.image,
-        artistId: artistProfile.id,
-        description: artworkData.description,
-        aiHint: 'custom artwork',
-        width: 1000, // default or calculated
-        height: 1000, // default or calculated
-        price: artworkData.price,
-        priceHistory: [{ date: new Date().toISOString(), price: artworkData.price }],
-        editions: artworkData.editions,
-        editionsAvailable: artworkData.editions,
-    };
-
     if (db) {
-        await addDoc(collection(db, 'fractals'), newFractal);
+        const artistRef = doc(db, 'artists', artistProfile.id);
+        const fractalCollectionRef = collection(db, 'fractals');
+
+        await runTransaction(db, async (transaction) => {
+            const artistDoc = await transaction.get(artistRef);
+            if (!artistDoc.exists()) throw new Error("Artist does not exist.");
+
+            const artistData = artistDoc.data() as Artist;
+
+            // 1. Create the new artwork document
+            const newFractalData: Omit<Fractal, 'id'> = {
+                title: artworkData.title,
+                image: artworkData.image,
+                artistId: artistProfile.id,
+                description: artworkData.description,
+                aiHint: 'custom artwork',
+                width: 1000,
+                height: 1000,
+                price: artworkData.estimatedValue, // Use estimated value as the artwork's price
+                priceHistory: [{ date: new Date().toISOString(), price: artworkData.estimatedValue }],
+                editions: 1, // Individual artworks are unique
+                editionsAvailable: 1,
+            };
+            const newFractalRef = doc(fractalCollectionRef);
+            transaction.set(newFractalRef, newFractalData);
+
+            // 2. Update the artist's portfolio
+            const newTotalPortfolioValue = (artistData.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + artworkData.estimatedValue;
+            const newTotalEditions = artistData.totalEditions + artworkData.editionsToIssue;
+            const newAvailableEditions = artistData.availableEditions + artworkData.editionsToIssue;
+            const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;
+            const roundedNewFractalPrice = Math.round(newFractalPrice * 100) / 100;
+            const now = new Date().toISOString();
+
+            const updatedArtistData = {
+                totalEditions: newTotalEditions,
+                availableEditions: newAvailableEditions,
+                fractalPrice: roundedNewFractalPrice,
+                priceHistory: [...artistData.priceHistory, { date: now, price: roundedNewFractalPrice }],
+                totalPortfolioValueHistory: [...artistData.totalPortfolioValueHistory, { date: now, value: newTotalPortfolioValue }],
+            };
+
+            transaction.update(artistRef, updatedArtistData);
+        });
     } else {
         console.warn("Firebase not configured. Simulating artwork creation locally.");
+
         const createdFractal: Fractal = {
-            ...newFractal,
-            id: `local-fractal-${Date.now()}`
+            id: `local-fractal-${Date.now()}`,
+            title: artworkData.title,
+            image: artworkData.image,
+            artistId: artistProfile.id,
+            description: artworkData.description,
+            aiHint: 'custom artwork',
+            width: 1000,
+            height: 1000,
+            price: artworkData.estimatedValue,
+            priceHistory: [{ date: new Date().toISOString(), price: artworkData.estimatedValue }],
+            editions: 1,
+            editionsAvailable: 1,
         };
         setFractals(prev => [...prev, createdFractal]);
+
+        const artistToUpdate = artists.find(a => a.id === artistProfile.id);
+        if (artistToUpdate) {
+            const newTotalPortfolioValue = (artistToUpdate.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + artworkData.estimatedValue;
+            const newTotalEditions = artistToUpdate.totalEditions + artworkData.editionsToIssue;
+            const newAvailableEditions = artistToUpdate.availableEditions + artworkData.editionsToIssue;
+            const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;
+            const roundedNewFractalPrice = Math.round(newFractalPrice * 100) / 100;
+            const now = new Date().toISOString();
+
+            const updatedArtist = {
+                ...artistToUpdate,
+                totalEditions: newTotalEditions,
+                availableEditions: newAvailableEditions,
+                fractalPrice: roundedNewFractalPrice,
+                priceHistory: [...artistToUpdate.priceHistory, { date: now, price: roundedNewFractalPrice }],
+                totalPortfolioValueHistory: [...artistToUpdate.totalPortfolioValueHistory, { date: now, value: newTotalPortfolioValue }],
+            };
+            setArtists(prev => prev.map(a => a.id === artistProfile.id ? updatedArtist : a));
+            setArtistProfile(updatedArtist);
+        }
     }
-  }, [user, artistProfile]);
+  }, [user, artistProfile, artists]);
 
   const addToWatchlist = (artistId: string) => {
     setWatchlist(prev => [...new Set([...prev, artistId])]);

@@ -30,8 +30,8 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 const artworkFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters.").max(100),
   description: z.string().min(10, "Description must be at least 10 characters.").max(1000),
-  price: z.coerce.number().min(0, "Price must be a positive number."),
-  editions: z.coerce.number().int().min(1, "There must be at least 1 edition."),
+  estimatedValue: z.coerce.number().min(1, "Estimated value must be at least $1."),
+  editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
   image: z.any()
     .refine((file) => file, "Image is required.")
     .refine((file) => file?.size <= MAX_FILE_SIZE, `Max file size is 5MB.`)
@@ -65,8 +65,8 @@ export default function CreateArtworkPage() {
     defaultValues: {
       title: "",
       description: "",
-      price: 0,
-      editions: 1,
+      estimatedValue: 1000,
+      editionsToIssue: 100,
       image: undefined,
     }
   });
@@ -122,7 +122,7 @@ export default function CreateArtworkPage() {
         <CardHeader>
           <CardTitle className="font-headline text-3xl">Add New Artwork</CardTitle>
           <CardDescription>
-            List a new fractal artwork on the platform. This will be visible to all collectors.
+            Upload a new artwork. This will be added to your public portfolio and its value will be incorporated into your total portfolio valuation.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -200,26 +200,32 @@ export default function CreateArtworkPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <FormField
                   control={form.control}
-                  name="price"
+                  name="estimatedValue"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price per Edition ($)</FormLabel>
+                      <FormLabel>Estimated Value ($)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="150" {...field} />
+                        <Input type="number" placeholder="1000" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        The value this piece adds to your portfolio.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
-                  name="editions"
+                  name="editionsToIssue"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Editions</FormLabel>
+                      <FormLabel>New Portfolio Editions to Issue</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="100" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        New 'fractals' to add to your total supply.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
