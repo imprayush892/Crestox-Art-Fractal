@@ -41,6 +41,11 @@ export default function PortfolioPage() {
       </div>
     );
   }
+  
+  const currentPortfolioValue = artistProfile.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
+  const fractalsSold = artistProfile.totalEditions - artistProfile.availableEditions;
+  // This is a placeholder for now, as earnings tracking is not yet implemented.
+  const totalEarnings = 0;
 
   return (
     <div className="container py-12">
@@ -85,7 +90,7 @@ export default function PortfolioPage() {
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">$125,430</div>
+                            <div className="text-2xl font-bold">${currentPortfolioValue.toLocaleString()}</div>
                             <p className="text-xs text-muted-foreground">Based on current fractal prices</p>
                         </CardContent>
                     </Card>
@@ -95,7 +100,7 @@ export default function PortfolioPage() {
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">$23,150.75</div>
+                            <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
                              <p className="text-xs text-muted-foreground">After platform fees</p>
                         </CardContent>
                     </Card>
@@ -105,7 +110,7 @@ export default function PortfolioPage() {
                             <TrendingUp className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">+520</div>
+                            <div className="text-2xl font-bold">+{fractalsSold.toLocaleString()}</div>
                              <p className="text-xs text-muted-foreground">All-time sales from your portfolio</p>
                         </CardContent>
                     </Card>
