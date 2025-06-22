@@ -146,7 +146,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     const snapshot = await getDocs(fractalsToUpdateQuery);
     if(snapshot.empty) {
       console.warn("No fractals found for this listing to cancel.");
-      // still proceed to cancel the listing itself
     }
     snapshot.docs.forEach(docToUpdate => {
         batch.update(docToUpdate.ref, { status: 'available', listingId: '' });
@@ -271,7 +270,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 id: `local-fractal-${Date.now()}-${Math.random()}`,
                 artistId: artist.id,
                 artistName: artist.name,
-                purchasePrice: share.price,
+                purchasePrice: Math.round(share.price * 1.18 * 100) / 100,
                 purchaseDate: purchaseDate,
                 serialNumber: serialNumber,
                 status: 'available'
@@ -353,7 +352,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             const newOwnedFractal: Omit<OwnedFractal, 'id'> = {
                 artistId: artist.id,
                 artistName: artist.name,
-                purchasePrice: share.price,
+                purchasePrice: Math.round(share.price * 1.18 * 100) / 100,
                 purchaseDate: purchaseDate,
                 serialNumber: serialNumber,
                 status: 'available'
