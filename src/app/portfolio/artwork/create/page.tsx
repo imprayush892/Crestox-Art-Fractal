@@ -62,6 +62,13 @@ export default function CreateArtworkPage() {
   const form = useForm<ArtworkFormValues>({
     resolver: zodResolver(artworkFormSchema),
     mode: "onChange",
+    defaultValues: {
+      title: "",
+      description: "",
+      price: 0,
+      editions: 1,
+      image: undefined,
+    }
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {

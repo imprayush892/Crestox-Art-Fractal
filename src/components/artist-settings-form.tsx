@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Loader2, User } from 'lucide-react';
 import type { Artist } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -66,6 +66,20 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
     mode: "onChange",
   });
   
+  useEffect(() => {
+    if (artist) {
+      form.reset({
+        name: artist.name || "",
+        bio: artist.bio || "",
+        avatar: artist.avatar || "",
+        location: artist.location || "",
+        website: artist.website || "",
+        style: artist.style || "",
+      });
+      setAvatarPreview(artist.avatar || null);
+    }
+  }, [artist, form.reset]);
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
