@@ -111,9 +111,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const login = () => {
     setUser({ uid: 'mock-user-id' });
     setIsLoggedIn(true);
-    // For this prototype, we'll assume the mock user is also an artist.
-    // A real implementation would check a user's roles/claims.
-    setIsArtist(true);
+    // For this prototype, a user is a collector by default, but not an artist.
+    // They can choose to create an artist profile later.
   }
   
   const logout = () => {
