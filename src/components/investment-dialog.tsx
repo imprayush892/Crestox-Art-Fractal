@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Artist } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +18,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Minus, Plus } from 'lucide-react';
+import { Separator } from './ui/separator';
 
 interface InvestmentDialogProps {
   artist: Artist;
@@ -29,7 +31,15 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
   const { investInPortfolio } = useAuth();
   const { toast } = useToast();
 
-  const totalCost = useMemo(() => quantity * artist.fractalPrice, [quantity, artist.fractalPrice]);
+  const subtotal = useMemo(() => quantity * artist.fractalPrice, [quantity, artist.fractalPrice]);
+  const taxAmount = useMemo(() => subtotal * 0.18, [subtotal]);
+  const totalCost = useMemo(() => subtotal + taxAmount, [subtotal, taxAmount]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setQuantity(1);
+    }
+  }, [isOpen]);
 
   const handleQuantityChange = (value: number) => {
     if (value >= 1 && value <= artist.availableEditions) {
@@ -58,9 +68,9 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-muted">
-                <span className="text-muted-foreground">Price per Fractal</span>
-                <span className="text-xl font-bold">${artist.fractalPrice.toLocaleString()}</span>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <span className="text-muted-foreground">Current Price / Fractal</span>
+                <span className="font-bold">${artist.fractalPrice.toLocaleString()}</span>
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="quantity" className="text-left">
@@ -97,9 +107,23 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
                 </div>
                  <p className="text-xs text-muted-foreground text-right">{artist.availableEditions.toLocaleString()} available</p>
             </div>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-primary/10 text-primary-foreground">
-                <span className="text-lg font-semibold text-primary">Total Cost</span>
-                <span className="text-2xl font-bold text-primary">${totalCost.toLocaleString()}</span>
+            
+            <Separator />
+
+            <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">G.S.T. (18%)</span>
+                    <span className="font-medium">${taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <Separator className="my-2"/>
+                <div className="flex items-center justify-between text-lg font-bold text-primary">
+                    <span>Total Payable</span>
+                    <span>${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
             </div>
         </div>
         <DialogFooter>

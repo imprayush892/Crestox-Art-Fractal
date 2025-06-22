@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Artist } from '@/lib/data';
-import { useAuth } from '@/context/auth-context';
+import { useAuth, type OwnedFractal } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -19,6 +19,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Minus, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Separator } from './ui/separator';
 
 interface SellDialogProps {
   artist: Artist | null;
@@ -37,6 +38,10 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
   const { toast } = useToast();
 
   const ownedShares = useMemo(() => ownedFractals.filter(f => f.status !== 'listed').length, [ownedFractals]);
+  
+  const initialSaleValue = useMemo(() => quantity * (Number(initialPrice) || 0), [quantity, initialPrice]);
+  const transactionFee = useMemo(() => initialSaleValue * 0.02, [initialSaleValue]);
+  const netProceeds = useMemo(() => initialSaleValue - transactionFee, [initialSaleValue, transactionFee]);
 
   useEffect(() => {
     if (artist) {
@@ -141,6 +146,24 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
              <div className="text-xs text-muted-foreground p-3 bg-muted/50 rounded-lg">
                 Your fractals will be listed at the <span className="font-bold">Initial Price</span>, and the price will gradually decrease over the <span className="font-bold">Selling Period</span> until it reaches the <span className="font-bold">Minimum Price</span>.
              </div>
+
+             <Separator />
+
+             <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Est. Gross Sale (at initial price)</span>
+                    <span className="font-medium">${initialSaleValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Transaction Fee (2%)</span>
+                    <span className="font-medium text-red-500">-${transactionFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <Separator className="my-2"/>
+                <div className="flex items-center justify-between text-base font-bold">
+                    <span>Est. Net Proceeds</span>
+                    <span>${netProceeds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+            </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>
