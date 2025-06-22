@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DollarSign, Eye, ImageIcon, Palette, Settings, TrendingUp, UserPlus } from 'lucide-react';
 import Link from 'next/link';
+import { ArtistSettingsForm } from '@/components/artist-settings-form';
 
 export default function PortfolioPage() {
   const { isLoggedIn, artistProfile } = useAuth();
@@ -173,7 +174,7 @@ export default function PortfolioPage() {
                     <CardDescription>Update your public artist profile and manage account settings.</CardDescription>
                 </CardHeader>
                  <CardContent>
-                    <p className="text-sm text-muted-foreground">This section will contain a form to edit your artist name, bio, and avatar, and manage communications. This feature is coming soon.</p>
+                    <ArtistSettingsForm artist={artistProfile} />
                 </CardContent>
             </Card>
         </TabsContent>

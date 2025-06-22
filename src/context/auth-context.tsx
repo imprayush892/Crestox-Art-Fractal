@@ -4,7 +4,7 @@
 import type { Artist, Fractal } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection, addDoc } from 'firebase/firestore';
+import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection, addDoc, updateDoc } from 'firebase/firestore';
 
 export interface ResaleListing {
   id: string;
@@ -47,6 +47,7 @@ interface AuthContextType {
   addToWatchlist: (artistId: string) => void;
   removeFromWatchlist: (artistId: string) => void;
   createArtistProfile: (profileData: { name: string; bio: string }) => Promise<void>;
+  updateArtistProfile: (profileData: { name: string; bio: string; avatar: string; }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -169,6 +170,24 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
   }, [user]);
   
+  const updateArtistProfile = useCallback(async (profileData: { name: string; bio: string; avatar: string; }) => {
+    if (!user || !artistProfile) throw new Error("User or artist profile not available for update.");
+
+    const newProfileData = { ...artistProfile, ...profileData };
+
+    if (db) {
+        const artistRef = doc(db, 'artists', artistProfile.id);
+        await updateDoc(artistRef, profileData);
+        // The onSnapshot listener for the 'artists' collection will handle updating the 'artists' array.
+        // We need to manually update the specific 'artistProfile' state for the current user.
+        setArtistProfile(newProfileData);
+    } else {
+        console.warn("Firebase not configured. Simulating profile update locally.");
+        setArtistProfile(newProfileData);
+        setArtists(prev => prev.map(a => a.id === artistProfile.id ? newProfileData : a));
+    }
+  }, [user, artistProfile]);
+
   const addToWatchlist = (artistId: string) => {
     setWatchlist(prev => [...new Set([...prev, artistId])]);
   };
@@ -475,7 +494,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       }
   });
 
-  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile };
+  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile, updateArtistProfile };
 
   return (
     <AuthContext.Provider value={value}>
