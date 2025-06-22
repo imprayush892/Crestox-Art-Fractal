@@ -32,6 +32,7 @@ export interface OwnedFractal {
 interface AuthContextType {
   isLoggedIn: boolean;
   user: { uid: string } | null;
+  isArtist: boolean;
   login: () => void;
   logout: () => void;
   collection: OwnedFractal[];
@@ -69,6 +70,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children, initialArtists, initialFractals }: AuthProviderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<{ uid: string } | null>(null);
+  const [isArtist, setIsArtist] = useState(false);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
   const [artists, setArtists] = useState<Artist[]>(initialArtists);
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
@@ -109,11 +111,15 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const login = () => {
     setUser({ uid: 'mock-user-id' });
     setIsLoggedIn(true);
+    // For this prototype, we'll assume the mock user is also an artist.
+    // A real implementation would check a user's roles/claims.
+    setIsArtist(true);
   }
   
   const logout = () => {
     setUser(null);
     setIsLoggedIn(false);
+    setIsArtist(false);
   };
   
   const addToWatchlist = (artistId: string) => {
@@ -129,6 +135,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
     if (!db) {
         console.warn("Firebase not configured. Simulating cancellation locally.");
+        const listingToCancel = resaleListings.find(l => l.id === listingId);
+        if (!listingToCancel) return;
+
         setResaleListings(prev => prev.map(l => l.id === listingId ? { ...l, status: 'cancelled' } : l));
         setCollection(prev => prev.map(f => f.listingId === listingId ? { ...f, status: 'available', listingId: undefined } : f));
         return;
@@ -153,7 +162,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     
     await batch.commit();
 
-  }, [user]);
+  }, [user, resaleListings]);
 
   const listForResale = useCallback(async (artist: Artist, details: { quantity: number, initialPrice: number, minPrice: number, periodDays: number}) => {
     if (!user) throw new Error("User must be logged in to sell.");
@@ -227,6 +236,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const investInPortfolio = useCallback(async (artist: Artist, quantity: number) => {
     if (!user) throw new Error("User must be logged in to invest.");
     
+    // OFFLINE / DEMO MODE
     if (!db) {
         console.warn("Firebase not configured. Simulating investment locally.");
         const artistData = artists.find(a => a.id === artist.id);
@@ -234,7 +244,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
         const activeResaleListings = resaleListings.filter(l => l.artistId === artist.id && l.status === 'active');
         
-        type Share = { price: number; isResold: boolean; sourceId: string; resellerId?: string };
+        type Share = { price: number; isResold: boolean; sourceId: string; resellerId?: string; listingId?: string };
         const orderBook: Share[] = [];
         const now = new Date();
 
@@ -245,7 +255,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 : listing.initialPrice - (listing.initialPrice - listing.minPrice) * (t / listing.periodSeconds);
             
             for (let i = 0; i < listing.quantity; i++) {
-                orderBook.push({ price: P_t, isResold: true, sourceId: listing.id, resellerId: listing.resellerId });
+                orderBook.push({ price: P_t, isResold: true, sourceId: listing.id, resellerId: listing.resellerId, listingId: listing.id });
             }
         });
 
@@ -263,22 +273,25 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         const newOwnedFractals: OwnedFractal[] = [];
         let newArtistData = { ...artistData };
         let newResaleListings = [...resaleListings];
+        let newCollection = [...collection];
 
         for (const share of sharesToBuy) {
             const serialNumber = `CRESTOX-${artist.id.split('-')[1]}-${String(Date.now()).slice(-6)}-${Math.random().toString(36).substring(2, 5)}`;
+            const purchasePriceWithTax = Math.round(share.price * 1.18 * 100) / 100;
+            
             const newOwnedFractal: OwnedFractal = {
                 id: `local-fractal-${Date.now()}-${Math.random()}`,
                 artistId: artist.id,
                 artistName: artist.name,
-                purchasePrice: Math.round(share.price * 1.18 * 100) / 100,
+                purchasePrice: purchasePriceWithTax,
                 purchaseDate: purchaseDate,
                 serialNumber: serialNumber,
                 status: 'available'
             };
             newOwnedFractals.push(newOwnedFractal);
 
-            if (share.isResold) {
-                const listingIndex = newResaleListings.findIndex(l => l.id === share.sourceId);
+            if (share.isResold && share.listingId) {
+                const listingIndex = newResaleListings.findIndex(l => l.id === share.listingId);
                 if (listingIndex !== -1) {
                     const updatedListing = { ...newResaleListings[listingIndex] };
                     updatedListing.quantity -= 1;
@@ -287,6 +300,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                     }
                     newResaleListings[listingIndex] = updatedListing;
                 }
+                // Remove a listed fractal from the seller's collection
+                const sellerFractalIndex = newCollection.findIndex(f => f.listingId === share.listingId);
+                if(sellerFractalIndex > -1){
+                    newCollection.splice(sellerFractalIndex, 1);
+                }
+
             } else {
                 newArtistData.availableEditions -= 1;
             }
@@ -299,13 +318,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         newArtistData.priceHistory = [...newArtistData.priceHistory, { date: purchaseDate, price: newMarketPrice }];
         newArtistData.totalPortfolioValueHistory = [...newArtistData.totalPortfolioValueHistory, { date: purchaseDate, value: newTotalPortfolioValue }];
         
-        setCollection(prev => [...prev, ...newOwnedFractals]);
+        setCollection([...newCollection, ...newOwnedFractals]);
         setArtists(prevArtists => prevArtists.map(a => a.id === artist.id ? newArtistData : a));
         setResaleListings(newResaleListings);
 
         return;
     }
-
+    
+    // ONLINE / FIREBASE MODE
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, 'artists', artist.id);
         const artistDoc = await transaction.get(artistRef);
@@ -349,10 +369,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         for (const share of sharesToBuy) {
             const newFractalRef = doc(collection(db, 'users', user.uid, 'ownedFractals'));
             const serialNumber = `CRESTOX-${artist.id.split('-')[1]}-${String(Date.now()).slice(-6)}-${Math.random().toString(36).substring(2, 5)}`;
+            const purchasePriceWithTax = Math.round(share.price * 1.18 * 100) / 100;
             const newOwnedFractal: Omit<OwnedFractal, 'id'> = {
                 artistId: artist.id,
                 artistName: artist.name,
-                purchasePrice: Math.round(share.price * 1.18 * 100) / 100,
+                purchasePrice: purchasePriceWithTax,
                 purchaseDate: purchaseDate,
                 serialNumber: serialNumber,
                 status: 'available'
@@ -367,14 +388,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 const newQuantity = listingData.quantity - 1;
                 transaction.update(listingRef, { quantity: newQuantity, status: newQuantity === 0 ? 'completed' : 'active' });
 
-                const resellerFractalQuery = query(
-                    collection(db, 'users', share.resellerId!, 'ownedFractals'),
-                    where('listingId', '==', share.sourceId),
-                    limit(1)
-                );
-                const resellerFractalSnapshot = await getDocs(resellerFractalQuery);
-                if (!resellerFractalSnapshot.empty) {
-                    transaction.delete(resellerFractalSnapshot.docs[0].ref);
+                if (share.resellerId) {
+                    const resellerFractalQuery = query(
+                        collection(db, 'users', share.resellerId, 'ownedFractals'),
+                        where('listingId', '==', share.sourceId),
+                        limit(1)
+                    );
+                    const resellerFractalSnapshot = await getDocs(resellerFractalQuery);
+                    if (!resellerFractalSnapshot.empty) {
+                        transaction.delete(resellerFractalSnapshot.docs[0].ref);
+                    }
                 }
 
             } else {
@@ -396,7 +419,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             totalPortfolioValueHistory: [...postTradeArtistData.totalPortfolioValueHistory, { date: purchaseDate, value: newTotalPortfolioValue }],
         });
     });
-  }, [user, artists, resaleListings]);
+  }, [user, artists, resaleListings, collection]);
 
   const holdingsByArtist = new Map<string, number>();
   collection.forEach(fractal => {
@@ -405,7 +428,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       }
   });
 
-  const value = { isLoggedIn, user, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist };
+  const value = { isLoggedIn, user, isArtist, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist };
 
   return (
     <AuthContext.Provider value={value}>

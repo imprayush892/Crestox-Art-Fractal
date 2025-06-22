@@ -9,7 +9,7 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 
 export function Header() {
-  const { isLoggedIn, logout } = useAuth();
+  const { isLoggedIn, isArtist, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
@@ -18,10 +18,14 @@ export function Header() {
     { href: '/artists', label: 'Artists' },
   ];
 
-  const loggedInLinks = [
+  const loggedInCollectorLinks = [
     { href: '/collection', label: 'My Collection' },
   ];
   
+  const loggedInArtistLinks = [
+      { href: '/portfolio', label: 'My Portfolio' },
+  ];
+
   const handleLogout = () => {
     logout();
     closeMenu();
@@ -44,7 +48,12 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
-            {isLoggedIn && loggedInLinks.map((link) => (
+            {isLoggedIn && loggedInCollectorLinks.map((link) => (
+               <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+                {link.label}
+              </Link>
+            ))}
+            {isLoggedIn && isArtist && loggedInArtistLinks.map((link) => (
                <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
                 {link.label}
               </Link>
@@ -99,7 +108,12 @@ export function Header() {
                       {link.label}
                     </Link>
                   ))}
-                  {isLoggedIn && loggedInLinks.map((link) => (
+                  {isLoggedIn && loggedInCollectorLinks.map((link) => (
+                     <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
+                      {link.label}
+                    </Link>
+                  ))}
+                   {isLoggedIn && isArtist && loggedInArtistLinks.map((link) => (
                      <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
                       {link.label}
                     </Link>
