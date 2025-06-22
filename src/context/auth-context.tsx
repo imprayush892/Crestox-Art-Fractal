@@ -15,7 +15,7 @@ export interface ResaleListing {
   minPrice: number;
   periodSeconds: number;
   listingTimestamp: string; // ISO string
-  status: 'active' | 'completed';
+  status: 'active' | 'completed' | 'cancelled';
 }
 
 export interface OwnedFractal {
@@ -31,14 +31,20 @@ export interface OwnedFractal {
 
 interface AuthContextType {
   isLoggedIn: boolean;
+  user: { uid: string } | null;
   login: () => void;
   logout: () => void;
   collection: OwnedFractal[];
   investInPortfolio: (artist: Artist, quantity: number) => Promise<void>;
   listForResale: (artist: Artist, details: { quantity: number; initialPrice: number; minPrice: number; periodDays: number }) => Promise<void>;
+  cancelListing: (listingId: string) => Promise<void>;
   holdingsByArtist: Map<string, number>;
   artists: Artist[];
   fractals: Fractal[];
+  resaleListings: ResaleListing[];
+  watchlist: string[];
+  addToWatchlist: (artistId: string) => void;
+  removeFromWatchlist: (artistId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,50 +73,24 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const [artists, setArtists] = useState<Artist[]>(initialArtists);
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
   const [resaleListings, setResaleListings] = useState<ResaleListing[]>([]);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!db) {
-      return;
-    }
+    if (!db) return;
 
-    const unsubArtists = onSnapshot(
-      firestoreCollection(db, 'artists'),
-      (snapshot) => {
-        const artistsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Artist));
-        if (artistsData.length > 0) setArtists(artistsData);
-      },
-      (error) => {
-        console.error("Error listening to 'artists':", error);
-        setArtists(initialArtists);
-      }
-    );
+    const unsubArtists = onSnapshot(firestoreCollection(db, 'artists'), (snapshot) => {
+      setArtists(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Artist)));
+    }, () => setArtists(initialArtists));
 
-    const unsubFractals = onSnapshot(
-      firestoreCollection(db, 'fractals'),
-      (snapshot) => {
-        const fractalsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Fractal));
-        if (fractalsData.length > 0) setFractals(fractalsData);
-      },
-      (error) => {
-        console.error("Error listening to 'fractals':", error);
-        setFractals(initialFractals);
-      }
-    );
+    const unsubFractals = onSnapshot(firestoreCollection(db, 'fractals'), (snapshot) => {
+      setFractals(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Fractal)));
+    }, () => setFractals(initialFractals));
     
-    const unsubResale = onSnapshot(
-        query(firestoreCollection(db, 'resaleListings'), where('status', '==', 'active')),
-        (snapshot) => {
-            const listingsData = snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as ResaleListing));
-            setResaleListings(listingsData);
-        }
-    );
+    const unsubResale = onSnapshot(query(firestoreCollection(db, 'resaleListings')), (snapshot) => {
+      setResaleListings(snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as ResaleListing)));
+    });
 
-
-    return () => {
-      unsubArtists();
-      unsubFractals();
-      unsubResale();
-    };
+    return () => { unsubArtists(); unsubFractals(); unsubResale(); };
   }, [initialArtists, initialFractals]);
   
   useEffect(() => {
@@ -118,8 +98,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     if (user && db) {
       const q = query(firestoreCollection(db, "users", user.uid, "ownedFractals"));
       unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const userFractals = querySnapshot.docs.map(doc => ({...doc.data(), id: doc.id} as OwnedFractal));
-        setCollection(userFractals);
+        setCollection(querySnapshot.docs.map(doc => ({...doc.data(), id: doc.id} as OwnedFractal)));
       });
     } else {
       setCollection([]);
@@ -136,6 +115,46 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     setUser(null);
     setIsLoggedIn(false);
   };
+  
+  const addToWatchlist = (artistId: string) => {
+    setWatchlist(prev => [...new Set([...prev, artistId])]);
+  };
+
+  const removeFromWatchlist = (artistId: string) => {
+      setWatchlist(prev => prev.filter(id => id !== artistId));
+  };
+  
+  const cancelListing = useCallback(async (listingId: string) => {
+    if (!user) throw new Error("User must be logged in.");
+
+    if (!db) {
+        console.warn("Firebase not configured. Simulating cancellation locally.");
+        setResaleListings(prev => prev.filter(l => l.id !== listingId));
+        setCollection(prev => prev.map(f => f.listingId === listingId ? { ...f, status: 'available', listingId: undefined } : f));
+        return;
+    }
+
+    const batch = writeBatch(db);
+    const listingRef = doc(db, 'resaleListings', listingId);
+    
+    batch.update(listingRef, { status: 'cancelled' });
+
+    const fractalsToUpdateQuery = query(
+        collection(db, 'users', user.uid, 'ownedFractals'),
+        where('listingId', '==', listingId)
+    );
+    const snapshot = await getDocs(fractalsToUpdateQuery);
+    if(snapshot.empty) {
+      console.warn("No fractals found for this listing to cancel.");
+      // still proceed to cancel the listing itself
+    }
+    snapshot.docs.forEach(docToUpdate => {
+        batch.update(docToUpdate.ref, { status: 'available', listingId: '' });
+    });
+    
+    await batch.commit();
+
+  }, [user]);
 
   const listForResale = useCallback(async (artist: Artist, details: { quantity: number, initialPrice: number, minPrice: number, periodDays: number}) => {
     if (!user) throw new Error("User must be logged in to sell.");
@@ -165,12 +184,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         const fractalsToUpdate = availableToSell.slice(0, details.quantity);
         const fractalIdsToUpdate = new Set(fractalsToUpdate.map(f => f.id));
 
-        setCollection(currentCollection => currentCollection.map(f => {
-            if (fractalIdsToUpdate.has(f.id)) {
-                return { ...f, status: 'listed', listingId: newListingId };
-            }
-            return f;
-        }));
+        setCollection(currentCollection => currentCollection.map(f => 
+            fractalIdsToUpdate.has(f.id) ? { ...f, status: 'listed', listingId: newListingId } : f
+        ));
         
         return;
     }
@@ -182,10 +198,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         limit(details.quantity)
     );
     
-    const batch = writeBatch(db);
+    const snapshot = await getDocs(fractalsToSellQuery);
+    if(snapshot.docs.length < details.quantity) {
+        throw new Error("Not enough available fractals to sell.");
+    }
 
+    const batch = writeBatch(db);
     const newListingRef = doc(collection(db, 'resaleListings'));
-    const newListing: Omit<ResaleListing, 'id'> = {
+    const newListingData: Omit<ResaleListing, 'id'> = {
         artistId: artist.id,
         resellerId: user.uid,
         quantity: details.quantity,
@@ -195,12 +215,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         listingTimestamp: new Date().toISOString(),
         status: 'active'
     };
-    batch.set(newListingRef, newListing);
-
-    const snapshot = await getDocs(fractalsToSellQuery);
-    if(snapshot.docs.length < details.quantity) {
-        throw new Error("Not enough available fractals to sell.");
-    }
+    batch.set(newListingRef, newListingData);
 
     snapshot.docs.forEach(doc => {
         batch.update(doc.ref, { status: 'listed', listingId: newListingRef.id });
@@ -215,7 +230,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     
     if (!db) {
         console.warn("Firebase not configured. Simulating investment locally.");
-
         const artistData = artists.find(a => a.id === artist.id);
         if (!artistData) throw new Error("Artist not found for local simulation");
 
@@ -288,7 +302,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         
         setCollection(prev => [...prev, ...newOwnedFractals]);
         setArtists(prevArtists => prevArtists.map(a => a.id === artist.id ? newArtistData : a));
-        setResaleListings(newResaleListings.filter(l => l.status === 'active'));
+        setResaleListings(newResaleListings);
 
         return;
     }
@@ -383,14 +397,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             totalPortfolioValueHistory: [...postTradeArtistData.totalPortfolioValueHistory, { date: purchaseDate, value: newTotalPortfolioValue }],
         });
     });
-  }, [user, artists, resaleListings, collection]);
+  }, [user, artists, resaleListings]);
 
   const holdingsByArtist = new Map<string, number>();
   collection.forEach(fractal => {
-      holdingsByArtist.set(fractal.artistId, (holdingsByArtist.get(fractal.artistId) || 0) + 1);
+      if (fractal.status !== 'listed') {
+        holdingsByArtist.set(fractal.artistId, (holdingsByArtist.get(fractal.artistId) || 0) + 1);
+      }
   });
 
-  const value = { isLoggedIn, login, logout, collection, investInPortfolio, listForResale, holdingsByArtist, artists, fractals };
+  const value = { isLoggedIn, user, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist };
 
   return (
     <AuthContext.Provider value={value}>

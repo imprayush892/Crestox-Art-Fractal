@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
@@ -21,11 +21,12 @@ interface ArtistProfileProps {
 }
 
 export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
-  const { isLoggedIn, holdingsByArtist } = useAuth();
+  const { isLoggedIn, holdingsByArtist, watchlist, addToWatchlist, removeFromWatchlist } = useAuth();
   const router = useRouter();
   const [isInvesting, setIsInvesting] = useState(false);
 
   const ownedShares = holdingsByArtist.get(artist.id) || 0;
+  const isWatched = watchlist.includes(artist.id);
 
   const handleInvestClick = () => {
     if (!isLoggedIn) {
@@ -33,6 +34,18 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
       return;
     }
     setIsInvesting(true);
+  };
+  
+  const handleWatchClick = () => {
+    if (!isLoggedIn) {
+      router.push(`/login?redirect=/artist/${artist.id}`);
+      return;
+    }
+    if (isWatched) {
+      removeFromWatchlist(artist.id);
+    } else {
+      addToWatchlist(artist.id);
+    }
   };
 
   const fractalPriceHistory = artist.priceHistory.map(p => ({ date: p.date, value: p.price }));
@@ -73,10 +86,15 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                             ${artist.fractalPrice.toLocaleString()}
                         </div>
                     </div>
-                    <Button size="lg" className="w-full" onClick={handleInvestClick}>
-                        <ShoppingCart className="mr-2 h-5 w-5" />
-                        Invest Now
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="lg" className="w-full" onClick={handleInvestClick}>
+                          <ShoppingCart className="mr-2 h-5 w-5" />
+                          Invest Now
+                      </Button>
+                       <Button size="lg" variant="outline" onClick={handleWatchClick} aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}>
+                          <Star className={`w-5 h-5 transition-colors ${isWatched ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'}`} />
+                      </Button>
+                    </div>
                     {ownedShares > 0 && (
                         <div className="mt-4 text-center text-sm text-green-600 font-medium flex items-center justify-center gap-2">
                             <CheckCircle className="w-4 h-4" />
