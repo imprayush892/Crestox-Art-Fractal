@@ -129,7 +129,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
     if (!db) {
         console.warn("Firebase not configured. Simulating cancellation locally.");
-        setResaleListings(prev => prev.filter(l => l.id !== listingId));
+        setResaleListings(prev => prev.map(l => l.id === listingId ? { ...l, status: 'cancelled' } : l));
         setCollection(prev => prev.map(f => f.listingId === listingId ? { ...f, status: 'available', listingId: undefined } : f));
         return;
     }
