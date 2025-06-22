@@ -219,7 +219,7 @@ export default function CreateArtworkPage() {
                   name="editionsToIssue"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>New Portfolio Editions to Issue</FormLabel>
+                      <FormLabel>New Portfolio Fractals to Issue</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="100" {...field} />
                       </FormControl>
