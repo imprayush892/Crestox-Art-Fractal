@@ -56,7 +56,7 @@ interface AuthContextType {
   removeFromWatchlist: (artistId: string) => void;
   createArtistProfile: (profileData: Omit<Artist, 'id'|'avatar'|'fractalPrice'|'priceHistory'|'totalPortfolioValueHistory'|'totalEditions'|'availableEditions'|'userId'>) => Promise<void>;
   updateArtistProfile: (profileData: Partial<Omit<Artist, 'id' | 'userId'>>) => Promise<void>;
-  addArtwork: (artworkData: NewArtworkData) => Promise<void>;
+  addArtwork: (artworkData: NewArtworkData, aiScore: number, aiGrade: string) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: { title: string; description: string; }) => Promise<void>;
 }
 
@@ -197,7 +197,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     }
   }, [user, artistProfile]);
   
-  const addArtwork = useCallback(async (artworkData: NewArtworkData) => {
+  const addArtwork = useCallback(async (artworkData: NewArtworkData, aiScore: number, aiGrade: string) => {
     if (!user || !artistProfile) throw new Error("Artist profile not found.");
 
     if (db) {
@@ -219,10 +219,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 aiHint: 'custom artwork',
                 width: 1000,
                 height: 1000,
-                price: artworkData.estimatedValue, // Use estimated value as the artwork's price
+                price: artworkData.estimatedValue,
                 priceHistory: [{ date: new Date().toISOString(), price: artworkData.estimatedValue }],
-                editions: 1, // Individual artworks are unique
+                editions: 1,
                 editionsAvailable: 1,
+                aiScore: aiScore,
+                aiGrade: aiGrade,
             };
             const newFractalRef = doc(fractalCollectionRef);
             transaction.set(newFractalRef, newFractalData);
@@ -261,6 +263,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             priceHistory: [{ date: new Date().toISOString(), price: artworkData.estimatedValue }],
             editions: 1,
             editionsAvailable: 1,
+            aiScore: aiScore,
+            aiGrade: aiGrade,
         };
         setFractals(prev => [...prev, createdFractal]);
 

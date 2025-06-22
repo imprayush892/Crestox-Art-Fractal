@@ -28,6 +28,8 @@ export interface Fractal {
   priceHistory: { date: string; price: number }[];
   editions?: number;
   editionsAvailable?: number;
+  aiScore?: number;
+  aiGrade?: string;
 }
 
 // --- Data Generation ---
@@ -163,6 +165,13 @@ const tempFractals: Fractal[] = (() => {
         const height = randomInt(5, 9) * 100;
         const price = randomInt(5, 150) * 10;
         const editions = randomInt(1, 20) * 5;
+        const aiScore = randomInt(30, 95);
+        let aiGrade = 'A-';
+        if (aiScore > 80) aiGrade = 'AAA';
+        else if (aiScore > 60) aiGrade = 'AA';
+        else if (aiScore > 40) aiGrade = 'A+';
+        else if (aiScore > 20) aiGrade = 'A';
+        
         return {
             id: `fractal-${String(index + 1).padStart(3, '0')}`,
             title,
@@ -176,6 +185,8 @@ const tempFractals: Fractal[] = (() => {
             priceHistory: generatePriceHistory(price),
             editions: editions,
             editionsAvailable: randomInt(0, editions),
+            aiScore,
+            aiGrade,
         };
     });
 })();

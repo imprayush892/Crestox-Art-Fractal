@@ -21,8 +21,9 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
-import { Loader2, UploadCloud, X } from 'lucide-react';
+import { Loader2, UploadCloud, X, Wand2 } from 'lucide-react';
 import Image from 'next/image';
+import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -89,25 +90,38 @@ export default function CreateArtworkPage() {
         return;
     }
     setIsSubmitting(true);
+    
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(data.image);
-      reader.onloadend = async () => {
-        const imageDataUri = reader.result as string;
-        await addArtwork({ ...data, image: imageDataUri });
+        const reader = new FileReader();
+        reader.readAsDataURL(data.image);
+        reader.onloadend = async () => {
+            const imageDataUri = reader.result as string;
 
-        toast({
-          title: "Artwork Added!",
-          description: `"${data.title}" has been added to your portfolio.`,
-        });
-        router.push('/portfolio');
-      }
+            // Step 1: Evaluate artwork
+            toast({ title: "AI Evaluation In Progress...", description: "Our AI is analyzing your artwork. This may take a moment." });
+            const evaluationResult = await evaluateArtwork({ photoDataUri: imageDataUri });
+
+            // Step 2: Add artwork with evaluation results
+            await addArtwork(
+              { ...data, image: imageDataUri }, 
+              evaluationResult.finalScore, 
+              evaluationResult.grade
+            );
+
+            toast({
+                title: "Artwork Added!",
+                description: `"${data.title}" has been added to your portfolio with an AI grade of ${evaluationResult.grade}.`,
+            });
+            router.push('/portfolio');
+        }
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: "There was a problem adding your artwork. Please try again.",
-      });
+        console.error("Error during artwork creation:", error);
+        toast({
+            variant: "destructive",
+            title: "Uh oh! Something went wrong.",
+            description: "There was a problem adding your artwork. Please try again.",
+        });
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -122,7 +136,7 @@ export default function CreateArtworkPage() {
         <CardHeader>
           <CardTitle className="font-headline text-3xl">Add New Artwork</CardTitle>
           <CardDescription>
-            Upload a new artwork. This will be added to your public portfolio and its value will be incorporated into your total portfolio valuation.
+            Upload a new artwork. This will be added to your public portfolio and will be evaluated by our AI to provide a quality grade.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -233,8 +247,8 @@ export default function CreateArtworkPage() {
               </div>
 
               <Button type="submit" disabled={isSubmitting} size="lg">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add Artwork to Portfolio
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                {isSubmitting ? 'Evaluating & Adding...' : 'Add Artwork to Portfolio'}
               </Button>
             </form>
           </Form>

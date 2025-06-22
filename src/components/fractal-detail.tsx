@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Artist, Fractal } from '@/lib/data';
@@ -11,6 +12,7 @@ import { FractalCard } from '@/components/fractal-card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { format } from 'date-fns';
+import { Star } from 'lucide-react';
 
 interface FractalDetailProps {
     fractal: Fractal;
@@ -27,7 +29,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
     <>
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
         <div className="lg:col-span-3">
-          <div className="bg-muted rounded-lg overflow-hidden shadow-lg mb-8">
+          <div className="bg-muted rounded-lg overflow-hidden shadow-lg mb-8 relative">
             <Image
               src={fractal.image}
               alt={fractal.title}
@@ -37,6 +39,12 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
               data-ai-hint={fractal.aiHint}
               priority
             />
+            {fractal.aiGrade && (
+                <Badge variant="secondary" className="absolute top-4 right-4 text-base py-1 px-3 shadow-lg">
+                    <Star className="w-4 h-4 mr-2 text-yellow-400 fill-yellow-400" />
+                    AI Grade: {fractal.aiGrade}
+                </Badge>
+            )}
           </div>
             <h2 className="font-headline text-3xl font-bold mb-6">Artwork Value History</h2>
             <Card>

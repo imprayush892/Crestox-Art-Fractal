@@ -24,6 +24,7 @@ import { Loader2 } from 'lucide-react';
 import type { Fractal } from '@/lib/data';
 import Image from 'next/image';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 const editArtworkFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters.").max(100),
@@ -137,6 +138,12 @@ export default function EditArtworkPage() {
                       <Label className="text-sm font-medium text-muted-foreground">Current Valuation</Label>
                       <p className="text-2xl font-bold">${artwork.price.toLocaleString()}</p>
                   </div>
+                   {artwork.aiGrade && (
+                    <div>
+                        <Label className="text-sm font-medium text-muted-foreground">AI Grade</Label>
+                        <Badge variant="secondary" className="text-lg mt-1">{artwork.aiGrade}</Badge>
+                    </div>
+                  )}
                   <div>
                       <Label className="text-sm font-medium text-muted-foreground">Artist</Label>
                       <p className="text-lg font-semibold">{artistProfile?.name}</p>
