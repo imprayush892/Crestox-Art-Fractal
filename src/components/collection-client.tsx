@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/context/auth-context';
@@ -145,7 +146,7 @@ export function CollectionClient() {
                   if (!artist) return null;
 
                   const totalInvestment = fractalsByArtist.reduce((sum, f) => sum + f.purchasePrice, 0);
-                  const currentValue = fractalsByArtist.length * artist.fractalPrice;
+                  const currentValue = fractalsByArtist.reduce((sum, f) => sum + artist.fractalPrice, 0);
                   const gainLoss = currentValue - totalInvestment;
 
                   return (
