@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { ArrowUpRight, BarChart, DollarSign, TrendingUp, Wallet, Info } from 'lucide-react';
+import { ArrowUpRight, BarChart, DollarSign, TrendingUp, Wallet } from 'lucide-react';
 import type { OwnedFractal, ResaleListing } from '@/context/auth-context';
 import type { Artist } from '@/lib/data';
 import { ArtistHoldingsDialog } from './artist-holdings-dialog';
@@ -16,7 +16,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ArtistCard } from './artist-card';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
 function HoldingsView() {
@@ -289,13 +288,6 @@ export function CollectionClient() {
           </TabsList>
           
           <TabsContent value="holdings">
-            <Alert className="mb-6">
-              <Info className="h-4 w-4" />
-              <AlertTitle>Portfolio Overview</AlertTitle>
-              <AlertDescription>
-                This is a summary of the fractals you currently own. To sell, click the "Sell" button on an artist's card.
-              </AlertDescription>
-            </Alert>
             <HoldingsView />
           </TabsContent>
 
