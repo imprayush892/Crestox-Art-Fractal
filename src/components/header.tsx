@@ -1,21 +1,23 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Gem, Menu, User, X } from 'lucide-react';
+import { Menu, User, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
+import { Logo } from './logo';
 
 export function Header() {
-  const { isLoggedIn, isArtist, logout } = useAuth();
+  const { isLoggedIn, logout, artistProfile } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   const navLinks = [
     { href: '/explore', label: 'Explore Art' },
     { href: '/artists', label: 'Artists' },
+    { href: '/suggestions', label: 'AI Curator' },
   ];
 
   const loggedInCollectorLinks = [
@@ -38,7 +40,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <Link href="/" className="mr-6 flex items-center gap-2">
-          <Gem className="h-6 w-6 text-primary" />
+          <Logo className="h-12 w-12" />
           <span className="font-bold text-lg font-headline">Crestox</span>
         </Link>
         <div className="hidden md:flex flex-1 items-center justify-between">
@@ -48,23 +50,27 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
-            {isLoggedIn && loggedInCollectorLinks.map((link) => (
-               <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
-                {link.label}
-              </Link>
-            ))}
-            {isLoggedIn && isArtist && loggedInArtistLinks.map((link) => (
-               <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
-                {link.label}
-              </Link>
-            ))}
+            {isLoggedIn && (
+              <>
+                {loggedInCollectorLinks.map((link) => (
+                  <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+                    {link.label}
+                  </Link>
+                ))}
+                {loggedInArtistLinks.map((link) => (
+                  <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+                    {link.label}
+                  </Link>
+                ))}
+              </>
+            )}
           </nav>
           <div className="flex items-center gap-4">
             {isLoggedIn ? (
               <>
                 <Button onClick={handleLogout} variant="secondary">Logout</Button>
                 <Avatar>
-                  <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />
+                  <AvatarImage src={artistProfile?.avatar} alt="User" data-ai-hint="user avatar" />
                   <AvatarFallback><User className="w-4 h-4"/></AvatarFallback>
                 </Avatar>
               </>
@@ -92,7 +98,7 @@ export function Header() {
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between border-b p-4">
                     <Link href="/" onClick={closeMenu} className="flex items-center gap-2">
-                      <Gem className="h-6 w-6 text-primary" />
+                      <Logo className="h-12 w-12" />
                       <span className="font-bold font-headline">Crestox</span>
                     </Link>
                     <SheetTrigger asChild>
@@ -108,23 +114,27 @@ export function Header() {
                       {link.label}
                     </Link>
                   ))}
-                  {isLoggedIn && loggedInCollectorLinks.map((link) => (
-                     <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
-                      {link.label}
-                    </Link>
-                  ))}
-                   {isLoggedIn && isArtist && loggedInArtistLinks.map((link) => (
-                     <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
-                      {link.label}
-                    </Link>
-                  ))}
+                  {isLoggedIn && (
+                    <>
+                      {loggedInCollectorLinks.map((link) => (
+                        <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
+                          {link.label}
+                        </Link>
+                      ))}
+                      {loggedInArtistLinks.map((link) => (
+                        <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
+                          {link.label}
+                        </Link>
+                      ))}
+                    </>
+                  )}
                 </nav>
                 <div className="mt-auto border-t p-4">
                  {isLoggedIn ? (
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-2 font-medium">
                             <Avatar>
-                              <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="user avatar" />
+                              <AvatarImage src={artistProfile?.avatar} alt="User" data-ai-hint="user avatar" />
                               <AvatarFallback>U</AvatarFallback>
                             </Avatar>
                             <span>User Profile</span>

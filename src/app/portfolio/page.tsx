@@ -12,12 +12,8 @@ import { DollarSign, Eye, ImageIcon, Palette, Settings, TrendingUp, UserPlus } f
 import Link from 'next/link';
 
 export default function PortfolioPage() {
-  const { isLoggedIn, isArtist, artists } = useAuth();
+  const { isLoggedIn, artistProfile } = useAuth();
   const router = useRouter();
-
-  // For this prototype, we'll find the artist profile from the full list.
-  // In a real app, this would be a dedicated fetch for the logged-in user's artist profile.
-  const artistProfile = artists.find(a => a.id === 'artist-1'); // Mock: assuming logged in user is artist-1
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -29,7 +25,7 @@ export default function PortfolioPage() {
     return null; // Or a loading spinner
   }
 
-  if (!isArtist || !artistProfile) {
+  if (!artistProfile) {
     return (
       <div className="container py-12 text-center">
         <h1 className="font-headline text-4xl font-bold">Become an Artist on Crestox</h1>

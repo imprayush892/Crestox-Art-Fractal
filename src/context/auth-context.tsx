@@ -32,7 +32,7 @@ export interface OwnedFractal {
 interface AuthContextType {
   isLoggedIn: boolean;
   user: { uid: string } | null;
-  isArtist: boolean;
+  artistProfile: Artist | null;
   login: () => void;
   logout: () => void;
   collection: OwnedFractal[];
@@ -70,7 +70,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children, initialArtists, initialFractals }: AuthProviderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<{ uid: string } | null>(null);
-  const [isArtist, setIsArtist] = useState(false);
+  const [artistProfile, setArtistProfile] = useState<Artist | null>(null);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
   const [artists, setArtists] = useState<Artist[]>(initialArtists);
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
@@ -111,14 +111,15 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const login = () => {
     setUser({ uid: 'mock-user-id' });
     setIsLoggedIn(true);
-    // For this prototype, a user is a collector by default, but not an artist.
-    // They can choose to create an artist profile later.
+    // For this prototype, we assume a new user does not have an artist profile.
+    // They can create one from the "My Portfolio" page.
+    setArtistProfile(null);
   }
   
   const logout = () => {
     setUser(null);
     setIsLoggedIn(false);
-    setIsArtist(false);
+    setArtistProfile(null);
   };
   
   const addToWatchlist = (artistId: string) => {
@@ -427,7 +428,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       }
   });
 
-  const value = { isLoggedIn, user, isArtist, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist };
+  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist };
 
   return (
     <AuthContext.Provider value={value}>
