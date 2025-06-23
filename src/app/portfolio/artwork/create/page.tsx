@@ -182,11 +182,7 @@ export default function CreateArtworkPage() {
     try {
         await addArtwork(
             { ...formData, image: imagePreview! },
-            {
-                aiScore: evaluationResult.finalScore,
-                aiGrade: evaluationResult.grade,
-                aiScorecard: evaluationResult.breakdown,
-            },
+            evaluationResult,
             finalPrice,
             shouldApplyGrade
         );
