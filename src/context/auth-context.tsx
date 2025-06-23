@@ -299,8 +299,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
     const priceDifference = finalPrice - oldPrice;
     
-    const updatedArtworkData = {
-        ...formData,
+    const { editionsToIssue, ...fractalFormData } = formData;
+
+    const updatedArtworkData: Partial<Fractal> = {
+        ...fractalFormData,
         price: finalPrice,
         priceHistory: [...artworkToUpdate.priceHistory, { date: new Date().toISOString(), price: finalPrice }],
         aiScore: evaluationResult.finalScore,
@@ -312,8 +314,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     };
 
     const newTotalPortfolioValue = (artistToUpdate.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + priceDifference;
-    const newTotalEditions = artistToUpdate.totalEditions + formData.editionsToIssue;
-    const newAvailableEditions = artistToUpdate.availableEditions + formData.editionsToIssue;
+    const newTotalEditions = artistToUpdate.totalEditions + editionsToIssue;
+    const newAvailableEditions = artistToUpdate.availableEditions + editionsToIssue;
     const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;
     const roundedNewFractalPrice = Math.round(newFractalPrice * 100) / 100;
     const now = new Date().toISOString();
@@ -335,7 +337,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         });
     } else {
         console.warn("Firebase not configured. Simulating artwork update locally.");
-        const updatedArtwork = { ...artworkToUpdate, ...updatedArtworkData };
+        const updatedArtwork = { ...artworkToUpdate, ...updatedArtworkData } as Fractal;
         setFractals(prev => prev.map(f => f.id === artworkId ? updatedArtwork : f));
         
         const updatedArtist = { ...artistToUpdate, ...updatedArtistData };
