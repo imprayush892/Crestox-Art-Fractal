@@ -12,7 +12,9 @@ import { FractalCard } from '@/components/fractal-card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { format } from 'date-fns';
-import { Star } from 'lucide-react';
+import { Star, Info } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArtworkContextDialog } from './artwork-context-dialog';
 
 interface FractalDetailProps {
     fractal: Fractal;
@@ -22,11 +24,17 @@ interface FractalDetailProps {
 }
 
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
-
+  const [isContextDialogOpen, setIsContextDialogOpen] = useState(false);
   const artworkValueHistory = fractal.priceHistory.map(p => ({ date: p.date, value: p.price }));
+  const hasContext = fractal.subjectSignificance || fractal.personalSignificance || fractal.timeEffort || fractal.biographicalContext || fractal.commissionPatronage;
 
   return (
     <>
+      <ArtworkContextDialog
+        fractal={fractal}
+        isOpen={isContextDialogOpen}
+        onClose={() => setIsContextDialogOpen(false)}
+      />
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
         <div className="lg:col-span-3">
           <div className="bg-muted rounded-lg overflow-hidden shadow-lg mb-8 relative">
@@ -39,10 +47,10 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
               data-ai-hint={fractal.aiHint}
               priority
             />
-            {fractal.aiGrade && (
+            {fractal.crestoxGrade && (
                 <Badge variant="secondary" className="absolute top-4 right-4 text-base py-1 px-3 shadow-lg">
                     <Star className="w-4 h-4 mr-2 text-yellow-400 fill-yellow-400" />
-                    AI Grade: {fractal.aiGrade}
+                    Crestox Grade: {fractal.crestoxGrade}
                 </Badge>
             )}
           </div>
@@ -121,10 +129,18 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
 
             <p className="text-lg text-muted-foreground mt-4">{fractal.description}</p>
             
-            <div className="mt-6 flex flex-wrap gap-2">
-              <Badge variant="secondary">Fractal</Badge>
-              <Badge variant="secondary">Digital Art</Badge>
-              <Badge variant="secondary">Algorithmic</Badge>
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">Fractal</Badge>
+                <Badge variant="secondary">Digital Art</Badge>
+                <Badge variant="secondary">Algorithmic</Badge>
+              </div>
+              {hasContext && (
+                  <Button variant="outline" size="sm" onClick={() => setIsContextDialogOpen(true)}>
+                    <Info className="mr-2 h-4 w-4" />
+                    Show Artwork Details
+                  </Button>
+              )}
             </div>
 
             {artist && (

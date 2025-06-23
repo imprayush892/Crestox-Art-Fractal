@@ -23,19 +23,23 @@ import { useRouter, useParams, notFound } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import { Loader2, Wand2, ArrowRight, ArrowLeft } from 'lucide-react';
-import type { Fractal, Artist } from '@/lib/data';
+import type { Fractal, Artist, ArtworkSize } from '@/lib/data';
 import Image from 'next/image';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { EvaluationResult } from '@/context/auth-context';
 import Link from 'next/link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const editArtworkFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters.").max(100),
   description: z.string().min(10, "Description must be at least 10 characters.").max(1000),
   materials: z.string().min(3, "Please specify the materials used."),
-  artworkSize: z.string().min(3, "Please specify the artwork's dimensions."),
+  length: z.coerce.number().min(0.1, "Length is required."),
+  breadth: z.coerce.number().min(0.1, "Breadth is required."),
+  height: z.coerce.number().optional(),
+  unit: z.enum(['in', 'cm', 'ft', 'px']),
   minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least $1."),
   maxEstimatedValue: z.coerce.number(),
   editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
@@ -89,12 +93,18 @@ export default function EditArtworkPage() {
             title: foundArtwork.title,
             description: foundArtwork.description,
             materials: foundArtwork.materials,
-            artworkSize: foundArtwork.artworkSize,
+            length: foundArtwork.artworkSize.length,
+            breadth: foundArtwork.artworkSize.breadth,
+            height: foundArtwork.artworkSize.height,
+            unit: foundArtwork.artworkSize.unit,
             minEstimatedValue: foundArtwork.artistMinEstimate || 100,
             maxEstimatedValue: foundArtwork.artistMaxEstimate || 1000,
-            // You might want to decide if editions can be changed or not
-            editionsToIssue: 0, // Default to not issuing new fractals on edit
-            // Pre-fill optional fields if they exist
+            editionsToIssue: 0,
+            subjectSignificance: foundArtwork.subjectSignificance,
+            personalSignificance: foundArtwork.personalSignificance,
+            timeEffort: foundArtwork.timeEffort,
+            biographicalContext: foundArtwork.biographicalContext,
+            commissionPatronage: foundArtwork.commissionPatronage,
           });
         } else {
           notFound();
@@ -129,12 +139,18 @@ export default function EditArtworkPage() {
     setIsEvaluating(true);
     
     try {
+        let artworkSizeString = `${data.length} x ${data.breadth}`;
+        if (data.height) {
+            artworkSizeString += ` x ${data.height}`;
+        }
+        artworkSizeString += ` ${data.unit}`;
+
         const evaluationInput = {
             photoDataUri: artwork.image,
             title: data.title,
             description: data.description,
             materials: data.materials,
-            artworkSize: data.artworkSize,
+            artworkSize: artworkSizeString,
             minEstimatedValue: data.minEstimatedValue,
             maxEstimatedValue: data.maxEstimatedValue,
             subjectSignificance: data.subjectSignificance,
@@ -143,7 +159,8 @@ export default function EditArtworkPage() {
             biographicalContext: data.biographicalContext,
             commissionPatronage: data.commissionPatronage,
             artistBio: artistProfile.bio,
-            awardsAndExhibitions: artistProfile.awardsAndExhibitions
+            artistAwards: artistProfile.awards.join(', '),
+            artistExhibitions: artistProfile.exhibitions.join(', '),
         };
 
         const result = await evaluateArtwork(evaluationInput);
@@ -324,9 +341,7 @@ export default function EditArtworkPage() {
                       </FormItem>
                     )}
                   />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <FormField
+                  <FormField
                       control={form.control}
                       name="materials"
                       render={({ field }) => (
@@ -339,20 +354,28 @@ export default function EditArtworkPage() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="artworkSize"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Artwork Size</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., 24x36 inches, 4000x4000 pixels" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormItem>
+                    <FormLabel>Artwork Size</FormLabel>
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                        <FormField control={form.control} name="length" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="Length" {...field}/></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="breadth" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="Breadth" {...field}/></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="height" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="Height (Opt.)" {...field}/></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="unit" render={({field}) => (
+                            <FormItem>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="in">in</SelectItem>
+                                        <SelectItem value="cm">cm</SelectItem>
+                                        <SelectItem value="ft">ft</SelectItem>
+                                        <SelectItem value="px">px</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FormItem>
+                        )} />
+                    </div>
+                  </FormItem>
+                  
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <FormField

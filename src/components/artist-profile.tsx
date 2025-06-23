@@ -10,11 +10,12 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { InvestmentDialog } from './investment-dialog';
+import { Badge } from './ui/badge';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -52,6 +53,15 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
   const fractalPriceHistory = artist.priceHistory.map(p => ({ date: p.date, value: p.price }));
   const totalValueHistory = artist.totalPortfolioValueHistory.map(p => ({ date: p.date, value: p.value }));
 
+  const portfolioSnapshot = useMemo(() => {
+    return artistFractals.reduce((acc, fractal) => {
+        if (fractal.crestoxGrade) {
+            acc[fractal.crestoxGrade] = (acc[fractal.crestoxGrade] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+  }, [artistFractals]);
+
   return (
     <>
       <InvestmentDialog
@@ -81,13 +91,16 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     </div>
                 )}
                 {artist.website && (
-                    <div className="flex items-center gap-2">
+                    <a href={artist.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-primary hover:underline">
                         <LinkIcon className="w-4 h-4" />
-                        <a href={artist.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline">
-                            Portfolio
-                        </a>
-                    </div>
+                        <span>Portfolio</span>
+                    </a>
                 )}
+              </div>
+              <div className="mt-4 flex justify-center md:justify-start gap-4">
+                  {artist.twitter && <a href={artist.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Twitter className="w-5 h-5"/></a>}
+                  {artist.instagram && <a href={artist.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Instagram className="w-5 h-5"/></a>}
+                  {artist.linkedin && <a href={artist.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Linkedin className="w-5 h-5"/></a>}
               </div>
               <p className="mt-4 max-w-2xl text-lg text-foreground/80">{artist.bio}</p>
             </div>
@@ -128,6 +141,45 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
             </Card>
         </div>
       </div>
+
+      <div className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
+            <h2 className="font-headline text-3xl font-bold mb-6">Portfolio Snapshot</h2>
+            <Card>
+                <CardContent className="p-6 grid grid-cols-2 gap-4">
+                    {Object.entries(portfolioSnapshot).length > 0 ? (
+                        Object.entries(portfolioSnapshot).map(([grade, count]) => (
+                            <div key={grade} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                                <Badge variant="secondary">{grade} Grade</Badge>
+                                <span className="font-bold text-lg">{count}</span>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="col-span-2 text-center text-muted-foreground">No graded artworks yet.</p>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+        <div className='space-y-6'>
+             <div>
+                <h3 className="font-headline text-2xl font-bold mb-4 flex items-center gap-2"><Award /> Awards</h3>
+                {artist.awards.length > 0 ? (
+                    <ul className="list-disc list-inside space-y-1">
+                        {artist.awards.map((award, i) => <li key={i} className="text-muted-foreground">{award}</li>)}
+                    </ul>
+                ) : <p className="text-sm text-muted-foreground">No awards listed.</p>}
+            </div>
+             <div>
+                <h3 className="font-headline text-2xl font-bold mb-4 flex items-center gap-2"><Building2 /> Exhibitions</h3>
+                {artist.exhibitions.length > 0 ? (
+                     <ul className="list-disc list-inside space-y-1">
+                        {artist.exhibitions.map((ex, i) => <li key={i} className="text-muted-foreground">{ex}</li>)}
+                    </ul>
+                ) : <p className="text-sm text-muted-foreground">No exhibitions listed.</p>}
+            </div>
+        </div>
+      </div>
+
 
       <div className="mb-12">
         <h2 className="font-headline text-3xl font-bold mb-6">Portfolio Analytics</h2>

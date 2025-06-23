@@ -46,7 +46,7 @@ export function ScorecardDialog({ isOpen, onClose, fractal }: ScorecardDialogPro
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl printable-area">
         <DialogHeader>
-          <DialogTitle className="font-headline text-2xl">AI Evaluation Scorecard</DialogTitle>
+          <DialogTitle className="font-headline text-2xl">Crestox Evaluation Scorecard</DialogTitle>
           <DialogDescription>
             Detailed analysis for "{fractal.title}".
           </DialogDescription>
@@ -58,8 +58,8 @@ export function ScorecardDialog({ isOpen, onClose, fractal }: ScorecardDialogPro
                 <p className="text-3xl font-bold">{fractal.aiScore}</p>
             </div>
              <div className="text-center">
-                <p className="text-sm text-muted-foreground">AI Grade</p>
-                <Badge variant="secondary" className="text-2xl mt-1 px-4 py-1">{fractal.aiGrade}</Badge>
+                <p className="text-sm text-muted-foreground">Crestox Grade</p>
+                <Badge variant="secondary" className="text-2xl mt-1 px-4 py-1">{fractal.crestoxGrade || 'N/A'}</Badge>
             </div>
         </div>
 

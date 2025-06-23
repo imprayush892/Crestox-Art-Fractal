@@ -129,7 +129,8 @@ const EvaluateArtworkInputSchema = z.object({
   biographicalContext: z.string().optional(),
   commissionPatronage: z.string().optional(),
   artistBio: z.string(),
-  awardsAndExhibitions: z.string().optional(),
+  artistAwards: z.string().optional(),
+  artistExhibitions: z.string().optional(),
 });
 
 const AiCriterionScoreSchema = z.object({
@@ -190,7 +191,8 @@ ${rubric.map(item => `| ${item.id} | ${item.criterion} | ${item.type} | ${item.w
 
 **Artist Information:**
 - Artist Bio: {{{artistBio}}}
-- Artist Awards & Exhibitions: {{{awardsAndExhibitions}}}
+- Artist Awards: {{{artistAwards}}}
+- Artist Exhibitions: {{{artistExhibitions}}}
 
 ---
 **ARTWORK TO ANALYZE**

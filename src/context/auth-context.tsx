@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import type { Artist, Fractal, AIScorecardBreakdown } from '@/lib/data';
+import type { Artist, Fractal, AIScorecardBreakdown, ArtworkSize } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection, addDoc, updateDoc, getDoc } from 'firebase/firestore';
@@ -41,7 +40,7 @@ type NewArtworkData = {
     title: string;
     description: string;
     materials: string;
-    artworkSize: string;
+    artworkSize: ArtworkSize;
     minEstimatedValue: number;
     maxEstimatedValue: number;
     editionsToIssue: number;
@@ -179,7 +178,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         location: profileData.location,
         website: profileData.website,
         style: profileData.style,
-        awardsAndExhibitions: profileData.awardsAndExhibitions,
+        awards: profileData.awards,
+        exhibitions: profileData.exhibitions,
+        twitter: profileData.twitter,
+        instagram: profileData.instagram,
+        linkedin: profileData.linkedin,
         avatar: 'https://placehold.co/100x100.png',
         fractalPrice: 0,
         priceHistory: [],
@@ -226,6 +229,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         description: artworkData.description,
         materials: artworkData.materials,
         artworkSize: artworkData.artworkSize,
+        subjectSignificance: artworkData.subjectSignificance,
+        personalSignificance: artworkData.personalSignificance,
+        timeEffort: artworkData.timeEffort,
+        biographicalContext: artworkData.biographicalContext,
+        commissionPatronage: artworkData.commissionPatronage,
         aiHint: 'custom artwork',
         width: 1000,
         height: 1000,
@@ -234,7 +242,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         editions: 1,
         editionsAvailable: 1,
         aiScore: evaluation.finalScore,
-        aiGrade: shouldApplyGrade ? evaluation.grade : undefined,
+        crestoxGrade: shouldApplyGrade ? evaluation.grade : undefined,
         aiScorecard: evaluation.breakdown,
         crestoxPriceRange: evaluation.crestoxPriceRange,
         artistMinEstimate: artworkData.minEstimatedValue,
@@ -300,13 +308,27 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     const priceDifference = finalPrice - oldPrice;
     
     const { editionsToIssue, ...fractalFormData } = formData;
+    
+    const { length, breadth, height, unit } = formData;
+    const artworkSize: ArtworkSize = { length, breadth, unit };
+    if (height) {
+        artworkSize.height = height;
+    }
 
     const updatedArtworkData: Partial<Fractal> = {
-        ...fractalFormData,
+        title: fractalFormData.title,
+        description: fractalFormData.description,
+        materials: fractalFormData.materials,
+        artworkSize: artworkSize,
+        subjectSignificance: fractalFormData.subjectSignificance,
+        personalSignificance: fractalFormData.personalSignificance,
+        timeEffort: fractalFormData.timeEffort,
+        biographicalContext: fractalFormData.biographicalContext,
+        commissionPatronage: fractalFormData.commissionPatronage,
         price: finalPrice,
         priceHistory: [...artworkToUpdate.priceHistory, { date: new Date().toISOString(), price: finalPrice }],
         aiScore: evaluationResult.finalScore,
-        aiGrade: shouldApplyGrade ? evaluationResult.grade : undefined,
+        crestoxGrade: shouldApplyGrade ? evaluationResult.grade : undefined,
         aiScorecard: evaluationResult.breakdown,
         crestoxPriceRange: evaluationResult.crestoxPriceRange,
         artistMinEstimate: formData.minEstimatedValue,

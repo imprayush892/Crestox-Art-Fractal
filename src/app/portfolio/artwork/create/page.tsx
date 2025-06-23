@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -28,6 +27,8 @@ import Image from 'next/image';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArtworkSize } from '@/lib/data';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -36,7 +37,10 @@ const artworkFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters.").max(100),
   description: z.string().min(10, "Description must be at least 10 characters.").max(1000),
   materials: z.string().min(3, "Please specify the materials used."),
-  artworkSize: z.string().min(3, "Please specify the artwork's dimensions."),
+  length: z.coerce.number().min(0.1, "Length is required."),
+  breadth: z.coerce.number().min(0.1, "Breadth is required."),
+  height: z.coerce.number().optional(),
+  unit: z.enum(['in', 'cm', 'ft', 'px']),
   minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least $1."),
   maxEstimatedValue: z.coerce.number(),
   editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
@@ -112,7 +116,9 @@ export default function CreateArtworkPage() {
       title: "",
       description: "",
       materials: "",
-      artworkSize: "",
+      length: 24,
+      breadth: 36,
+      unit: "in",
       minEstimatedValue: 100,
       maxEstimatedValue: 1000,
       editionsToIssue: 100,
@@ -135,12 +141,18 @@ export default function CreateArtworkPage() {
         reader.onloadend = async () => {
             const imageDataUri = reader.result as string;
 
+            let artworkSizeString = `${data.length} x ${data.breadth}`;
+            if (data.height) {
+                artworkSizeString += ` x ${data.height}`;
+            }
+            artworkSizeString += ` ${data.unit}`;
+
             const evaluationInput = {
                 photoDataUri: imageDataUri,
                 title: data.title,
                 description: data.description,
                 materials: data.materials,
-                artworkSize: data.artworkSize,
+                artworkSize: artworkSizeString,
                 minEstimatedValue: data.minEstimatedValue,
                 maxEstimatedValue: data.maxEstimatedValue,
                 subjectSignificance: data.subjectSignificance,
@@ -149,7 +161,8 @@ export default function CreateArtworkPage() {
                 biographicalContext: data.biographicalContext,
                 commissionPatronage: data.commissionPatronage,
                 artistBio: artistProfile.bio,
-                awardsAndExhibitions: artistProfile.awardsAndExhibitions
+                artistAwards: artistProfile.awards.join(', '),
+                artistExhibitions: artistProfile.exhibitions.join(', '),
             };
 
             const result = await evaluateArtwork(evaluationInput);
@@ -180,8 +193,27 @@ export default function CreateArtworkPage() {
     const shouldApplyGrade = useCrestoxPrice || formData.maxEstimatedValue <= crestoxPrice;
     
     try {
+        const artworkSize : ArtworkSize = { length: formData.length, breadth: formData.breadth, unit: formData.unit };
+        if(formData.height) artworkSize.height = formData.height;
+
+        const newArtworkData = {
+          title: formData.title,
+          description: formData.description,
+          materials: formData.materials,
+          artworkSize,
+          minEstimatedValue: formData.minEstimatedValue,
+          maxEstimatedValue: formData.maxEstimatedValue,
+          editionsToIssue: formData.editionsToIssue,
+          image: imagePreview!,
+          subjectSignificance: formData.subjectSignificance,
+          personalSignificance: formData.personalSignificance,
+          timeEffort: formData.timeEffort,
+          biographicalContext: formData.biographicalContext,
+          commissionPatronage: formData.commissionPatronage,
+        };
+        
         await addArtwork(
-            { ...formData, image: imagePreview! },
+            newArtworkData,
             evaluationResult,
             finalPrice,
             shouldApplyGrade
@@ -369,9 +401,7 @@ export default function CreateArtworkPage() {
                       </FormItem>
                     )}
                   />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <FormField
+                   <FormField
                       control={form.control}
                       name="materials"
                       render={({ field }) => (
@@ -384,20 +414,27 @@ export default function CreateArtworkPage() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="artworkSize"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Artwork Size</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., 24x36 inches, 4000x4000 pixels" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormItem>
+                    <FormLabel>Artwork Size</FormLabel>
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                        <FormField control={form.control} name="length" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="Length" {...field}/></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="breadth" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="Breadth" {...field}/></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="height" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="Height (Opt.)" {...field}/></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name="unit" render={({field}) => (
+                            <FormItem>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="in">in</SelectItem>
+                                        <SelectItem value="cm">cm</SelectItem>
+                                        <SelectItem value="ft">ft</SelectItem>
+                                        <SelectItem value="px">px</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FormItem>
+                        )} />
+                    </div>
+                  </FormItem>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <FormField
@@ -521,7 +558,7 @@ export default function CreateArtworkPage() {
                     </AccordionItem>
                   </Accordion>
                 </div>
-                <Button type="submit" size="lg">
+                <Button type="submit" size="lg" disabled={isEvaluating}>
                   <Wand2 className="mr-2 h-4 w-4" />
                   Evaluate Artwork
                 </Button>

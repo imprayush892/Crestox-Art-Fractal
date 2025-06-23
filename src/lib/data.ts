@@ -1,11 +1,17 @@
 
-
 export interface AIScorecardBreakdown {
   id: number;
   criterion: string;
   score: number;
   weight: number;
   weightedScore: number;
+}
+
+export interface ArtworkSize {
+  length: number;
+  breadth: number;
+  height?: number;
+  unit: 'in' | 'cm' | 'ft' | 'px';
 }
 
 export interface Artist {
@@ -17,7 +23,11 @@ export interface Artist {
   location?: string;
   website?: string;
   style?: string;
-  awardsAndExhibitions?: string;
+  awards: string[];
+  exhibitions: string[];
+  twitter?: string;
+  instagram?: string;
+  linkedin?: string;
   fractalPrice: number;
   priceHistory: { date: string; price: number }[];
   totalPortfolioValueHistory: { date: string; value: number }[];
@@ -32,7 +42,7 @@ export interface Fractal {
   artistId: string;
   description: string;
   materials: string;
-  artworkSize: string;
+  artworkSize: ArtworkSize;
   aiHint: string;
   width: number;
   height: number;
@@ -41,11 +51,16 @@ export interface Fractal {
   editions?: number;
   editionsAvailable?: number;
   aiScore?: number;
-  aiGrade?: string;
+  crestoxGrade?: string;
   aiScorecard?: AIScorecardBreakdown[];
   crestoxPriceRange?: [number, number];
   artistMinEstimate?: number;
   artistMaxEstimate?: number;
+  subjectSignificance?: string;
+  personalSignificance?: string;
+  timeEffort?: string;
+  biographicalContext?: string;
+  commissionPatronage?: string;
 }
 
 // --- Data Generation ---
@@ -66,11 +81,13 @@ const bios = [
 ];
 const locations = ['Berlin, Germany', 'Tokyo, Japan', 'New York, USA', 'London, UK', 'Virtual Realm', 'Cyber City', 'The Void'];
 const styles = ['Generative', 'Abstract', 'Algorithmic', 'Surreal', 'Minimalist', 'Glitch Art'];
-const awards = [
+const awardsData = [
     'Winner of the 2023 Algorithmic Art Prize.',
-    'Featured in the "Digital Dreams" exhibition at the Modern Art Gallery.',
     'Recipient of the "Innovator in Code" grant.',
-    'Work acquired by the National Museum of Digital Art.'
+];
+const exhibitionsData = [
+    'Featured in the "Digital Dreams" exhibition at the Modern Art Gallery.',
+    'Solo show at The Techne Art Center, 2024.'
 ];
 
 const fractalAdjectives = ['Quantum', 'Cosmic', 'Galactic', 'Ephemeral', 'Crystalline', 'Solar', 'Veridian', 'Abyssal', 'Axiomatic', 'Digital', 'Chromatic', 'Ethereal', 'Chaotic', 'Frozen', 'Celestial', 'Prismatic', 'Lucid', 'Obsidian', 'Golden', 'Silent', 'Pulsing', 'Nebulous', 'Luminous', 'Woven', 'Glimmering'];
@@ -158,15 +175,19 @@ const tempArtists = (() => {
 
     return selectedNames.map((name, index) => {
         const totalEditions = randomInt(1, 10) * 1000;
+        const slug = name.replace(/\s+/g, '').toLowerCase();
         return {
             id: `artist-${index + 1}`,
             name,
             avatar: 'https://placehold.co/100x100.png',
             bio: getRandom(bios),
             location: getRandom(locations),
-            website: `https://example.com/${name.replace(/\s+/g, '-').toLowerCase()}`,
+            website: `https://example.com/${slug}`,
             style: `${getRandom(styles)}, ${getRandom(styles)}`,
-            awardsAndExhibitions: getRandom(awards),
+            awards: [getRandom(awardsData)],
+            exhibitions: [getRandom(exhibitionsData)],
+            twitter: `https://twitter.com/${slug}`,
+            instagram: `https://instagram.com/${slug}`,
             totalEditions,
             availableEditions: randomInt(100, totalEditions),
         }
@@ -189,11 +210,11 @@ const tempFractals: Fractal[] = (() => {
         const price = randomInt(5, 150) * 10;
         const editions = randomInt(1, 20) * 5;
         const aiScore = randomInt(30, 95);
-        let aiGrade = 'A-';
-        if (aiScore > 80) aiGrade = 'AAA';
-        else if (aiScore > 60) aiGrade = 'AA';
-        else if (aiScore > 40) aiGrade = 'A+';
-        else if (aiScore > 20) aiGrade = 'A';
+        let crestoxGrade = 'A-';
+        if (aiScore > 80) crestoxGrade = 'AAA';
+        else if (aiScore > 60) crestoxGrade = 'AA';
+        else if (aiScore > 40) crestoxGrade = 'A+';
+        else if (aiScore > 20) crestoxGrade = 'A';
         
         return {
             id: `fractal-${String(index + 1).padStart(3, '0')}`,
@@ -202,7 +223,7 @@ const tempFractals: Fractal[] = (() => {
             artistId: getRandom(tempArtists).id,
             description: getRandom(fractalDescriptions),
             materials: 'Digital Render',
-            artworkSize: `${width}x${height} pixels`,
+            artworkSize: { length: width, breadth: height, unit: 'px' },
             aiHint: getRandom(aiHints),
             width,
             height,
@@ -211,9 +232,11 @@ const tempFractals: Fractal[] = (() => {
             editions: editions,
             editionsAvailable: randomInt(0, editions),
             aiScore,
-            aiGrade,
+            crestoxGrade,
             artistMinEstimate: Math.round(price * 0.8),
             artistMaxEstimate: Math.round(price * 1.2),
+            subjectSignificance: 'This piece explores the intersection of nature and technology.',
+            personalSignificance: 'Created during a period of intense personal growth and discovery.'
         };
     });
 })();

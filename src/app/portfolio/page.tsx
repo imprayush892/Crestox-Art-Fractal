@@ -187,7 +187,7 @@ export default function PortfolioPage() {
                                   <TableHead className="w-[80px] hidden md:table-cell">Image</TableHead>
                                   <TableHead>Artwork</TableHead>
                                   <TableHead>Valuation</TableHead>
-                                  <TableHead>AI Grade</TableHead>
+                                  <TableHead>Crestox Grade</TableHead>
                                   <TableHead className="text-right">Actions</TableHead>
                               </TableRow>
                           </TableHeader>
@@ -200,9 +200,9 @@ export default function PortfolioPage() {
                                       <TableCell className="font-medium">{fractal.title}</TableCell>
                                       <TableCell>${fractal.price.toLocaleString()}</TableCell>
                                       <TableCell>
-                                        {fractal.aiGrade ? (
+                                        {fractal.crestoxGrade ? (
                                             <Button variant="ghost" size="sm" className="p-1 h-auto" onClick={() => setSelectedFractal(fractal)}>
-                                                <Badge variant="secondary">{fractal.aiGrade}</Badge>
+                                                <Badge variant="secondary">{fractal.crestoxGrade}</Badge>
                                             </Button>
                                         ) : fractal.aiScore !== undefined ? (
                                             <div className="flex items-center gap-2">
