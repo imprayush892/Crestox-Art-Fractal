@@ -10,11 +10,12 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
 import { CollectionDialog } from './investment-dialog';
+import Link from 'next/link';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -22,10 +23,11 @@ interface ArtistProfileProps {
 }
 
 export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
-  const { isLoggedIn, holdingsByArtist, watchlist, addToWatchlist, removeFromWatchlist } = useAuth();
+  const { isLoggedIn, artistProfile, holdingsByArtist, watchlist, addToWatchlist, removeFromWatchlist } = useAuth();
   const router = useRouter();
   const [isCollecting, setIsCollecting] = useState(false);
 
+  const isOwnProfile = artistProfile?.id === artist.id;
   const ownedFractals = holdingsByArtist.get(artist.id) || 0;
   const isWatched = watchlist.includes(artist.id);
 
@@ -111,38 +113,55 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
         </div>
 
         <div className="lg:col-span-2">
-           <Card className="sticky top-24">
+           {isOwnProfile ? (
+             <Card className="sticky top-24">
                 <CardHeader>
-                    <CardTitle className="font-headline text-2xl">Collect from the Portfolio</CardTitle>
-                    <CardDescription>Purchase a "fractal" to own a piece of this artist's entire collection.</CardDescription>
+                    <CardTitle className="font-headline text-2xl">Your Public Profile</CardTitle>
+                    <CardDescription>This is how collectors see your portfolio. Manage your artworks and settings from your dashboard.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="text-sm text-muted-foreground flex items-center gap-2">
-                            <Layers className="w-4 h-4" />
-                            <span>{artist.availableEditions.toLocaleString()} of {artist.totalEditions.toLocaleString()} available</span>
-                        </div>
-                        <div className="text-3xl font-bold text-primary">
-                            ${artist.fractalPrice.toLocaleString()}
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="lg" className="w-full" onClick={handleCollectClick}>
-                          <ShoppingCart className="mr-2 h-5 w-5" />
-                          Collect Now
-                      </Button>
-                       <Button size="lg" variant="outline" onClick={handleWatchClick} aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}>
-                          <Star className={`w-5 h-5 transition-colors ${isWatched ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'}`} />
-                      </Button>
-                    </div>
-                    {ownedFractals > 0 && (
-                        <div className="mt-4 text-center text-sm text-green-600 font-medium flex items-center justify-center gap-2">
-                            <CheckCircle className="w-4 h-4" />
-                            You own {ownedFractals} fractal{ownedFractals > 1 ? 's' : ''} from this portfolio.
-                        </div>
-                    )}
+                    <Button size="lg" className="w-full" asChild>
+                        <Link href="/portfolio">
+                            <Edit className="mr-2 h-5 w-5" />
+                            Go to Dashboard
+                        </Link>
+                    </Button>
                 </CardContent>
             </Card>
+           ) : (
+            <Card className="sticky top-24">
+                  <CardHeader>
+                      <CardTitle className="font-headline text-2xl">Collect from the Portfolio</CardTitle>
+                      <CardDescription>Purchase a "fractal" to own a piece of this artist's entire collection.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="flex justify-between items-center mb-4">
+                          <div className="text-sm text-muted-foreground flex items-center gap-2">
+                              <Layers className="w-4 h-4" />
+                              <span>{artist.availableEditions.toLocaleString()} of {artist.totalEditions.toLocaleString()} available</span>
+                          </div>
+                          <div className="text-3xl font-bold text-primary">
+                              ${artist.fractalPrice.toLocaleString()}
+                          </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button size="lg" className="w-full" onClick={handleCollectClick}>
+                            <ShoppingCart className="mr-2 h-5 w-5" />
+                            Collect Now
+                        </Button>
+                         <Button size="lg" variant="outline" onClick={handleWatchClick} aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}>
+                            <Star className={`w-5 h-5 transition-colors ${isWatched ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'}`} />
+                        </Button>
+                      </div>
+                      {ownedFractals > 0 && (
+                          <div className="mt-4 text-center text-sm text-green-600 font-medium flex items-center justify-center gap-2">
+                              <CheckCircle className="w-4 h-4" />
+                              You own {ownedFractals} fractal{ownedFractals > 1 ? 's' : ''} from this portfolio.
+                          </div>
+                      )}
+                  </CardContent>
+              </Card>
+           )}
         </div>
       </div>
 
