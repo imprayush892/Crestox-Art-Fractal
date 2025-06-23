@@ -3,7 +3,7 @@
 
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Artist, Fractal, AIScorecardBreakdown } from '@/lib/data';
+import { artists as mockArtists, fractals as mockFractals, type Artist, type Fractal, type AIScorecardBreakdown } from '@/lib/data';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 
 export interface ReevaluationResult {
@@ -14,25 +14,35 @@ export interface ReevaluationResult {
 }
 
 export async function reevaluateArtworkForGrading(artworkId: string): Promise<ReevaluationResult> {
-    if (!db) {
-        throw new Error("Firebase is not connected. Re-evaluation is not possible.");
-    }
     
-    const fractalRef = doc(db, 'fractals', artworkId);
-    const fractalDoc = await getDoc(fractalRef);
+    let fractalData: Fractal | undefined;
+    let artistData: Artist | undefined;
 
-    if (!fractalDoc.exists()) {
+    if (!db) {
+        console.warn("Firebase not configured. Simulating re-evaluation locally.");
+        fractalData = mockFractals.find(f => f.id === artworkId);
+        if (fractalData) {
+            artistData = mockArtists.find(a => a.id === fractalData!.artistId);
+        }
+    } else {
+        const fractalRef = doc(db, 'fractals', artworkId);
+        const fractalDoc = await getDoc(fractalRef);
+        if (fractalDoc.exists()) {
+            fractalData = fractalDoc.data() as Fractal;
+            const artistRef = doc(db, 'artists', fractalData.artistId);
+            const artistDoc = await getDoc(artistRef);
+            if (artistDoc.exists()) {
+                artistData = artistDoc.data() as Artist;
+            }
+        }
+    }
+
+    if (!fractalData) {
         throw new Error("Artwork not found.");
     }
-    const fractalData = fractalDoc.data() as Fractal;
-
-    const artistRef = doc(db, 'artists', fractalData.artistId);
-    const artistDoc = await getDoc(artistRef);
-
-    if (!artistDoc.exists()) {
-        throw new Error("Artist not found.");
+    if (!artistData) {
+        throw new Error("Artist not found for the given artwork.");
     }
-    const artistData = artistDoc.data() as Artist;
     
     const evaluationInput = {
         photoDataUri: fractalData.image,
