@@ -6,7 +6,13 @@ import type { Artist, Fractal, AIScorecardBreakdown } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection, addDoc, updateDoc, getDoc } from 'firebase/firestore';
-import type { ReevaluationResult } from '@/actions/reevaluate';
+import type { EditArtworkFormValues } from '@/app/portfolio/artwork/edit/[id]/page';
+export interface EvaluationResult {
+    finalScore: number;
+    grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
+    breakdown: AIScorecardBreakdown[];
+    crestoxPriceRange: [number, number];
+}
 
 export interface ResaleListing {
   id: string;
@@ -49,13 +55,6 @@ type NewArtworkData = {
 
 type CreateArtistProfileData = Omit<Artist, 'id'|'avatar'|'fractalPrice'|'priceHistory'|'totalPortfolioValueHistory'|'totalEditions'|'availableEditions'|'userId'>;
 
-interface EvaluationResult {
-    finalScore: number;
-    grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
-    breakdown: AIScorecardBreakdown[];
-    crestoxPriceRange: [number, number];
-}
-
 interface AuthContextType {
   isLoggedIn: boolean;
   user: { uid: string } | null;
@@ -76,9 +75,7 @@ interface AuthContextType {
   createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
   updateArtistProfile: (profileData: Partial<Omit<Artist, 'id' | 'userId'>>) => Promise<void>;
   addArtwork: (artworkData: NewArtworkData, evaluation: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
-  updateArtworkDetails: (artworkId: string, data: { title: string; description: string; }) => Promise<void>;
-  updateArtworkWithCrestoxValuation: (artworkId: string, evaluation: ReevaluationResult) => Promise<void>;
-  updateArtworkWithNewScorecard: (artworkId: string, evaluation: ReevaluationResult) => Promise<void>;
+  updateAndReevaluateArtwork: (artworkId: string, formData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -222,189 +219,130 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const addArtwork = useCallback(async (artworkData: NewArtworkData, evaluation: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
     if (!user || !artistProfile) throw new Error("Artist profile not found.");
 
+    const newFractalData: Omit<Fractal, 'id'> = {
+        title: artworkData.title,
+        image: artworkData.image,
+        artistId: artistProfile.id,
+        description: artworkData.description,
+        materials: artworkData.materials,
+        artworkSize: artworkData.artworkSize,
+        aiHint: 'custom artwork',
+        width: 1000,
+        height: 1000,
+        price: finalPrice,
+        priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
+        editions: 1,
+        editionsAvailable: 1,
+        aiScore: evaluation.finalScore,
+        aiGrade: shouldApplyGrade ? evaluation.grade : undefined,
+        aiScorecard: evaluation.breakdown,
+        crestoxPriceRange: evaluation.crestoxPriceRange,
+        artistMinEstimate: artworkData.minEstimatedValue,
+        artistMaxEstimate: artworkData.maxEstimatedValue,
+    };
+    
+    const artistToUpdate = artists.find(a => a.id === artistProfile.id);
+    if (!artistToUpdate) throw new Error("Could not find artist to update");
+
+    const newTotalPortfolioValue = (artistToUpdate.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + finalPrice;
+    const newTotalEditions = artistToUpdate.totalEditions + artworkData.editionsToIssue;
+    const newAvailableEditions = artistToUpdate.availableEditions + artworkData.editionsToIssue;
+    const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;
+    const roundedNewFractalPrice = Math.round(newFractalPrice * 100) / 100;
+    const now = new Date().toISOString();
+
+    const updatedArtistData = {
+        totalEditions: newTotalEditions,
+        availableEditions: newAvailableEditions,
+        fractalPrice: roundedNewFractalPrice,
+        priceHistory: [...artistToUpdate.priceHistory, { date: now, price: roundedNewFractalPrice }],
+        totalPortfolioValueHistory: [...artistToUpdate.totalPortfolioValueHistory, { date: now, value: newTotalPortfolioValue }],
+    };
+
     if (db) {
         const artistRef = doc(db, 'artists', artistProfile.id);
         const fractalCollectionRef = collection(db, 'fractals');
 
         await runTransaction(db, async (transaction) => {
-            const artistDoc = await transaction.get(artistRef);
-            if (!artistDoc.exists()) throw new Error("Artist does not exist.");
-
-            const artistData = artistDoc.data() as Artist;
-
-            const newFractalData: Omit<Fractal, 'id'> = {
-                title: artworkData.title,
-                image: artworkData.image,
-                artistId: artistProfile.id,
-                description: artworkData.description,
-                materials: artworkData.materials,
-                artworkSize: artworkData.artworkSize,
-                aiHint: 'custom artwork',
-                width: 1000,
-                height: 1000,
-                price: finalPrice,
-                priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
-                editions: 1,
-                editionsAvailable: 1,
-                aiScore: evaluation.finalScore,
-                aiGrade: shouldApplyGrade ? evaluation.grade : undefined,
-                aiScorecard: evaluation.breakdown,
-                crestoxPriceRange: evaluation.crestoxPriceRange,
-                artistMinEstimate: artworkData.minEstimatedValue,
-                artistMaxEstimate: artworkData.maxEstimatedValue,
-            };
-            const newFractalRef = doc(fractalCollectionRef);
-            transaction.set(newFractalRef, newFractalData);
-
-            // 2. Update the artist's portfolio
-            const newTotalPortfolioValue = (artistData.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + finalPrice;
-            const newTotalEditions = artistData.totalEditions + artworkData.editionsToIssue;
-            const newAvailableEditions = artistData.availableEditions + artworkData.editionsToIssue;
-            const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;
-            const roundedNewFractalPrice = Math.round(newFractalPrice * 100) / 100;
-            const now = new Date().toISOString();
-
-            const updatedArtistData = {
-                totalEditions: newTotalEditions,
-                availableEditions: newAvailableEditions,
-                fractalPrice: roundedNewFractalPrice,
-                priceHistory: [...artistData.priceHistory, { date: now, price: roundedNewFractalPrice }],
-                totalPortfolioValueHistory: [...artistData.totalPortfolioValueHistory, { date: now, value: newTotalPortfolioValue }],
-            };
-
+            transaction.set(doc(fractalCollectionRef), newFractalData);
             transaction.update(artistRef, updatedArtistData);
         });
     } else {
         console.warn("Firebase not configured. Simulating artwork creation locally.");
-
-        const createdFractal: Fractal = {
-            id: `local-fractal-${Date.now()}`,
-            title: artworkData.title,
-            image: artworkData.image,
-            artistId: artistProfile.id,
-            description: artworkData.description,
-            materials: artworkData.materials,
-            artworkSize: artworkData.artworkSize,
-            aiHint: 'custom artwork',
-            width: 1000,
-            height: 1000,
-            price: finalPrice,
-            priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
-            editions: 1,
-            editionsAvailable: 1,
-            aiScore: evaluation.finalScore,
-            aiGrade: shouldApplyGrade ? evaluation.grade : undefined,
-            aiScorecard: evaluation.breakdown,
-            crestoxPriceRange: evaluation.crestoxPriceRange,
-            artistMinEstimate: artworkData.minEstimatedValue,
-            artistMaxEstimate: artworkData.maxEstimatedValue,
-        };
+        const createdFractal: Fractal = { ...newFractalData, id: `local-fractal-${Date.now()}` };
         setFractals(prev => [...prev, createdFractal]);
-
-        const artistToUpdate = artists.find(a => a.id === artistProfile.id);
-        if (artistToUpdate) {
-            const newTotalPortfolioValue = (artistToUpdate.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + finalPrice;
-            const newTotalEditions = artistToUpdate.totalEditions + artworkData.editionsToIssue;
-            const newAvailableEditions = artistToUpdate.availableEditions + artworkData.editionsToIssue;
-            const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;
-            const roundedNewFractalPrice = Math.round(newFractalPrice * 100) / 100;
-            const now = new Date().toISOString();
-
-            const updatedArtist = {
-                ...artistToUpdate,
-                totalEditions: newTotalEditions,
-                availableEditions: newAvailableEditions,
-                fractalPrice: roundedNewFractalPrice,
-                priceHistory: [...artistToUpdate.priceHistory, { date: now, price: roundedNewFractalPrice }],
-                totalPortfolioValueHistory: [...artistToUpdate.totalPortfolioValueHistory, { date: now, value: newTotalPortfolioValue }],
-            };
-            setArtists(prev => prev.map(a => a.id === artistProfile.id ? updatedArtist : a));
-            setArtistProfile(updatedArtist);
-        }
+        const updatedArtist = { ...artistToUpdate, ...updatedArtistData };
+        setArtists(prev => prev.map(a => a.id === artistProfile.id ? updatedArtist : a));
+        setArtistProfile(updatedArtist);
     }
   }, [user, artistProfile, artists]);
+  
+  const updateAndReevaluateArtwork = useCallback(async (
+    artworkId: string, 
+    formData: EditArtworkFormValues, 
+    evaluationResult: EvaluationResult, 
+    useCrestoxPrice: boolean
+  ) => {
+    if (!user || !artistProfile) throw new Error("Not available");
+    
+    const artistToUpdate = artists.find(a => a.id === artistProfile.id);
+    const artworkToUpdate = fractals.find(f => f.id === artworkId);
 
-  const updateArtworkDetails = useCallback(async (artworkId: string, data: { title: string; description: string; }) => {
-    if (!user || !artistProfile) throw new Error("Artist profile not found.");
+    if (!artistToUpdate || !artworkToUpdate) throw new Error("Artwork or artist not found.");
+
+    const oldPrice = artworkToUpdate.price;
+    const crestoxAvgPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
+    const artistAvgPrice = Math.round((formData.minEstimatedValue + formData.maxEstimatedValue) / 2);
+    
+    const finalPrice = useCrestoxPrice ? crestoxAvgPrice : artistAvgPrice;
+    const shouldApplyGrade = useCrestoxPrice || finalPrice <= crestoxAvgPrice;
+
+    const priceDifference = finalPrice - oldPrice;
+    
+    const updatedArtworkData = {
+        ...formData,
+        price: finalPrice,
+        priceHistory: [...artworkToUpdate.priceHistory, { date: new Date().toISOString(), price: finalPrice }],
+        aiScore: evaluationResult.finalScore,
+        aiGrade: shouldApplyGrade ? evaluationResult.grade : undefined,
+        aiScorecard: evaluationResult.breakdown,
+        crestoxPriceRange: evaluationResult.crestoxPriceRange,
+        artistMinEstimate: formData.minEstimatedValue,
+        artistMaxEstimate: formData.maxEstimatedValue,
+    };
+
+    const newTotalPortfolioValue = (artistToUpdate.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + priceDifference;
+    const newTotalEditions = artistToUpdate.totalEditions + formData.editionsToIssue;
+    const newAvailableEditions = artistToUpdate.availableEditions + formData.editionsToIssue;
+    const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;
+    const roundedNewFractalPrice = Math.round(newFractalPrice * 100) / 100;
+    const now = new Date().toISOString();
+
+    const updatedArtistData = {
+        totalEditions: newTotalEditions,
+        availableEditions: newAvailableEditions,
+        fractalPrice: roundedNewFractalPrice,
+        priceHistory: [...artistToUpdate.priceHistory, { date: now, price: roundedNewFractalPrice }],
+        totalPortfolioValueHistory: [...artistToUpdate.totalPortfolioValueHistory, { date: now, value: newTotalPortfolioValue }],
+    };
 
     if (db) {
-        const artworkRef = doc(db, 'fractals', artworkId);
-        const artworkDoc = await getDoc(artworkRef);
-
-        if (!artworkDoc.exists() || artworkDoc.data().artistId !== artistProfile.id) {
-            throw new Error("Artwork not found or you do not have permission to edit it.");
-        }
-        
-        await updateDoc(artworkRef, {
-            title: data.title,
-            description: data.description,
+        await runTransaction(db, async (transaction) => {
+            const artistRef = doc(db, 'artists', artistProfile.id);
+            const fractalRef = doc(db, 'fractals', artworkId);
+            transaction.update(fractalRef, updatedArtworkData);
+            transaction.update(artistRef, updatedArtistData);
         });
-
     } else {
         console.warn("Firebase not configured. Simulating artwork update locally.");
-        setFractals(prevFractals =>
-            prevFractals.map(f =>
-                f.id === artworkId && f.artistId === artistProfile.id
-                    ? { ...f, title: data.title, description: data.description }
-                    : f
-            )
-        );
+        const updatedArtwork = { ...artworkToUpdate, ...updatedArtworkData };
+        setFractals(prev => prev.map(f => f.id === artworkId ? updatedArtwork : f));
+        
+        const updatedArtist = { ...artistToUpdate, ...updatedArtistData };
+        setArtists(prev => prev.map(a => a.id === artistProfile.id ? updatedArtist : a));
+        setArtistProfile(updatedArtist);
     }
-  }, [user, artistProfile]);
-  
-  const updateArtworkWithCrestoxValuation = useCallback(async (artworkId: string, evaluation: ReevaluationResult) => {
-    if (!db || !artistProfile) throw new Error("Not available");
-    
-    await runTransaction(db, async (transaction) => {
-        const artistRef = doc(db, 'artists', artistProfile.id);
-        const fractalRef = doc(db, 'fractals', artworkId);
-
-        const [artistDoc, fractalDoc] = await Promise.all([
-            transaction.get(artistRef),
-            transaction.get(fractalRef)
-        ]);
-
-        if (!artistDoc.exists() || !fractalDoc.exists()) throw new Error("Data not found.");
-        
-        const artistData = artistDoc.data() as Artist;
-        const fractalData = fractalDoc.data() as Fractal;
-
-        const oldPrice = fractalData.price;
-        const newPrice = Math.round((evaluation.crestoxPriceRange[0] + evaluation.crestoxPriceRange[1]) / 2);
-        const priceDifference = newPrice - oldPrice;
-        
-        transaction.update(fractalRef, {
-            price: newPrice,
-            aiGrade: evaluation.grade,
-            aiScore: evaluation.finalScore,
-            aiScorecard: evaluation.breakdown,
-            crestoxPriceRange: evaluation.crestoxPriceRange,
-            priceHistory: [...fractalData.priceHistory, { date: new Date().toISOString(), price: newPrice }],
-        });
-
-        const newTotalPortfolioValue = (artistData.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + priceDifference;
-        const newFractalPrice = artistData.totalEditions > 0 ? newTotalPortfolioValue / artistData.totalEditions : 0;
-        const roundedNewFractalPrice = Math.round(newFractalPrice * 100) / 100;
-        const now = new Date().toISOString();
-        
-        transaction.update(artistRef, {
-            fractalPrice: roundedNewFractalPrice,
-            totalPortfolioValueHistory: [...artistData.totalPortfolioValueHistory, { date: now, value: newTotalPortfolioValue }],
-            priceHistory: [...artistData.priceHistory, { date: now, price: roundedNewFractalPrice }]
-        });
-    });
-  }, [artistProfile]);
-
-  const updateArtworkWithNewScorecard = useCallback(async (artworkId: string, evaluation: ReevaluationResult) => {
-    if (!db) throw new Error("Not available");
-
-    const fractalRef = doc(db, 'fractals', artworkId);
-    await updateDoc(fractalRef, {
-        aiScore: evaluation.finalScore,
-        aiScorecard: evaluation.breakdown,
-        crestoxPriceRange: evaluation.crestoxPriceRange,
-    });
-  }, []);
+  }, [user, artistProfile, artists, fractals]);
 
   const addToWatchlist = (artistId: string) => {
     setWatchlist(prev => [...new Set([...prev, artistId])]);
@@ -712,7 +650,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       }
   });
 
-  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile, updateArtistProfile, addArtwork, updateArtworkDetails, updateArtworkWithCrestoxValuation, updateArtworkWithNewScorecard };
+  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile, updateArtistProfile, addArtwork, updateAndReevaluateArtwork };
 
   return (
     <AuthContext.Provider value={value}>

@@ -9,20 +9,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, FileText } from 'lucide-react';
+import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, FileText, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { ArtistSettingsForm } from '@/components/artist-settings-form';
 import Image from 'next/image';
 import type { Fractal } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { ScorecardDialog } from '@/components/scorecard-dialog';
-import { ReevaluationDialog } from '@/components/reevaluation-dialog';
 
 export default function PortfolioPage() {
   const { isLoggedIn, artistProfile, fractals } = useAuth();
   const router = useRouter();
   const [selectedFractal, setSelectedFractal] = useState<Fractal | null>(null);
-  const [fractalForReevaluation, setFractalForReevaluation] = useState<Fractal | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -68,12 +66,6 @@ export default function PortfolioPage() {
         fractal={selectedFractal}
         isOpen={!!selectedFractal}
         onClose={() => setSelectedFractal(null)}
-      />
-       <ReevaluationDialog
-        fractal={fractalForReevaluation}
-        artist={artistProfile}
-        isOpen={!!fractalForReevaluation}
-        onClose={() => setFractalForReevaluation(null)}
       />
       <div className="container py-12">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
@@ -217,9 +209,6 @@ export default function PortfolioPage() {
                                                 <Button variant="outline" size="sm" onClick={() => setSelectedFractal(fractal)}>
                                                     View Scorecard
                                                 </Button>
-                                                <Button size="sm" onClick={() => setFractalForReevaluation(fractal)}>
-                                                    Get Grade
-                                                </Button>
                                             </div>
                                         ) : (
                                             <span className="text-muted-foreground text-xs">Not Evaluated</span>
@@ -227,7 +216,10 @@ export default function PortfolioPage() {
                                       </TableCell>
                                       <TableCell className="text-right space-x-2">
                                           <Button variant="outline" size="sm" asChild>
-                                              <Link href={`/portfolio/artwork/edit/${fractal.id}`}>Edit</Link>
+                                              <Link href={`/portfolio/artwork/edit/${fractal.id}`}>
+                                                <Wand2 className="mr-2 h-3 w-3" />
+                                                Re-evaluate
+                                              </Link>
                                           </Button>
                                       </TableCell>
                                   </TableRow>

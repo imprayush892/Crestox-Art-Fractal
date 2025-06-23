@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -16,30 +17,51 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useAuth } from '@/context/auth-context';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
-import type { Fractal } from '@/lib/data';
+import { Loader2, Wand2, ArrowRight, ArrowLeft } from 'lucide-react';
+import type { Fractal, Artist } from '@/lib/data';
 import Image from 'next/image';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { EvaluationResult } from '@/context/auth-context';
+import Link from 'next/link';
 
 const editArtworkFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters.").max(100),
   description: z.string().min(10, "Description must be at least 10 characters.").max(1000),
+  materials: z.string().min(3, "Please specify the materials used."),
+  artworkSize: z.string().min(3, "Please specify the artwork's dimensions."),
+  minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least $1."),
+  maxEstimatedValue: z.coerce.number(),
+  editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
+  subjectSignificance: z.string().max(500).optional(),
+  personalSignificance: z.string().max(500).optional(),
+  timeEffort: z.string().max(500).optional(),
+  biographicalContext: z.string().max(500).optional(),
+  commissionPatronage: z.string().max(500).optional(),
+}).refine(data => data.maxEstimatedValue > data.minEstimatedValue, {
+  message: "Maximum value must be greater than minimum value.",
+  path: ["maxEstimatedValue"],
 });
 
-type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
+export type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
 
 export default function EditArtworkPage() {
-  const { isLoggedIn, artistProfile, fractals, updateArtworkDetails } = useAuth();
+  const { isLoggedIn, artistProfile, fractals, updateAndReevaluateArtwork } = useAuth();
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [artwork, setArtwork] = useState<Fractal | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
 
   const artworkId = typeof params.id === 'string' ? params.id : '';
   
@@ -58,46 +80,116 @@ export default function EditArtworkPage() {
   }, [isLoggedIn, artistProfile, router, artworkId]);
 
   useEffect(() => {
-    if (fractals.length > 0 && artworkId) {
+    if (fractals.length > 0 && artworkId && artistProfile) {
       const foundArtwork = fractals.find(f => f.id === artworkId);
       if (foundArtwork) {
-        if (foundArtwork.artistId === artistProfile?.id) {
+        if (foundArtwork.artistId === artistProfile.id) {
           setArtwork(foundArtwork);
           form.reset({
             title: foundArtwork.title,
             description: foundArtwork.description,
+            materials: foundArtwork.materials,
+            artworkSize: foundArtwork.artworkSize,
+            minEstimatedValue: foundArtwork.artistMinEstimate || 100,
+            maxEstimatedValue: foundArtwork.artistMaxEstimate || 1000,
+            // You might want to decide if editions can be changed or not
+            editionsToIssue: 0, // Default to not issuing new fractals on edit
+            // Pre-fill optional fields if they exist
           });
         } else {
-          // Artwork found but doesn't belong to this artist
           notFound();
         }
+      } else {
+        notFound();
       }
     }
   }, [fractals, artworkId, artistProfile, form, notFound]);
-  
-  async function onSubmit(data: EditArtworkFormValues) {
-    if (!updateArtworkDetails || !artworkId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Update function not available.'});
-        return;
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isEvaluating) {
+      setProgress(13); // Initial progress
+      timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 95) {
+            clearInterval(timer);
+            return prev;
+          }
+          return prev + 5;
+        });
+      }, 800);
+    } else {
+      setProgress(0);
     }
-    setIsSubmitting(true);
+    return () => clearInterval(timer);
+  }, [isEvaluating]);
+  
+  async function onFormSubmit(data: EditArtworkFormValues) {
+    if (!artistProfile || !artwork) return;
+    setIsEvaluating(true);
+    
     try {
-      await updateArtworkDetails(artworkId, data);
-      toast({
-        title: "Artwork Updated!",
-        description: `"${data.title}" has been updated successfully.`,
-      });
-      router.push('/portfolio');
+        const evaluationInput = {
+            photoDataUri: artwork.image,
+            title: data.title,
+            description: data.description,
+            materials: data.materials,
+            artworkSize: data.artworkSize,
+            minEstimatedValue: data.minEstimatedValue,
+            maxEstimatedValue: data.maxEstimatedValue,
+            subjectSignificance: data.subjectSignificance,
+            personalSignificance: data.personalSignificance,
+            timeEffort: data.timeEffort,
+            biographicalContext: data.biographicalContext,
+            commissionPatronage: data.commissionPatronage,
+            artistBio: artistProfile.bio,
+            awardsAndExhibitions: artistProfile.awardsAndExhibitions
+        };
+
+        const result = await evaluateArtwork(evaluationInput);
+        setProgress(100);
+        setEvaluationResult(result);
+        setIsEvaluating(false);
+        
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: "There was a problem updating your artwork. Please try again.",
-      });
-    } finally {
-        setIsSubmitting(false);
+        console.error("Error during artwork evaluation:", error);
+        toast({
+            variant: "destructive",
+            title: "Uh oh! Something went wrong.",
+            description: "There was a problem evaluating your artwork. Please try again.",
+        });
+        setIsEvaluating(false);
     }
   }
+
+  const handlePriceChoice = async (useCrestoxPrice: boolean) => {
+    if (!updateAndReevaluateArtwork || !evaluationResult || !artwork) return;
+    
+    setIsSubmitting(true);
+    const formData = form.getValues();
+    
+    try {
+        await updateAndReevaluateArtwork(
+            artwork.id,
+            formData,
+            evaluationResult,
+            useCrestoxPrice
+        );
+        toast({
+            title: "Artwork Updated!",
+            description: `"${formData.title}" has been successfully re-evaluated and updated.`,
+        });
+        router.push('/portfolio');
+    } catch (error) {
+         console.error("Error during artwork final submission:", error);
+        toast({
+            variant: "destructive",
+            title: "Uh oh! Something went wrong.",
+            description: "There was a problem updating your artwork. Please try again.",
+        });
+        setIsSubmitting(false);
+    }
+  };
   
   if (!artwork) {
     return (
@@ -118,78 +210,279 @@ export default function EditArtworkPage() {
     <div className="container py-12 flex justify-center">
       <Card className="w-full max-w-3xl">
         <CardHeader>
-          <CardTitle className="font-headline text-3xl">Edit Artwork</CardTitle>
+          <div className='flex items-center justify-between'>
+            <CardTitle className="font-headline text-3xl">Edit & Re-evaluate Artwork</CardTitle>
+            <Button variant="ghost" asChild>
+                <Link href="/portfolio">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Portfolio
+                </Link>
+            </Button>
+          </div>
           <CardDescription>
-            Update the details for your artwork. Changes to valuation are not available here.
+            Update artwork details and submit for a fresh AI evaluation to get a quality grade.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-muted/50 p-4 rounded-lg">
-             <Image
-                src={artwork.image}
-                alt={artwork.title}
-                width={artwork.width}
-                height={artwork.height}
-                className="rounded-md object-cover w-full"
-                data-ai-hint={artwork.aiHint}
-              />
-              <div className="space-y-4">
-                  <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Current Valuation</Label>
-                      <p className="text-2xl font-bold">${artwork.price.toLocaleString()}</p>
-                  </div>
-                   {artwork.aiGrade && (
-                    <div>
-                        <Label className="text-sm font-medium text-muted-foreground">AI Grade</Label>
-                        <Badge variant="secondary" className="text-lg mt-1">{artwork.aiGrade}</Badge>
-                    </div>
-                  )}
-                  <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Artist</Label>
-                      <p className="text-lg font-semibold">{artistProfile?.name}</p>
-                  </div>
+          {isEvaluating && (
+              <div className="space-y-4 pt-4 flex flex-col items-center">
+                  <Progress value={progress} className="w-full" />
+                  <p className="text-sm text-muted-foreground text-center animate-pulse">
+                      AI evaluation in progress... This may take up to a minute. Please don't leave the page.
+                  </p>
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
-          </div>
+          )}
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Chromatic Bloom" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe your artwork, its inspiration, and the process..."
-                        className="resize-y min-h-[120px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <Button type="submit" disabled={isSubmitting} size="lg">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-            </form>
-          </Form>
+          {evaluationResult && !isEvaluating && (
+              <div className="space-y-6">
+                 <Alert>
+                    <Wand2 className="h-4 w-4" />
+                    <AlertTitle>Evaluation Complete!</AlertTitle>
+                    <AlertDescription>
+                        Choose a valuation for your artwork. Accepting the Crestox price ensures you receive a grade badge.
+                    </AlertDescription>
+                </Alert>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
+                    <Card className="flex flex-col justify-between">
+                        <CardHeader>
+                            <CardTitle>Your Estimate</CardTitle>
+                            <CardDescription>Based on your provided range.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-3xl font-bold">${form.getValues('minEstimatedValue').toLocaleString()} - ${form.getValues('maxEstimatedValue').toLocaleString()}</p>
+                        </CardContent>
+                        <CardContent>
+                             <Button size="lg" className="w-full" onClick={() => handlePriceChoice(false)} disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                Use My Valuation
+                            </Button>
+                        </CardContent>
+                    </Card>
+                     <Card className="border-primary border-2 flex flex-col justify-between">
+                        <CardHeader>
+                            <CardTitle>Crestox AI Suggestion</CardTitle>
+                            <CardDescription>Our AI-powered recommendation.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-3xl font-bold text-primary">${evaluationResult.crestoxPriceRange[0].toLocaleString()} - ${evaluationResult.crestoxPriceRange[1].toLocaleString()}</p>
+                        </CardContent>
+                         <CardContent>
+                             <Button size="lg" className="w-full" onClick={() => handlePriceChoice(true)} disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ArrowRight className="mr-2 h-4 w-4" />}
+                                Accept Crestox Valuation
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+              </div>
+          )}
+
+          {!isEvaluating && !evaluationResult && (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-8">
+                
+                <div className="bg-muted/50 rounded-lg p-4 flex justify-center">
+                  <Image
+                    src={artwork.image}
+                    alt={artwork.title}
+                    width={300}
+                    height={300}
+                    className="rounded-md object-contain"
+                    data-ai-hint={artwork.aiHint}
+                  />
+                </div>
+
+                <div className="space-y-8">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Chromatic Bloom" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description / Artist's Statement</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Describe your artwork, its inspiration, and the process..."
+                            className="resize-y min-h-[120px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <FormField
+                      control={form.control}
+                      name="materials"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Materials Used / Medium</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Oil on canvas, Digital (Procreate)" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="artworkSize"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Artwork Size</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., 24x36 inches, 4000x4000 pixels" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <FormField
+                      control={form.control}
+                      name="minEstimatedValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Your Minimum Estimated Value ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="100" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="maxEstimatedValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Your Maximum Estimated Value ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="1000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="editionsToIssue"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Portfolio Fractals to Issue</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0" {...field} />
+                        </FormControl>
+                        <FormDescription> New 'fractals' to add to your total supply (for your entire portfolio, not just this artwork). </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                      <AccordionTrigger>
+                        <h3 className="text-lg font-medium">Optional: Add Detailed Context for AI Evaluation</h3>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-6 pt-6">
+                        <Alert variant="default">
+                          <AlertDescription>Providing thorough and accurate information here will significantly improve the quality of the AI evaluation. Leaving fields blank may result in a lower score.</AlertDescription>
+                        </Alert>
+                        <FormField
+                          control={form.control}
+                          name="subjectSignificance"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Subject/Cultural Significance</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Explain any historical, cultural, or notable relevance of your artwork's subject." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="personalSignificance"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Personal/Emotional Significance</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Describe the personal story or emotional meaning behind this piece." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="timeEffort"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Time Spent / Effort</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., 80 hours of rendering, 3 months of concept work" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="biographicalContext"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Biographical/Contextual Relevance</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="How does this artwork relate to a specific period in your life or a broader art movement?" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="commissionPatronage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Commission/Patronage Information</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., Commissioned by the Museum of Digital Art" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </div>
+                <Button type="submit" size="lg">
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Re-evaluate Artwork
+                </Button>
+              </form>
+            </Form>
+          )}
         </CardContent>
       </Card>
     </div>
