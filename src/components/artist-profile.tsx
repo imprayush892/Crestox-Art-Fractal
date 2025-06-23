@@ -77,7 +77,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
             </Avatar>
             <div className="pt-4 text-center md:text-left">
               <h1 className="font-headline text-4xl md:text-5xl font-bold">{artist.name}</h1>
-              <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 text-muted-foreground">
+              <div className="mt-4 flex flex-wrap justify-center md:justify-start items-center gap-x-4 gap-y-2 text-muted-foreground">
                 {artist.location && (
                     <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4" />
@@ -96,11 +96,9 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                         <span>Portfolio</span>
                     </a>
                 )}
-              </div>
-              <div className="mt-4 flex justify-center md:justify-start gap-4">
-                  {artist.twitter && <a href={artist.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Twitter className="w-5 h-5"/></a>}
-                  {artist.instagram && <a href={artist.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Instagram className="w-5 h-5"/></a>}
-                  {artist.linkedin && <a href={artist.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Linkedin className="w-5 h-5"/></a>}
+                 {artist.twitter && <a href={artist.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Twitter className="w-5 h-5"/></a>}
+                 {artist.instagram && <a href={artist.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Instagram className="w-5 h-5"/></a>}
+                 {artist.linkedin && <a href={artist.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Linkedin className="w-5 h-5"/></a>}
               </div>
               <p className="mt-4 max-w-2xl text-lg text-foreground/80">{artist.bio}</p>
             </div>
@@ -143,37 +141,41 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
       </div>
 
       <div className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-            <h2 className="font-headline text-3xl font-bold mb-6">Portfolio Snapshot</h2>
-            <Card>
-                <CardContent className="p-6 grid grid-cols-2 gap-4">
-                    {Object.entries(portfolioSnapshot).length > 0 ? (
-                        Object.entries(portfolioSnapshot).map(([grade, count]) => (
-                            <div key={grade} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                                <Badge variant="secondary">{grade} Grade</Badge>
-                                <span className="font-bold text-lg">{count}</span>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="col-span-2 text-center text-muted-foreground">No graded artworks yet.</p>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-        <div className='space-y-6'>
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-headline text-2xl">Portfolio Snapshot</CardTitle>
+                <CardDescription>Breakdown of graded artworks in this collection.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {Object.entries(portfolioSnapshot).length > 0 ? (
+                    Object.entries(portfolioSnapshot).map(([grade, count]) => (
+                        <Card key={grade} className="p-4 flex flex-col items-center justify-center text-center bg-muted/50">
+                            <Badge variant="secondary" className="text-lg px-3 py-1">{grade}</Badge>
+                            <p className="text-4xl font-bold mt-2">{count}</p>
+                            <p className="text-xs text-muted-foreground">Artwork{count > 1 ? 's' : ''}</p>
+                        </Card>
+                    ))
+                ) : (
+                    <div className="col-span-full text-center py-8">
+                        <p className="text-muted-foreground">No graded artworks in this portfolio yet.</p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
              <div>
                 <h3 className="font-headline text-2xl font-bold mb-4 flex items-center gap-2"><Award /> Awards</h3>
                 {artist.awards.length > 0 ? (
-                    <ul className="list-disc list-inside space-y-1">
-                        {artist.awards.map((award, i) => <li key={i} className="text-muted-foreground">{award}</li>)}
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                        {artist.awards.map((award, i) => <li key={i}>{award}</li>)}
                     </ul>
                 ) : <p className="text-sm text-muted-foreground">No awards listed.</p>}
             </div>
              <div>
                 <h3 className="font-headline text-2xl font-bold mb-4 flex items-center gap-2"><Building2 /> Exhibitions</h3>
                 {artist.exhibitions.length > 0 ? (
-                     <ul className="list-disc list-inside space-y-1">
-                        {artist.exhibitions.map((ex, i) => <li key={i} className="text-muted-foreground">{ex}</li>)}
+                     <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                        {artist.exhibitions.map((ex, i) => <li key={i}>{ex}</li>)}
                     </ul>
                 ) : <p className="text-sm text-muted-foreground">No exhibitions listed.</p>}
             </div>

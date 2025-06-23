@@ -12,9 +12,8 @@ import { FractalCard } from '@/components/fractal-card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { format } from 'date-fns';
-import { Star, Info } from 'lucide-react';
-import React, { useState } from 'react';
-import { ArtworkContextDialog } from './artwork-context-dialog';
+import { Star } from 'lucide-react';
+import React from 'react';
 
 interface FractalDetailProps {
     fractal: Fractal;
@@ -23,18 +22,22 @@ interface FractalDetailProps {
     allArtists: Artist[];
 }
 
+const DetailItem = ({ label, value }: { label: string; value?: string }) => {
+    if (!value) return null;
+    return (
+        <div>
+            <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">{label}</h4>
+            <p className="mt-1 text-base text-foreground/80">{value}</p>
+        </div>
+    );
+};
+
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
-  const [isContextDialogOpen, setIsContextDialogOpen] = useState(false);
   const artworkValueHistory = fractal.priceHistory.map(p => ({ date: p.date, value: p.price }));
   const hasContext = fractal.subjectSignificance || fractal.personalSignificance || fractal.timeEffort || fractal.biographicalContext || fractal.commissionPatronage;
 
   return (
     <>
-      <ArtworkContextDialog
-        fractal={fractal}
-        isOpen={isContextDialogOpen}
-        onClose={() => setIsContextDialogOpen(false)}
-      />
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
         <div className="lg:col-span-3">
           <div className="bg-muted rounded-lg overflow-hidden shadow-lg mb-8 relative">
@@ -129,19 +132,27 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
 
             <p className="text-lg text-muted-foreground mt-4">{fractal.description}</p>
             
-            <div className="mt-6 flex flex-wrap items-center gap-4">
-              <div className="flex flex-wrap gap-2">
+            <div className="mt-6 flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">Fractal</Badge>
                 <Badge variant="secondary">Digital Art</Badge>
                 <Badge variant="secondary">Algorithmic</Badge>
-              </div>
-              {hasContext && (
-                  <Button variant="outline" size="sm" onClick={() => setIsContextDialogOpen(true)}>
-                    <Info className="mr-2 h-4 w-4" />
-                    Show Artwork Details
-                  </Button>
-              )}
             </div>
+
+            {hasContext && (
+                <Card className="mt-6">
+                    <CardHeader>
+                        <CardTitle className="text-xl font-headline">Artwork Context</CardTitle>
+                        <CardDescription>Additional details from the artist.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <DetailItem label="Subject / Cultural Significance" value={fractal.subjectSignificance} />
+                        <DetailItem label="Personal / Emotional Significance" value={fractal.personalSignificance} />
+                        <DetailItem label="Time Spent / Effort" value={fractal.timeEffort} />
+                        <DetailItem label="Biographical / Contextual Relevance" value={fractal.biographicalContext} />
+                        <DetailItem label="Commission / Patronage" value={fractal.commissionPatronage} />
+                    </CardContent>
+                </Card>
+            )}
 
             {artist && (
                 <div className="mt-8 border-t pt-8">
