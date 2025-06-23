@@ -31,6 +31,8 @@ export interface Fractal {
   image: string;
   artistId: string;
   description: string;
+  materials: string;
+  artworkSize: string;
   aiHint: string;
   width: number;
   height: number;
@@ -197,6 +199,8 @@ const tempFractals: Fractal[] = (() => {
             image: `https://placehold.co/${width}x${height}.png`,
             artistId: getRandom(tempArtists).id,
             description: getRandom(fractalDescriptions),
+            materials: 'Digital Render',
+            artworkSize: `${width}x${height} pixels`,
             aiHint: getRandom(aiHints),
             width,
             height,
