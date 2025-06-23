@@ -1,9 +1,7 @@
 
 'use server';
 
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { artists as mockArtists, fractals as mockFractals, type Artist, type Fractal, type AIScorecardBreakdown } from '@/lib/data';
+import type { Artist, Fractal, AIScorecardBreakdown } from '@/lib/data';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 
 export interface ReevaluationResult {
@@ -13,35 +11,13 @@ export interface ReevaluationResult {
     crestoxPriceRange: [number, number];
 }
 
-export async function reevaluateArtworkForGrading(artworkId: string): Promise<ReevaluationResult> {
+export async function reevaluateArtworkForGrading(fractalData: Fractal, artistData: Artist): Promise<ReevaluationResult> {
     
-    let fractalData: Fractal | undefined;
-    let artistData: Artist | undefined;
-
-    if (!db) {
-        console.warn("Firebase not configured. Simulating re-evaluation locally.");
-        fractalData = mockFractals.find(f => f.id === artworkId);
-        if (fractalData) {
-            artistData = mockArtists.find(a => a.id === fractalData!.artistId);
-        }
-    } else {
-        const fractalRef = doc(db, 'fractals', artworkId);
-        const fractalDoc = await getDoc(fractalRef);
-        if (fractalDoc.exists()) {
-            fractalData = fractalDoc.data() as Fractal;
-            const artistRef = doc(db, 'artists', fractalData.artistId);
-            const artistDoc = await getDoc(artistRef);
-            if (artistDoc.exists()) {
-                artistData = artistDoc.data() as Artist;
-            }
-        }
-    }
-
     if (!fractalData) {
-        throw new Error("Artwork not found.");
+        throw new Error("Artwork data was not provided for re-evaluation.");
     }
     if (!artistData) {
-        throw new Error("Artist not found for the given artwork.");
+        throw new Error("Artist data was not provided for re-evaluation.");
     }
     
     const evaluationInput = {
@@ -50,8 +26,8 @@ export async function reevaluateArtworkForGrading(artworkId: string): Promise<Re
         description: fractalData.description,
         materials: fractalData.materials,
         artworkSize: fractalData.artworkSize,
-        minEstimatedValue: fractalData.price * 0.8,
-        maxEstimatedValue: fractalData.price * 1.2,
+        minEstimatedValue: fractalData.artistMinEstimate || 0,
+        maxEstimatedValue: fractalData.artistMaxEstimate || 1,
         artistBio: artistData.bio,
         awardsAndExhibitions: artistData.awardsAndExhibitions,
     };

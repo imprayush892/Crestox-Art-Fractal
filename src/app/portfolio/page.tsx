@@ -71,6 +71,7 @@ export default function PortfolioPage() {
       />
        <ReevaluationDialog
         fractal={fractalForReevaluation}
+        artist={artistProfile}
         isOpen={!!fractalForReevaluation}
         onClose={() => setFractalForReevaluation(null)}
       />

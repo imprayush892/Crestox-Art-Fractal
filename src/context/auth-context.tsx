@@ -250,6 +250,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 aiGrade: shouldApplyGrade ? evaluation.grade : undefined,
                 aiScorecard: evaluation.breakdown,
                 crestoxPriceRange: evaluation.crestoxPriceRange,
+                artistMinEstimate: artworkData.minEstimatedValue,
+                artistMaxEstimate: artworkData.maxEstimatedValue,
             };
             const newFractalRef = doc(fractalCollectionRef);
             transaction.set(newFractalRef, newFractalData);
@@ -294,6 +296,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             aiGrade: shouldApplyGrade ? evaluation.grade : undefined,
             aiScorecard: evaluation.breakdown,
             crestoxPriceRange: evaluation.crestoxPriceRange,
+            artistMinEstimate: artworkData.minEstimatedValue,
+            artistMaxEstimate: artworkData.maxEstimatedValue,
         };
         setFractals(prev => [...prev, createdFractal]);
 

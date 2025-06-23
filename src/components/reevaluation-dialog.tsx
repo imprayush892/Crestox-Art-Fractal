@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { Fractal } from '@/lib/data';
+import type { Artist, Fractal } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
 import { ArrowRight, Loader2, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -22,22 +22,23 @@ interface ReevaluationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   fractal: Fractal | null;
+  artist: Artist | null;
 }
 
 type EvaluationState = 'idle' | 'evaluating' | 'evaluated' | 'submitting';
 
-export function ReevaluationDialog({ isOpen, onClose, fractal }: ReevaluationDialogProps) {
+export function ReevaluationDialog({ isOpen, onClose, fractal, artist }: ReevaluationDialogProps) {
     const { updateArtworkWithCrestoxValuation, updateArtworkWithNewScorecard } = useAuth();
     const { toast } = useToast();
     const [state, setState] = useState<EvaluationState>('idle');
     const [evaluationResult, setEvaluationResult] = useState<ReevaluationResult | null>(null);
 
     useEffect(() => {
-        if (isOpen && fractal && state === 'idle') {
+        if (isOpen && fractal && artist && state === 'idle') {
             const performEvaluation = async () => {
                 setState('evaluating');
                 try {
-                    const result = await reevaluateArtworkForGrading(fractal.id);
+                    const result = await reevaluateArtworkForGrading(fractal, artist);
                     setEvaluationResult(result);
                     setState('evaluated');
                 } catch (error: any) {
@@ -55,10 +56,10 @@ export function ReevaluationDialog({ isOpen, onClose, fractal }: ReevaluationDia
             setState('idle');
             setEvaluationResult(null);
         }
-    }, [isOpen, fractal, state, toast, onClose]);
+    }, [isOpen, fractal, artist, state, toast, onClose]);
 
     const handlePriceChoice = async (useCrestoxPrice: boolean) => {
-        if (!fractal || !evaluationResult) return;
+        if (!fractal || !evaluationResult || !artist) return;
         setState('submitting');
         try {
             if (useCrestoxPrice) {
@@ -85,7 +86,7 @@ export function ReevaluationDialog({ isOpen, onClose, fractal }: ReevaluationDia
         }
     };
     
-    if (!fractal) return null;
+    if (!fractal || !artist) return null;
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => {if (!open) onClose()}}>

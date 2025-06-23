@@ -44,6 +44,8 @@ export interface Fractal {
   aiGrade?: string;
   aiScorecard?: AIScorecardBreakdown[];
   crestoxPriceRange?: [number, number];
+  artistMinEstimate?: number;
+  artistMaxEstimate?: number;
 }
 
 // --- Data Generation ---
@@ -210,6 +212,8 @@ const tempFractals: Fractal[] = (() => {
             editionsAvailable: randomInt(0, editions),
             aiScore,
             aiGrade,
+            artistMinEstimate: Math.round(price * 0.8),
+            artistMaxEstimate: Math.round(price * 1.2),
         };
     });
 })();
