@@ -41,6 +41,7 @@ export interface Fractal {
   aiScore?: number;
   aiGrade?: string;
   aiScorecard?: AIScorecardBreakdown[];
+  crestoxPriceRange?: [number, number];
 }
 
 // --- Data Generation ---

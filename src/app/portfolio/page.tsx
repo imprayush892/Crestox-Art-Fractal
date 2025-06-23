@@ -16,11 +16,13 @@ import Image from 'next/image';
 import type { Fractal } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { ScorecardDialog } from '@/components/scorecard-dialog';
+import { ReevaluationDialog } from '@/components/reevaluation-dialog';
 
 export default function PortfolioPage() {
   const { isLoggedIn, artistProfile, fractals } = useAuth();
   const router = useRouter();
   const [selectedFractal, setSelectedFractal] = useState<Fractal | null>(null);
+  const [fractalForReevaluation, setFractalForReevaluation] = useState<Fractal | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -66,6 +68,11 @@ export default function PortfolioPage() {
         fractal={selectedFractal}
         isOpen={!!selectedFractal}
         onClose={() => setSelectedFractal(null)}
+      />
+       <ReevaluationDialog
+        fractal={fractalForReevaluation}
+        isOpen={!!fractalForReevaluation}
+        onClose={() => setFractalForReevaluation(null)}
       />
       <div className="container py-12">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
@@ -200,10 +207,21 @@ export default function PortfolioPage() {
                                       <TableCell className="font-medium">{fractal.title}</TableCell>
                                       <TableCell>${fractal.price.toLocaleString()}</TableCell>
                                       <TableCell>
-                                        {fractal.aiGrade && (
-                                          <Button variant="ghost" size="sm" className="p-1 h-auto" onClick={() => setSelectedFractal(fractal)}>
-                                            <Badge variant="secondary">{fractal.aiGrade}</Badge>
-                                          </Button>
+                                        {fractal.aiGrade ? (
+                                            <Button variant="ghost" size="sm" className="p-1 h-auto" onClick={() => setSelectedFractal(fractal)}>
+                                                <Badge variant="secondary">{fractal.aiGrade}</Badge>
+                                            </Button>
+                                        ) : fractal.aiScore !== undefined ? (
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="outline" size="sm" onClick={() => setSelectedFractal(fractal)}>
+                                                    View Scorecard
+                                                </Button>
+                                                <Button size="sm" onClick={() => setFractalForReevaluation(fractal)}>
+                                                    Get Grade
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <span className="text-muted-foreground text-xs">Not Evaluated</span>
                                         )}
                                       </TableCell>
                                       <TableCell className="text-right space-x-2">
