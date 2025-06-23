@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, FileText, Wand2 } from 'lucide-react';
+import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { ArtistSettingsForm } from '@/components/artist-settings-form';
 import Image from 'next/image';
@@ -119,7 +119,7 @@ export default function PortfolioPage() {
                           </CardHeader>
                           <CardContent>
                               <div className="text-2xl font-bold">${artistProfile.fractalPrice.toLocaleString()}</div>
-                              <p className="text-xs text-muted-foreground">Market price per portfolio share</p>
+                              <p className="text-xs text-muted-foreground">Market price per portfolio fractal</p>
                           </CardContent>
                       </Card>
                       <Card>
@@ -129,7 +129,7 @@ export default function PortfolioPage() {
                           </CardHeader>
                           <CardContent>
                               <div className="text-2xl font-bold">{artistProfile.availableEditions.toLocaleString()}</div>
-                              <p className="text-xs text-muted-foreground">Portfolio shares available to buy</p>
+                              <p className="text-xs text-muted-foreground">Portfolio fractals available to buy</p>
                           </CardContent>
                       </Card>
                       <Card>
@@ -139,7 +139,7 @@ export default function PortfolioPage() {
                           </CardHeader>
                           <CardContent>
                               <div className="text-2xl font-bold">+{fractalsSoldCount.toLocaleString()}</div>
-                              <p className="text-xs text-muted-foreground">Total shares sold from your portfolio</p>
+                              <p className="text-xs text-muted-foreground">Total fractals sold from your portfolio</p>
                           </CardContent>
                       </Card>
                       <Card>
@@ -205,11 +205,9 @@ export default function PortfolioPage() {
                                                 <Badge variant="secondary">{fractal.crestoxGrade}</Badge>
                                             </Button>
                                         ) : fractal.aiScore !== undefined ? (
-                                            <div className="flex items-center gap-2">
-                                                <Button variant="outline" size="sm" onClick={() => setSelectedFractal(fractal)}>
-                                                    View Scorecard
-                                                </Button>
-                                            </div>
+                                            <Button variant="outline" size="sm" onClick={() => setSelectedFractal(fractal)}>
+                                                View Scorecard
+                                            </Button>
                                         ) : (
                                             <span className="text-muted-foreground text-xs">Not Evaluated</span>
                                         )}

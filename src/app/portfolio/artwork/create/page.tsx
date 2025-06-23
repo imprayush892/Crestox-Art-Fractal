@@ -29,6 +29,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArtworkSize } from '@/lib/data';
+import type { EvaluationResult } from '@/context/auth-context';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -56,19 +57,12 @@ const artworkFormSchema = z.object({
   timeEffort: z.string().max(500).optional(),
   biographicalContext: z.string().max(500).optional(),
   commissionPatronage: z.string().max(500).optional(),
-}).refine(data => data.maxEstimatedValue > data.minEstimatedValue, {
-  message: "Maximum value must be greater than minimum value.",
+}).refine(data => data.maxEstimatedValue >= data.minEstimatedValue, {
+  message: "Maximum value must be greater than or equal to minimum value.",
   path: ["maxEstimatedValue"],
 });
 
 type ArtworkFormValues = z.infer<typeof artworkFormSchema>;
-
-interface EvaluationResult {
-    finalScore: number;
-    grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
-    breakdown: any[];
-    crestoxPriceRange: [number, number];
-}
 
 export default function CreateArtworkPage() {
   const { isLoggedIn, artistProfile, addArtwork } = useAuth();
@@ -187,10 +181,11 @@ export default function CreateArtworkPage() {
     setIsSubmitting(true);
     const formData = form.getValues();
     
-    const crestoxPrice = (evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2;
-    const finalPrice = useCrestoxPrice ? crestoxPrice : formData.maxEstimatedValue;
+    const crestoxPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
+    const artistPrice = Math.round((formData.minEstimatedValue + formData.maxEstimatedValue) / 2);
+    const finalPrice = useCrestoxPrice ? crestoxPrice : artistPrice;
     
-    const shouldApplyGrade = useCrestoxPrice || formData.maxEstimatedValue <= crestoxPrice;
+    const shouldApplyGrade = useCrestoxPrice || artistPrice <= crestoxPrice;
     
     try {
         const artworkSize : ArtworkSize = { length: formData.length, breadth: formData.breadth, unit: formData.unit };
@@ -244,7 +239,7 @@ export default function CreateArtworkPage() {
         <CardHeader>
           <CardTitle className="font-headline text-3xl">Add New Artwork</CardTitle>
           <CardDescription>
-            Upload a new artwork. This will be added to your public portfolio and will be evaluated by our AI to provide a quality grade and price suggestion.
+            Upload a new artwork. This will be added to your public portfolio and will be evaluated by our AI assistant to provide a quality grade and price suggestion.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -286,7 +281,7 @@ export default function CreateArtworkPage() {
                      <Card className="border-primary border-2 flex flex-col justify-between">
                         <CardHeader>
                             <CardTitle>Crestox AI Suggestion</CardTitle>
-                            <CardDescription>Our AI-powered recommendation.</CardDescription>
+                            <CardDescription>Our AI-assisted recommendation.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <p className="text-3xl font-bold text-primary">${evaluationResult.crestoxPriceRange[0].toLocaleString()} - ${evaluationResult.crestoxPriceRange[1].toLocaleString()}</p>

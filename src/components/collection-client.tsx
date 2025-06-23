@@ -42,18 +42,18 @@ export function CollectionClient() {
   const portfolioStats = useMemo(() => {
     const holdings = collection.filter(f => f.status !== 'listed');
     
-    const totalInvestment = holdings.reduce((sum, f) => sum + f.purchasePrice, 0);
+    const totalCollectedValue = holdings.reduce((sum, f) => sum + f.purchasePrice, 0);
     
     const currentValue = holdings.reduce((sum, f) => {
       const artist = artistMap.get(f.artistId);
       return sum + (artist?.fractalPrice || 0);
     }, 0);
 
-    const gainLoss = currentValue - totalInvestment;
-    const gainLossPercent = totalInvestment > 0 ? (gainLoss / totalInvestment) * 100 : 0;
+    const gainLoss = currentValue - totalCollectedValue;
+    const gainLossPercent = totalCollectedValue > 0 ? (gainLoss / totalCollectedValue) * 100 : 0;
 
     return {
-      totalInvestment,
+      totalCollectedValue,
       currentValue,
       gainLoss,
       gainLossPercent
@@ -151,12 +151,12 @@ export function CollectionClient() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Investment</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Collected</CardTitle>
               <BarChart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${portfolioStats.totalInvestment.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1})}</div>
-              <p className="text-xs text-muted-foreground">The total amount you've invested</p>
+              <div className="text-2xl font-bold">${portfolioStats.totalCollectedValue.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1})}</div>
+              <p className="text-xs text-muted-foreground">The total amount spent collecting</p>
             </CardContent>
           </Card>
           <Card>
@@ -192,9 +192,9 @@ export function CollectionClient() {
                         const artist = artistMap.get(artistId);
                         if (!artist) return null;
 
-                        const totalInvestment = fractalsByArtist.reduce((sum, f) => sum + f.purchasePrice, 0);
+                        const totalCollected = fractalsByArtist.reduce((sum, f) => sum + f.purchasePrice, 0);
                         const currentValue = fractalsByArtist.reduce((sum) => sum + artist.fractalPrice, 0);
-                        const gainLoss = currentValue - totalInvestment;
+                        const gainLoss = currentValue - totalCollected;
 
                         return (
                             <Card 
@@ -210,8 +210,8 @@ export function CollectionClient() {
                                 </CardHeader>
                                 <CardContent className="grid gap-4 flex-grow cursor-pointer" onClick={() => handleCardClick(artistId)}>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                                        <span className="text-sm text-muted-foreground">Total Invested</span>
-                                        <span className="font-semibold">${totalInvestment.toLocaleString()}</span>
+                                        <span className="text-sm text-muted-foreground">Total Collected</span>
+                                        <span className="font-semibold">${totalCollected.toLocaleString()}</span>
                                     </div>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                                         <span className="text-sm text-muted-foreground">Current Value</span>

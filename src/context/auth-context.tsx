@@ -61,7 +61,7 @@ interface AuthContextType {
   login: () => Promise<void>;
   logout: () => void;
   collection: OwnedFractal[];
-  investInPortfolio: (artist: Artist, quantity: number) => Promise<void>;
+  collectFromPortfolio: (artist: Artist, quantity: number) => Promise<void>;
   listForResale: (artist: Artist, details: { quantity: number; initialPrice: number; minPrice: number; periodDays: number }) => Promise<void>;
   cancelListing: (listingId: string) => Promise<void>;
   holdingsByArtist: Map<string, number>;
@@ -479,19 +479,19 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
   }, [user, collection]);
 
-  const investInPortfolio = useCallback(async (artist: Artist, quantity: number) => {
-    if (!user) throw new Error("User must be logged in to invest.");
+  const collectFromPortfolio = useCallback(async (artist: Artist, quantity: number) => {
+    if (!user) throw new Error("User must be logged in to collect.");
     
     // OFFLINE / DEMO MODE
     if (!db) {
-        console.warn("Firebase not configured. Simulating investment locally.");
+        console.warn("Firebase not configured. Simulating collection locally.");
         const artistData = artists.find(a => a.id === artist.id);
         if (!artistData) throw new Error("Artist not found for local simulation");
 
         const activeResaleListings = resaleListings.filter(l => l.artistId === artist.id && l.status === 'active');
         
-        type Share = { price: number; isResold: boolean; sourceId: string; resellerId?: string; listingId?: string };
-        const orderBook: Share[] = [];
+        type AcquirableFractal = { price: number; isResold: boolean; sourceId: string; resellerId?: string; listingId?: string };
+        const orderBook: AcquirableFractal[] = [];
         const now = new Date();
 
         activeResaleListings.forEach(listing => {
@@ -511,9 +511,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
         orderBook.sort((a, b) => a.price - b.price || (a.isResold ? -1 : 1));
 
-        if (orderBook.length < quantity) throw new Error("Not enough shares available to fulfill the order.");
+        if (orderBook.length < quantity) throw new Error("Not enough fractals available to fulfill the order.");
         
-        const sharesToBuy = orderBook.slice(0, quantity);
+        const fractalsToBuy = orderBook.slice(0, quantity);
         const purchaseDate = now.toISOString();
 
         const newOwnedFractals: OwnedFractal[] = [];
@@ -521,9 +521,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         let newResaleListings = [...resaleListings];
         let newCollection = [...collection];
 
-        for (const share of sharesToBuy) {
+        for (const fractalToAcquire of fractalsToBuy) {
             const serialNumber = `CRESTOX-${artist.id.split('-')[1]}-${String(Date.now()).slice(-6)}-${Math.random().toString(36).substring(2, 5)}`;
-            const purchasePriceWithTax = Math.round(share.price * 1.18 * 100) / 100;
+            const purchasePriceWithTax = Math.round(fractalToAcquire.price * 1.18 * 100) / 100;
             
             const newOwnedFractal: OwnedFractal = {
                 id: `local-fractal-${Date.now()}-${Math.random()}`,
@@ -536,8 +536,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             };
             newOwnedFractals.push(newOwnedFractal);
 
-            if (share.isResold && share.listingId) {
-                const listingIndex = newResaleListings.findIndex(l => l.id === share.listingId);
+            if (fractalToAcquire.isResold && fractalToAcquire.listingId) {
+                const listingIndex = newResaleListings.findIndex(l => l.id === fractalToAcquire.listingId);
                 if (listingIndex !== -1) {
                     const updatedListing = { ...newResaleListings[listingIndex] };
                     updatedListing.quantity -= 1;
@@ -547,7 +547,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                     newResaleListings[listingIndex] = updatedListing;
                 }
                 // Remove a listed fractal from the seller's collection
-                const sellerFractalIndex = newCollection.findIndex(f => f.listingId === share.listingId);
+                const sellerFractalIndex = newCollection.findIndex(f => f.listingId === fractalToAcquire.listingId);
                 if(sellerFractalIndex > -1){
                     newCollection.splice(sellerFractalIndex, 1);
                 }
@@ -586,8 +586,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         const resaleListingsSnapshot = await getDocs(resaleListingsQuery);
         const activeResaleListings = resaleListingsSnapshot.docs.map(d => ({...d.data(), id: d.id} as ResaleListing));
 
-        type Share = { price: number; isResold: boolean; sourceId: string; resellerId?: string };
-        const orderBook: Share[] = [];
+        type AcquirableFractal = { price: number; isResold: boolean; sourceId: string; resellerId?: string };
+        const orderBook: AcquirableFractal[] = [];
 
         const now = new Date();
         activeResaleListings.forEach(listing => {
@@ -607,15 +607,15 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
         orderBook.sort((a, b) => a.price - b.price || (a.isResold ? -1 : 1));
 
-        if (orderBook.length < quantity) throw new Error("Not enough shares available to fulfill the order.");
+        if (orderBook.length < quantity) throw new Error("Not enough fractals available to fulfill the order.");
         
-        const sharesToBuy = orderBook.slice(0, quantity);
+        const fractalsToBuy = orderBook.slice(0, quantity);
         const purchaseDate = now.toISOString();
 
-        for (const share of sharesToBuy) {
+        for (const fractalToAcquire of fractalsToBuy) {
             const newFractalRef = doc(collection(db, 'users', user.uid, 'ownedFractals'));
             const serialNumber = `CRESTOX-${artist.id.split('-')[1]}-${String(Date.now()).slice(-6)}-${Math.random().toString(36).substring(2, 5)}`;
-            const purchasePriceWithTax = Math.round(share.price * 1.18 * 100) / 100;
+            const purchasePriceWithTax = Math.round(fractalToAcquire.price * 1.18 * 100) / 100;
             const newOwnedFractal: Omit<OwnedFractal, 'id'> = {
                 artistId: artist.id,
                 artistName: artist.name,
@@ -626,18 +626,18 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             };
             transaction.set(newFractalRef, newOwnedFractal);
 
-            if (share.isResold) {
-                const listingRef = doc(db, 'resaleListings', share.sourceId);
+            if (fractalToAcquire.isResold) {
+                const listingRef = doc(db, 'resaleListings', fractalToAcquire.sourceId);
                 const listingDocSnapshot = await transaction.get(listingRef);
                 const listingData = listingDocSnapshot.data() as ResaleListing;
 
                 const newQuantity = listingData.quantity - 1;
                 transaction.update(listingRef, { quantity: newQuantity, status: newQuantity === 0 ? 'completed' : 'active' });
 
-                if (share.resellerId) {
+                if (fractalToAcquire.resellerId) {
                     const resellerFractalQuery = query(
-                        collection(db, 'users', share.resellerId, 'ownedFractals'),
-                        where('listingId', '==', share.sourceId),
+                        collection(db, 'users', fractalToAcquire.resellerId, 'ownedFractals'),
+                        where('listingId', '==', fractalToAcquire.sourceId),
                         limit(1)
                     );
                     const resellerFractalSnapshot = await getDocs(resellerFractalQuery);
@@ -674,7 +674,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       }
   });
 
-  const value = { isLoggedIn, user, artistProfile, login, logout, collection, investInPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile, updateArtistProfile, addArtwork, updateAndReevaluateArtwork };
+  const value = { isLoggedIn, user, artistProfile, login, logout, collection, collectFromPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile, updateArtistProfile, addArtwork, updateAndReevaluateArtwork };
 
   return (
     <AuthContext.Provider value={value}>

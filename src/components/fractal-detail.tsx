@@ -142,13 +142,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
 
             <p className="text-lg text-muted-foreground mt-4">{fractal.description}</p>
             
-            <div className="mt-6 flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">Fractal</Badge>
-                <Badge variant="secondary">Digital Art</Badge>
-                <Badge variant="secondary">Algorithmic</Badge>
-            </div>
-            
-            <div className="mt-6 space-y-4 border-t border-b py-6">
+            <div className="mt-6 space-y-4 border-t pt-6">
                 <DetailItem label="Medium / Materials" value={fractal.materials} />
                 <DetailItem label="Size" value={formattedSize} />
             </div>
@@ -157,7 +151,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="item-1" className="border-b-0">
                     <AccordionTrigger className="hover:no-underline py-2">
-                        <h3 className="text-base font-semibold">View Full Artwork Context</h3>
+                        <h3 className="text-base font-semibold">View Artwork Context</h3>
                     </AccordionTrigger>
                     <AccordionContent>
                         <div className="space-y-4 pt-2">
@@ -176,10 +170,10 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                 <div className="mt-6 border-t pt-6">
                     <Button size="lg" className="w-full" asChild>
                         <Link href={`/artist/${artist.id}`}>
-                            Invest in Artist&apos;s Portfolio
+                            Collect from Artist's Portfolio
                         </Link>
                     </Button>
-                     <p className="text-center text-xs text-muted-foreground mt-2">Invest in a share of this artist&apos;s entire collection.</p>
+                     <p className="text-center text-xs text-muted-foreground mt-2">Collect a fractal from this artist's entire collection.</p>
                 </div>
             )}
           </div>

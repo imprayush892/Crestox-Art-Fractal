@@ -8,7 +8,7 @@ import { getInitialArtists, getInitialFractals } from '@/lib/server-data';
 
 export const metadata: Metadata = {
   title: 'Crestox - Digital Fractal Art Marketplace',
-  description: 'Explore, collect, and trade unique AI-generated fractal art.',
+  description: 'Explore, collect, and trade unique AI-assisted fractal art.',
 };
 
 export default async function RootLayout({

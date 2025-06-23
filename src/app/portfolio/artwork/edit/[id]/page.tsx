@@ -23,7 +23,7 @@ import { useRouter, useParams, notFound } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import { Loader2, Wand2, ArrowRight, ArrowLeft } from 'lucide-react';
-import type { Fractal, Artist, ArtworkSize } from '@/lib/data';
+import type { Fractal, ArtworkSize } from '@/lib/data';
 import Image from 'next/image';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 import { Progress } from '@/components/ui/progress';
@@ -48,8 +48,8 @@ const editArtworkFormSchema = z.object({
   timeEffort: z.string().max(500).optional(),
   biographicalContext: z.string().max(500).optional(),
   commissionPatronage: z.string().max(500).optional(),
-}).refine(data => data.maxEstimatedValue > data.minEstimatedValue, {
-  message: "Maximum value must be greater than minimum value.",
+}).refine(data => data.maxEstimatedValue >= data.minEstimatedValue, {
+  message: "Maximum value must be greater than or equal to minimum value.",
   path: ["maxEstimatedValue"],
 });
 
@@ -228,7 +228,7 @@ export default function EditArtworkPage() {
       <Card className="w-full max-w-3xl">
         <CardHeader>
           <div className='flex items-center justify-between'>
-            <CardTitle className="font-headline text-3xl">Edit & Re-evaluate Artwork</CardTitle>
+            <CardTitle className="font-headline text-3xl">Re-evaluate Artwork</CardTitle>
             <Button variant="ghost" asChild>
                 <Link href="/portfolio">
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -237,7 +237,7 @@ export default function EditArtworkPage() {
             </Button>
           </div>
           <CardDescription>
-            Update artwork details and submit for a fresh AI evaluation to get a quality grade.
+            Update artwork details and submit for a fresh AI-assisted evaluation to get a quality grade.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -279,7 +279,7 @@ export default function EditArtworkPage() {
                      <Card className="border-primary border-2 flex flex-col justify-between">
                         <CardHeader>
                             <CardTitle>Crestox AI Suggestion</CardTitle>
-                            <CardDescription>Our AI-powered recommendation.</CardDescription>
+                            <CardDescription>Our AI-assisted recommendation.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <p className="text-3xl font-bold text-primary">${evaluationResult.crestoxPriceRange[0].toLocaleString()} - ${evaluationResult.crestoxPriceRange[1].toLocaleString()}</p>

@@ -14,7 +14,7 @@ import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Pale
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
-import { InvestmentDialog } from './investment-dialog';
+import { CollectionDialog } from './investment-dialog';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -24,17 +24,17 @@ interface ArtistProfileProps {
 export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
   const { isLoggedIn, holdingsByArtist, watchlist, addToWatchlist, removeFromWatchlist } = useAuth();
   const router = useRouter();
-  const [isInvesting, setIsInvesting] = useState(false);
+  const [isCollecting, setIsCollecting] = useState(false);
 
-  const ownedShares = holdingsByArtist.get(artist.id) || 0;
+  const ownedFractals = holdingsByArtist.get(artist.id) || 0;
   const isWatched = watchlist.includes(artist.id);
 
-  const handleInvestClick = () => {
+  const handleCollectClick = () => {
     if (!isLoggedIn) {
       router.push(`/login?redirect=/artist/${artist.id}`);
       return;
     }
-    setIsInvesting(true);
+    setIsCollecting(true);
   };
   
   const handleWatchClick = () => {
@@ -70,10 +70,10 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
 
   return (
     <>
-      <InvestmentDialog
+      <CollectionDialog
         artist={artist}
-        isOpen={isInvesting}
-        onClose={() => setIsInvesting(false)}
+        isOpen={isCollecting}
+        onClose={() => setIsCollecting(false)}
       />
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12 mb-12">
         <div className="lg:col-span-3 flex flex-col items-center md:items-start">
@@ -113,8 +113,8 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
         <div className="lg:col-span-2">
            <Card className="sticky top-24">
                 <CardHeader>
-                    <CardTitle className="font-headline text-2xl">Invest in the Portfolio</CardTitle>
-                    <CardDescription>Purchase a "fractal" to own a share of this artist's entire collection.</CardDescription>
+                    <CardTitle className="font-headline text-2xl">Collect from the Portfolio</CardTitle>
+                    <CardDescription>Purchase a "fractal" to own a piece of this artist's entire collection.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex justify-between items-center mb-4">
@@ -127,18 +127,18 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="lg" className="w-full" onClick={handleInvestClick}>
+                      <Button size="lg" className="w-full" onClick={handleCollectClick}>
                           <ShoppingCart className="mr-2 h-5 w-5" />
-                          Invest Now
+                          Collect Now
                       </Button>
                        <Button size="lg" variant="outline" onClick={handleWatchClick} aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}>
                           <Star className={`w-5 h-5 transition-colors ${isWatched ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'}`} />
                       </Button>
                     </div>
-                    {ownedShares > 0 && (
+                    {ownedFractals > 0 && (
                         <div className="mt-4 text-center text-sm text-green-600 font-medium flex items-center justify-center gap-2">
                             <CheckCircle className="w-4 h-4" />
-                            You own {ownedShares} fractal{ownedShares > 1 ? 's' : ''} of this portfolio.
+                            You own {ownedFractals} fractal{ownedFractals > 1 ? 's' : ''} from this portfolio.
                         </div>
                     )}
                 </CardContent>
@@ -207,7 +207,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                 <CardContent className="p-0">
                     <TabsContent value="fractal-value" className="mt-0">
                        <CardDescription className="px-4 sm:px-6 mb-4 text-sm">
-                            Historical value of one fractal share of {artist.name}'s portfolio.
+                            Historical value of one fractal from {artist.name}'s portfolio.
                         </CardDescription>
                         <div className="p-4 pt-0 sm:p-6 sm:pt-0">
                             <ChartContainer 

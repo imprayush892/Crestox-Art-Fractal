@@ -20,15 +20,15 @@ import { Label } from './ui/label';
 import { Minus, Plus } from 'lucide-react';
 import { Separator } from './ui/separator';
 
-interface InvestmentDialogProps {
+interface CollectionDialogProps {
   artist: Artist;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogProps) {
+export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogProps) {
   const [quantity, setQuantity] = useState(1);
-  const { investInPortfolio } = useAuth();
+  const { collectFromPortfolio } = useAuth();
   const { toast } = useToast();
 
   const subtotal = useMemo(() => quantity * artist.fractalPrice, [quantity, artist.fractalPrice]);
@@ -48,9 +48,9 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
   };
 
   const handleConfirm = () => {
-    investInPortfolio(artist, quantity);
+    collectFromPortfolio(artist, quantity);
     toast({
-      title: 'Investment Successful!',
+      title: 'Collection Successful!',
       description: `You have purchased ${quantity} fractal${quantity > 1 ? 's' : ''} of ${artist.name}'s portfolio.`,
     });
     onClose();
@@ -62,7 +62,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="font-headline text-2xl">Invest in {artist.name}</DialogTitle>
+          <DialogTitle className="font-headline text-2xl">Collect from {artist.name}</DialogTitle>
           <DialogDescription>
             Select how many fractals of this artist's portfolio you'd like to acquire.
           </DialogDescription>
@@ -133,7 +133,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
             </Button>
           </DialogClose>
           <Button type="button" onClick={handleConfirm}>
-            Confirm Investment
+            Confirm Collection
           </Button>
         </DialogFooter>
       </DialogContent>
