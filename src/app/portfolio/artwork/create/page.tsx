@@ -343,20 +343,109 @@ export default function CreateArtworkPage() {
                 />
 
                 <div className="space-y-8">
-                  <FormField control={form.control} name="title" render={({ field }) => ( <FormItem> <FormLabel>Title</FormLabel> <FormControl> <Input placeholder="e.g., Chromatic Bloom" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                  <FormField control={form.control} name="description" render={({ field }) => ( <FormItem> <FormLabel>Description / Artist's Statement</FormLabel> <FormControl> <Textarea placeholder="Describe your artwork, its inspiration, and the process..." className="resize-y min-h-[120px]" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Chromatic Bloom" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description / Artist's Statement</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Describe your artwork, its inspiration, and the process..."
+                            className="resize-y min-h-[120px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <FormField control={form.control} name="materials" render={({ field }) => ( <FormItem> <FormLabel>Materials Used / Medium</FormLabel> <FormControl> <Input placeholder="e.g., Oil on canvas, Digital (Procreate)" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                    <FormField control={form.control} name="artworkSize" render={({ field }) => ( <FormItem> <FormLabel>Artwork Size</FormLabel> <FormControl> <Input placeholder="e.g., 24x36 inches, 4000x4000 pixels" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+                    <FormField
+                      control={form.control}
+                      name="materials"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Materials Used / Medium</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Oil on canvas, Digital (Procreate)" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="artworkSize"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Artwork Size</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., 24x36 inches, 4000x4000 pixels" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <FormField control={form.control} name="minEstimatedValue" render={({ field }) => ( <FormItem> <FormLabel>Minimum Estimated Value ($)</FormLabel> <FormControl> <Input type="number" placeholder="100" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                    <FormField control={form.control} name="maxEstimatedValue" render={({ field }) => ( <FormItem> <FormLabel>Maximum Estimated Value ($)</FormLabel> <FormControl> <Input type="number" placeholder="1000" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+                    <FormField
+                      control={form.control}
+                      name="minEstimatedValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Minimum Estimated Value ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="100" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="maxEstimatedValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Maximum Estimated Value ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="1000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                   
-                  <FormField control={form.control} name="editionsToIssue" render={({ field }) => ( <FormItem> <FormLabel>New Portfolio Fractals to Issue</FormLabel> <FormControl> <Input type="number" placeholder="100" {...field} /> </FormControl> <FormDescription> New 'fractals' to add to your total supply. </FormDescription> <FormMessage /> </FormItem> )}/>
+                  <FormField
+                    control={form.control}
+                    name="editionsToIssue"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Portfolio Fractals to Issue</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="100" {...field} />
+                        </FormControl>
+                        <FormDescription> New 'fractals' to add to your total supply. </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="item-1">
