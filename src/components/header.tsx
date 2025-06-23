@@ -40,7 +40,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <Link href="/" className="mr-6 flex items-center gap-2">
-          <Logo className="h-12 w-12" />
+          <Logo className="h-14 w-14" />
           <span className="font-bold text-lg font-headline">Crestox</span>
         </Link>
         <div className="hidden md:flex flex-1 items-center justify-between">
@@ -98,7 +98,7 @@ export function Header() {
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between border-b p-4">
                     <Link href="/" onClick={closeMenu} className="flex items-center gap-2">
-                      <Logo className="h-12 w-12" />
+                      <Logo className="h-14 w-14" />
                       <span className="font-bold font-headline">Crestox</span>
                     </Link>
                     <SheetTrigger asChild>
