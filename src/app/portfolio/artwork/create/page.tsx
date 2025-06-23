@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Loader2, UploadCloud, X, Wand2, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
@@ -75,6 +75,7 @@ export default function CreateArtworkPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     if (!isLoggedIn) {
@@ -293,9 +294,13 @@ export default function CreateArtworkPage() {
                                 variant="destructive"
                                 size="icon"
                                 className="absolute top-2 right-2 z-10 h-8 w-8"
-                                onClick={() => {
-                                  field.onChange(null);
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  form.setValue('image', null, { shouldValidate: true });
                                   setImagePreview(null);
+                                  if (fileInputRef.current) {
+                                    fileInputRef.current.value = "";
+                                  }
                                 }}
                               >
                                 <X className="h-4 w-4" />
@@ -313,9 +318,9 @@ export default function CreateArtworkPage() {
                             type="file"
                             className="hidden"
                             accept="image/png, image/jpeg, image/webp"
-                            ref={field.ref}
-                            name={field.name}
+                            ref={fileInputRef}
                             onBlur={field.onBlur}
+                            name={field.name}
                             onChange={(e) => {
                               const file = e.target.files?.[0] || null;
                               field.onChange(file);
