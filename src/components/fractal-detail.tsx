@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Artist, Fractal } from '@/lib/data';
+import type { Artist, Fractal, ArtworkSize } from '@/lib/data';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,6 +14,7 @@ import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts'
 import { format } from 'date-fns';
 import { Star } from 'lucide-react';
 import React from 'react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface FractalDetailProps {
     fractal: Fractal;
@@ -32,9 +33,18 @@ const DetailItem = ({ label, value }: { label: string; value?: string }) => {
     );
 };
 
+const formatSize = (size: ArtworkSize) => {
+    let sizeString = `${size.length} x ${size.breadth}`;
+    if (size.height) {
+        sizeString += ` x ${size.height}`;
+    }
+    return `${sizeString} ${size.unit}`;
+};
+
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
   const artworkValueHistory = fractal.priceHistory.map(p => ({ date: p.date, value: p.price }));
   const hasContext = fractal.subjectSignificance || fractal.personalSignificance || fractal.timeEffort || fractal.biographicalContext || fractal.commissionPatronage;
+  const formattedSize = formatSize(fractal.artworkSize);
 
   return (
     <>
@@ -137,25 +147,33 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                 <Badge variant="secondary">Digital Art</Badge>
                 <Badge variant="secondary">Algorithmic</Badge>
             </div>
+            
+            <div className="mt-6 space-y-4 border-t border-b py-6">
+                <DetailItem label="Medium / Materials" value={fractal.materials} />
+                <DetailItem label="Size" value={formattedSize} />
+            </div>
 
             {hasContext && (
-                <Card className="mt-6">
-                    <CardHeader>
-                        <CardTitle className="text-xl font-headline">Artwork Context</CardTitle>
-                        <CardDescription>Additional details from the artist.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <DetailItem label="Subject / Cultural Significance" value={fractal.subjectSignificance} />
-                        <DetailItem label="Personal / Emotional Significance" value={fractal.personalSignificance} />
-                        <DetailItem label="Time Spent / Effort" value={fractal.timeEffort} />
-                        <DetailItem label="Biographical / Contextual Relevance" value={fractal.biographicalContext} />
-                        <DetailItem label="Commission / Patronage" value={fractal.commissionPatronage} />
-                    </CardContent>
-                </Card>
+               <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1" className="border-b-0">
+                    <AccordionTrigger className="hover:no-underline py-2">
+                        <h3 className="text-base font-semibold">View Full Artwork Context</h3>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <div className="space-y-4 pt-2">
+                           <DetailItem label="Subject / Cultural Significance" value={fractal.subjectSignificance} />
+                            <DetailItem label="Personal / Emotional Significance" value={fractal.personalSignificance} />
+                            <DetailItem label="Time Spent / Effort" value={fractal.timeEffort} />
+                            <DetailItem label="Biographical / Contextual Relevance" value={fractal.biographicalContext} />
+                            <DetailItem label="Commission / Patronage" value={fractal.commissionPatronage} />
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             )}
 
             {artist && (
-                <div className="mt-8 border-t pt-8">
+                <div className="mt-6 border-t pt-6">
                     <Button size="lg" className="w-full" asChild>
                         <Link href={`/artist/${artist.id}`}>
                             Invest in Artist&apos;s Portfolio

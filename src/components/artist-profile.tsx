@@ -4,7 +4,7 @@
 import type { Artist, Fractal } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FractalCard } from '@/components/fractal-card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,7 +15,6 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
 import { InvestmentDialog } from './investment-dialog';
-import { Badge } from './ui/badge';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -53,14 +52,21 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
   const fractalPriceHistory = artist.priceHistory.map(p => ({ date: p.date, value: p.price }));
   const totalValueHistory = artist.totalPortfolioValueHistory.map(p => ({ date: p.date, value: p.value }));
 
-  const portfolioSnapshot = useMemo(() => {
-    return artistFractals.reduce((acc, fractal) => {
+  const portfolioSnapshotData = useMemo(() => {
+    const grades = ['AAA', 'AA', 'A+', 'A', 'A-'];
+    const snapshot = artistFractals.reduce((acc, fractal) => {
         if (fractal.crestoxGrade) {
             acc[fractal.crestoxGrade] = (acc[fractal.crestoxGrade] || 0) + 1;
         }
         return acc;
     }, {} as Record<string, number>);
+
+    return grades.map(grade => ({
+        grade,
+        count: snapshot[grade] || 0,
+    })).filter(item => item.count > 0);
   }, [artistFractals]);
+
 
   return (
     <>
@@ -146,17 +152,22 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                 <CardTitle className="font-headline text-2xl">Portfolio Snapshot</CardTitle>
                 <CardDescription>Breakdown of graded artworks in this collection.</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {Object.entries(portfolioSnapshot).length > 0 ? (
-                    Object.entries(portfolioSnapshot).map(([grade, count]) => (
-                        <Card key={grade} className="p-4 flex flex-col items-center justify-center text-center bg-muted/50">
-                            <Badge variant="secondary" className="text-lg px-3 py-1">{grade}</Badge>
-                            <p className="text-4xl font-bold mt-2">{count}</p>
-                            <p className="text-xs text-muted-foreground">Artwork{count > 1 ? 's' : ''}</p>
-                        </Card>
-                    ))
+            <CardContent>
+               {portfolioSnapshotData.length > 0 ? (
+                    <ChartContainer config={{ count: { label: "Artworks", color: "hsl(var(--primary))" } }} className="h-[250px] w-full">
+                        <BarChart data={portfolioSnapshotData} accessibilityLayer>
+                            <CartesianGrid vertical={false} />
+                            <XAxis dataKey="grade" tickLine={false} tickMargin={10} axisLine={false} stroke="#888888" fontSize={12} />
+                            <YAxis allowDecimals={false} stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                            <Tooltip
+                                cursor={{ fill: 'hsl(var(--muted))' }}
+                                content={<ChartTooltipContent indicator="dot" />}
+                            />
+                            <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
+                        </BarChart>
+                    </ChartContainer>
                 ) : (
-                    <div className="col-span-full text-center py-8">
+                    <div className="col-span-full text-center py-8 h-[250px] flex items-center justify-center">
                         <p className="text-muted-foreground">No graded artworks in this portfolio yet.</p>
                     </div>
                 )}
