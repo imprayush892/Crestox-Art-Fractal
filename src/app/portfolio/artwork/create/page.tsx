@@ -124,18 +124,6 @@ export default function CreateArtworkPage() {
     }
   });
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-          form.setValue('image', file);
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              setImagePreview(reader.result as string);
-          };
-          reader.readAsDataURL(file);
-      }
-  };
-
   async function onFormSubmit(data: ArtworkFormValues) {
     if (!artistProfile) return;
     setIsEvaluating(true);
@@ -292,35 +280,57 @@ export default function CreateArtworkPage() {
                 <FormField
                   control={form.control}
                   name="image"
-                  render={() => (
+                  render={({ field }) => (
                     <FormItem>
                       <FormLabel>Artwork File</FormLabel>
                       <FormControl>
-                        <Controller
-                          name="image"
-                          control={form.control}
-                          render={() => (
-                            <>
-                             <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80 transition-colors">
-                                {imagePreview ? (
-                                  <div className="relative w-full h-full">
-                                      <Image src={imagePreview} alt="Preview" fill style={{ objectFit: 'contain' }} />
-                                      <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 z-10 h-8 w-8" onClick={() => { form.setValue('image', null); setImagePreview(null); }}>
-                                          <X className="h-4 w-4"/>
-                                      </Button>
-                                  </div>
-                                ) : (
-                                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                    <UploadCloud className="w-10 h-10 mb-3 text-muted-foreground" />
-                                    <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                    <p className="text-xs text-muted-foreground">PNG, JPG, or WEBP (MAX. 5MB)</p>
-                                  </div>
-                                )}
-                                <input id="dropzone-file" type="file" className="hidden" onChange={handleImageChange} accept="image/png, image/jpeg, image/webp"/>
-                             </label>
-                            </>
+                        <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80 transition-colors">
+                          {imagePreview ? (
+                            <div className="relative w-full h-full">
+                              <Image src={imagePreview} alt="Preview" fill style={{ objectFit: 'contain' }} />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2 z-10 h-8 w-8"
+                                onClick={() => {
+                                  field.onChange(null);
+                                  setImagePreview(null);
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <UploadCloud className="w-10 h-10 mb-3 text-muted-foreground" />
+                              <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                              <p className="text-xs text-muted-foreground">PNG, JPG, or WEBP (MAX. 5MB)</p>
+                            </div>
                           )}
-                        />
+                          <input
+                            id="dropzone-file"
+                            type="file"
+                            className="hidden"
+                            accept="image/png, image/jpeg, image/webp"
+                            ref={field.ref}
+                            name={field.name}
+                            onBlur={field.onBlur}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              field.onChange(file);
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setImagePreview(reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              } else {
+                                setImagePreview(null);
+                              }
+                            }}
+                          />
+                        </label>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
