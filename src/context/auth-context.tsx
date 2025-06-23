@@ -33,7 +33,10 @@ export interface OwnedFractal {
 type NewArtworkData = {
     title: string;
     description: string;
-    estimatedValue: number;
+    materials: string;
+    artworkSize: string;
+    minEstimatedValue: number;
+    maxEstimatedValue: number;
     editionsToIssue: number;
     image: string; // data URI
     subjectSignificance?: string;
@@ -65,7 +68,7 @@ interface AuthContextType {
   removeFromWatchlist: (artistId: string) => void;
   createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
   updateArtistProfile: (profileData: Partial<Omit<Artist, 'id' | 'userId'>>) => Promise<void>;
-  addArtwork: (artworkData: NewArtworkData, evaluation: { aiScore: number, aiGrade: string, aiScorecard: AIScorecardBreakdown[] }) => Promise<void>;
+  addArtwork: (artworkData: NewArtworkData, evaluation: { aiScore: number, aiGrade: string, aiScorecard: AIScorecardBreakdown[] }, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: { title: string; description: string; }) => Promise<void>;
 }
 
@@ -207,7 +210,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     }
   }, [user, artistProfile]);
   
-  const addArtwork = useCallback(async (artworkData: NewArtworkData, evaluation: { aiScore: number, aiGrade: string, aiScorecard: AIScorecardBreakdown[] }) => {
+  const addArtwork = useCallback(async (artworkData: NewArtworkData, evaluation: { aiScore: number, aiGrade: string, aiScorecard: AIScorecardBreakdown[] }, finalPrice: number, shouldApplyGrade: boolean) => {
     if (!user || !artistProfile) throw new Error("Artist profile not found.");
 
     if (db) {
@@ -229,19 +232,19 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 aiHint: 'custom artwork',
                 width: 1000,
                 height: 1000,
-                price: artworkData.estimatedValue,
-                priceHistory: [{ date: new Date().toISOString(), price: artworkData.estimatedValue }],
+                price: finalPrice,
+                priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
                 editions: 1,
                 editionsAvailable: 1,
                 aiScore: evaluation.aiScore,
-                aiGrade: evaluation.aiGrade,
+                aiGrade: shouldApplyGrade ? evaluation.aiGrade : undefined,
                 aiScorecard: evaluation.aiScorecard,
             };
             const newFractalRef = doc(fractalCollectionRef);
             transaction.set(newFractalRef, newFractalData);
 
             // 2. Update the artist's portfolio
-            const newTotalPortfolioValue = (artistData.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + artworkData.estimatedValue;
+            const newTotalPortfolioValue = (artistData.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + finalPrice;
             const newTotalEditions = artistData.totalEditions + artworkData.editionsToIssue;
             const newAvailableEditions = artistData.availableEditions + artworkData.editionsToIssue;
             const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;
@@ -270,19 +273,19 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             aiHint: 'custom artwork',
             width: 1000,
             height: 1000,
-            price: artworkData.estimatedValue,
-            priceHistory: [{ date: new Date().toISOString(), price: artworkData.estimatedValue }],
+            price: finalPrice,
+            priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
             editions: 1,
             editionsAvailable: 1,
             aiScore: evaluation.aiScore,
-            aiGrade: evaluation.aiGrade,
+            aiGrade: shouldApplyGrade ? evaluation.aiGrade : undefined,
             aiScorecard: evaluation.aiScorecard,
         };
         setFractals(prev => [...prev, createdFractal]);
 
         const artistToUpdate = artists.find(a => a.id === artistProfile.id);
         if (artistToUpdate) {
-            const newTotalPortfolioValue = (artistToUpdate.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + artworkData.estimatedValue;
+            const newTotalPortfolioValue = (artistToUpdate.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + finalPrice;
             const newTotalEditions = artistToUpdate.totalEditions + artworkData.editionsToIssue;
             const newAvailableEditions = artistToUpdate.availableEditions + artworkData.editionsToIssue;
             const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;

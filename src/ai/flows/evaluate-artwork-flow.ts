@@ -119,6 +119,10 @@ const EvaluateArtworkInputSchema = z.object({
   ),
   title: z.string(),
   description: z.string(),
+  materials: z.string(),
+  artworkSize: z.string(),
+  minEstimatedValue: z.number(),
+  maxEstimatedValue: z.number(),
   subjectSignificance: z.string().optional(),
   personalSignificance: z.string().optional(),
   timeEffort: z.string().optional(),
@@ -128,7 +132,6 @@ const EvaluateArtworkInputSchema = z.object({
   awardsAndExhibitions: z.string().optional(),
 });
 
-
 const AiCriterionScoreSchema = z.object({
   id: z.number().describe('The ID of the criterion from the rubric (e.g., 11 for Rule-of-Thirds).'),
   score: z.number().min(0).max(10).describe('The score assigned by the AI for this criterion (0-10).'),
@@ -136,12 +139,15 @@ const AiCriterionScoreSchema = z.object({
 
 const ArtworkAnalysisSchema = z.object({
     scores: z.array(AiCriterionScoreSchema).describe('An array of scores for each AI-evaluated criterion.'),
+    minPriceAI: z.number().describe("The AI's estimated minimum market price for the artwork in USD, based on all available data."),
+    maxPriceAI: z.number().describe("The AI's estimated maximum market price for the artwork in USD, based on all available data."),
 });
 
 interface EvaluateArtworkOutput {
     finalScore: number;
     grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
     breakdown: AIScorecardBreakdown[];
+    crestoxPriceRange: [number, number];
 }
 
 export async function evaluateArtwork(
@@ -154,14 +160,15 @@ const evaluationPrompt = ai.definePrompt({
   name: 'evaluateArtworkPrompt',
   input: {schema: EvaluateArtworkInputSchema},
   output: {schema: ArtworkAnalysisSchema},
-  prompt: `You are an expert art evaluator and appraiser with deep knowledge of art history, composition, and materials science. Your task is to analyze the provided artwork image and associated context, then score it based on a comprehensive 100-point rubric.
-
-You must provide a score from 0 to 10 for every single criterion marked with type "AI" in the rubric below.
+  prompt: `You are an expert art appraiser. Your task is to analyze the provided artwork image and associated context, then score it based on a comprehensive rubric and provide a market valuation.
 
 **Evaluation Instructions:**
 1.  **Image-Based Criteria:** For criteria related to composition, color, texture, technique, condition, and material, your primary source is the artwork image.
-2.  **Context-Based Criteria:** For criteria related to the artist and the artwork's narrative, you must evaluate the provided text. Score based on the quality, credibility, and relevance of the information in relation to the artwork image. For example, a high score for "Artist's Intent" requires a compelling statement that is clearly reflected in the visual work.
-3.  **Inferred Criteria:** For criteria like "Artist Reputation" and "Uniqueness", synthesize information from the artist's bio, awards, and the artwork itself to make an expert judgment.
+2.  **Context-Based Criteria:** For criteria related to the artist and the artwork's narrative, evaluate the provided text. Score based on the quality, credibility, and relevance of the information. For example, a high score for "Artist's Intent" requires a compelling statement that is clearly reflected in the visual work.
+3.  **Inferred Criteria:** For "Artist Reputation" and "Uniqueness", synthesize information from the artist's bio, awards, and the artwork itself.
+4.  **Market Valuation:** Based on your complete analysis, provide an estimated minimum and maximum market price for this artwork in USD.
+
+You must provide a score from 0 to 10 for every single criterion marked with type "AI" in the rubric below.
 
 **Evaluation Rubric:**
 (You will score ALL items with Type='AI')
@@ -173,6 +180,8 @@ ${rubric.map(item => `| ${item.id} | ${item.criterion} | ${item.type} | ${item.w
 **Artwork Information:**
 - Title: {{{title}}}
 - Description (Artist's Intent/Theme): {{{description}}}
+- Materials Used: {{{materials}}}
+- Artwork Size: {{{artworkSize}}}
 - Subject/Cultural Significance Statement: {{{subjectSignificance}}}
 - Personal/Emotional Significance Statement: {{{personalSignificance}}}
 - Time Spent / Effort Statement: {{{timeEffort}}}
@@ -188,7 +197,7 @@ ${rubric.map(item => `| ${item.id} | ${item.criterion} | ${item.type} | ${item.w
 {{media url=photoDataUri}}
 
 ---
-Please analyze the artwork and context, then return your scores for all AI criteria.
+Please analyze the artwork and context, then return your scores for all AI criteria and your estimated price range.
 `,
 });
 
@@ -200,10 +209,11 @@ const evaluateArtworkFlow = ai.defineFlow(
   },
   async (input): Promise<EvaluateArtworkOutput> => {
     const { output } = await evaluationPrompt(input);
-    if (!output) {
-      throw new Error("AI analysis failed to return scores.");
+    if (!output || !output.scores || output.minPriceAI === undefined || output.maxPriceAI === undefined) {
+      throw new Error("AI analysis failed to return complete data.");
     }
     
+    // --- 1. Calculate Quality Score (Q) ---
     const breakdown: AIScorecardBreakdown[] = [];
     let totalWeightedScore = 0;
     let totalPossibleWeight = 0;
@@ -215,7 +225,6 @@ const evaluateArtworkFlow = ai.defineFlow(
             const score = aiScores.get(item.id);
             totalPossibleWeight += item.weight;
             if (score !== undefined) {
-                // Normalize score to 0-1 and multiply by its weight percentage.
                 const weightedScore = (score / 10) * item.weight;
                 totalWeightedScore += weightedScore;
                 breakdown.push({
@@ -237,7 +246,25 @@ const evaluateArtworkFlow = ai.defineFlow(
     else if (finalScore > 40) grade = 'A+';
     else if (finalScore > 20) grade = 'A';
     else grade = 'A-';
+
+    // --- 2. Calculate Price Estimations ---
+    const Q = finalScore;
+
+    // Model 1: Linear Mapping (User Prices)
+    const P_user = input.minEstimatedValue + (input.maxEstimatedValue - input.minEstimatedValue) * (Q / 100);
     
-    return { finalScore, grade, breakdown };
+    // Model 2: Linear Mapping (AI Prices)
+    const P_ai_linear = output.minPriceAI + (output.maxPriceAI - output.minPriceAI) * (Q / 100);
+
+    // Model 3: Regression Mapping
+    const a = 6.2;
+    const b = 0.015;
+    const P_regression = Math.exp(a + b * Q);
+
+    // --- 3. Final Averaged Price and Range ---
+    const P_avg = (P_user + P_ai_linear + P_regression) / 3;
+    const crestoxPriceRange: [number, number] = [Math.round(P_avg * 0.9), Math.round(P_avg * 1.1)];
+    
+    return { finalScore, grade, breakdown, crestoxPriceRange };
   }
 );
