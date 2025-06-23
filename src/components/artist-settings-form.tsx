@@ -54,25 +54,36 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     mode: "onChange",
+    defaultValues: {
+      name: artist.name || "",
+      bio: artist.bio || "",
+      avatar: artist.avatar || "",
+      location: artist.location || "",
+      website: artist.website || "",
+      style: artist.style || "",
+      awards: artist.awards?.map(value => ({ value })) || [],
+      exhibitions: artist.exhibitions?.map(value => ({ value })) || [],
+      twitter: artist.twitter || "",
+      instagram: artist.instagram || "",
+      linkedin: artist.linkedin || "",
+    },
   });
   
   useEffect(() => {
-    if (artist) {
-      form.reset({
-        name: artist.name || "",
-        bio: artist.bio || "",
-        avatar: artist.avatar || "",
-        location: artist.location || "",
-        website: artist.website || "",
-        style: artist.style || "",
-        awards: artist.awards?.map(value => ({ value })) || [],
-        exhibitions: artist.exhibitions?.map(value => ({ value })) || [],
-        twitter: artist.twitter || "",
-        instagram: artist.instagram || "",
-        linkedin: artist.linkedin || "",
-      });
-      setAvatarPreview(artist.avatar || null);
-    }
+    form.reset({
+      name: artist.name || "",
+      bio: artist.bio || "",
+      avatar: artist.avatar || "",
+      location: artist.location || "",
+      website: artist.website || "",
+      style: artist.style || "",
+      awards: artist.awards?.map(value => ({ value })) || [],
+      exhibitions: artist.exhibitions?.map(value => ({ value })) || [],
+      twitter: artist.twitter || "",
+      instagram: artist.instagram || "",
+      linkedin: artist.linkedin || "",
+    });
+    setAvatarPreview(artist.avatar || null);
   }, [artist, form.reset]);
 
   const { fields: awardFields, append: appendAward, remove: removeAward } = useFieldArray({ control: form.control, name: "awards" });
