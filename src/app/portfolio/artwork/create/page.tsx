@@ -367,11 +367,71 @@ export default function CreateArtworkPage() {
                         <Alert variant="default">
                           <AlertDescription>Providing thorough and accurate information here will significantly improve the quality of the AI evaluation. Leaving fields blank may result in a lower score.</AlertDescription>
                         </Alert>
-                        <FormField control={form.control} name="subjectSignificance" render={({ field }) => ( <FormItem> <FormLabel>Subject/Cultural Significance</FormLabel> <FormControl> <Textarea placeholder="Explain any historical, cultural, or notable relevance of your artwork's subject." {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                        <FormField control={form.control} name="personalSignificance" render={({ field }) => ( <FormItem> <FormLabel>Personal/Emotional Significance</FormLabel> <FormControl> <Textarea placeholder="Describe the personal story or emotional meaning behind this piece." {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                        <FormField control={form.control} name="timeEffort" render={({ field }) => ( <FormItem> <FormLabel>Time Spent / Effort</FormLabel> <FormControl> <Input placeholder="e.g., 80 hours of rendering, 3 months of concept work" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                        <FormField control={form.control} name="biographicalContext" render={({ field }) => ( <FormItem> <FormLabel>Biographical/Contextual Relevance</FormLabel> <FormControl> <Textarea placeholder="How does this artwork relate to a specific period in your life or a broader art movement?" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                        <FormField control={form.control} name="commissionPatronage" render={({ field }) => ( <FormItem> <FormLabel>Commission/Patronage Information</FormLabel> <FormControl> <Input placeholder="e.g., Commissioned by the Museum of Digital Art" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+                        <FormField
+                          control={form.control}
+                          name="subjectSignificance"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Subject/Cultural Significance</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Explain any historical, cultural, or notable relevance of your artwork's subject." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="personalSignificance"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Personal/Emotional Significance</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Describe the personal story or emotional meaning behind this piece." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="timeEffort"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Time Spent / Effort</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., 80 hours of rendering, 3 months of concept work" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="biographicalContext"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Biographical/Contextual Relevance</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="How does this artwork relate to a specific period in your life or a broader art movement?" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="commissionPatronage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Commission/Patronage Information</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., Commissioned by the Museum of Digital Art" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
