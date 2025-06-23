@@ -14,8 +14,9 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { Fractal } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
-import { ArrowDown, Loader2 } from 'lucide-react';
+import { Loader2, Wand2 } from 'lucide-react';
 import { useState } from 'react';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface ReevaluationDialogProps {
   isOpen: boolean;
@@ -28,9 +29,7 @@ export function ReevaluationDialog({ isOpen, onClose, fractal }: ReevaluationDia
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (!fractal || !fractal.crestoxPriceRange) return null;
-
-    const newPrice = Math.round((fractal.crestoxPriceRange[0] + fractal.crestoxPriceRange[1]) / 2);
+    if (!fractal) return null;
     
     const handleConfirm = async () => {
         setIsSubmitting(true);
@@ -38,7 +37,7 @@ export function ReevaluationDialog({ isOpen, onClose, fractal }: ReevaluationDia
             await acceptCrestoxValuation(fractal.id);
             toast({
                 title: "Valuation Updated!",
-                description: `"${fractal.title}" is now priced at $${newPrice.toLocaleString()} and has received its AI Grade.`,
+                description: `"${fractal.title}" has been re-evaluated and has received its AI Grade.`,
             });
             onClose();
         } catch (error: any) {
@@ -56,26 +55,23 @@ export function ReevaluationDialog({ isOpen, onClose, fractal }: ReevaluationDia
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle className="font-headline text-2xl">Accept AI Valuation</DialogTitle>
+                    <DialogTitle className="font-headline text-2xl">Get AI Grade</DialogTitle>
                     <DialogDescription>
-                        Update the artwork's valuation for "{fractal.title}" to receive your AI Grade.
+                        To receive an AI Grade, your artwork's price must be set by the Crestox valuation model.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="my-4 space-y-4">
+                     <Alert>
+                        <Wand2 className="h-4 w-4" />
+                        <AlertTitle>How it Works</AlertTitle>
+                        <AlertDescription>
+                            We will perform a fresh, real-time evaluation of your artwork. The resulting price will replace its current valuation, and an AI Grade badge will be applied. This action cannot be undone.
+                        </AlertDescription>
+                    </Alert>
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                         <span className="text-muted-foreground">Current Valuation</span>
                         <span className="font-semibold">${fractal.price.toLocaleString()}</span>
                     </div>
-                    <div className="flex items-center justify-center">
-                        <ArrowDown className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-lg border-2 border-primary">
-                        <span className="text-primary font-medium">New Crestox Valuation</span>
-                        <span className="font-bold text-primary text-lg">${newPrice.toLocaleString()}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                        Accepting the Crestox Valuation will update the artwork's public price and your total portfolio value. This action cannot be undone.
-                    </p>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
@@ -83,7 +79,7 @@ export function ReevaluationDialog({ isOpen, onClose, fractal }: ReevaluationDia
                     </DialogClose>
                     <Button onClick={handleConfirm} disabled={isSubmitting}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Confirm and Get Badge
+                        Re-evaluate and Get Badge
                     </Button>
                 </DialogFooter>
             </DialogContent>

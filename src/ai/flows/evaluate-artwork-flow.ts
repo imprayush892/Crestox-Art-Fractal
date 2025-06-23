@@ -199,6 +199,9 @@ ${rubric.map(item => `| ${item.id} | ${item.criterion} | ${item.type} | ${item.w
 ---
 Please analyze the artwork and context, then return your scores for all AI criteria and your estimated price range.
 `,
+  config: {
+    temperature: 0.2, // Lower temperature for more consistent, deterministic results
+  },
 });
 
 const evaluateArtworkFlow = ai.defineFlow(

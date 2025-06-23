@@ -6,6 +6,7 @@ import type { Artist, Fractal, AIScorecardBreakdown } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection, addDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 
 export interface ResaleListing {
   id: string;
@@ -360,23 +361,33 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             const artistData = artistDoc.data() as Artist;
             const fractalData = fractalDoc.data() as Fractal;
 
-            if (!fractalData.crestoxPriceRange || fractalData.aiScore === undefined) {
-                throw new Error("Evaluation data missing for this artwork.");
-            }
+            // This is a re-evaluation, so we call the AI flow again for a fresh result.
+            const evalInput = {
+                photoDataUri: fractalData.image, // Assuming image is a data URI. This might need adjustment if it's a URL.
+                title: fractalData.title,
+                description: fractalData.description,
+                materials: "Not specified", // These fields don't exist on the fractal object, using placeholders
+                artworkSize: "Not specified",
+                minEstimatedValue: fractalData.price, // Use current price as a baseline
+                maxEstimatedValue: fractalData.price * 1.5,
+                artistBio: artistData.bio,
+                awardsAndExhibitions: artistData.awardsAndExhibitions
+            };
+
+            const newEvaluation = await evaluateArtwork(evalInput);
 
             const oldPrice = fractalData.price;
-            const newPrice = Math.round((fractalData.crestoxPriceRange[0] + fractalData.crestoxPriceRange[1]) / 2);
+            const newPrice = Math.round((newEvaluation.crestoxPriceRange[0] + newEvaluation.crestoxPriceRange[1]) / 2);
             const priceDifference = newPrice - oldPrice;
-            
-            const score = fractalData.aiScore;
-            let grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
-            if (score > 80) grade = 'AAA';
-            else if (score > 60) grade = 'AA';
-            else if (score > 40) grade = 'A+';
-            else if (score > 20) grade = 'A';
-            else grade = 'A-';
 
-            transaction.update(fractalRef, { price: newPrice, aiGrade: grade });
+            transaction.update(fractalRef, { 
+                price: newPrice,
+                aiGrade: newEvaluation.grade,
+                aiScore: newEvaluation.finalScore,
+                aiScorecard: newEvaluation.breakdown,
+                crestoxPriceRange: newEvaluation.crestoxPriceRange,
+                priceHistory: [...fractalData.priceHistory, { date: new Date().toISOString(), price: newPrice }],
+             });
 
             const newTotalPortfolioValue = (artistData.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + priceDifference;
             const newFractalPrice = artistData.totalEditions > 0 ? newTotalPortfolioValue / artistData.totalEditions : 0;
@@ -390,7 +401,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             });
         });
     } else {
-        console.warn("Firebase not configured. Simulating valuation acceptance locally.");
+        // This is complex to simulate offline without fetching full fractal data,
+        // so we'll log a warning and perform a simplified update.
+        console.warn("Firebase not configured. Simulating re-evaluation with simplified logic.");
         const fractalIndex = fractals.findIndex(f => f.id === artworkId);
         const artistIndex = artists.findIndex(a => a.id === artistProfile.id);
 
@@ -400,6 +413,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         let updatedArtist = { ...artists[artistIndex] };
         
         const oldPrice = updatedFractal.price;
+        // In a real scenario, we'd call the AI. Here, we'll just use the stored range.
         const newPrice = Math.round((updatedFractal.crestoxPriceRange![0] + updatedFractal.crestoxPriceRange![1]) / 2);
         const priceDifference = newPrice - oldPrice;
 
