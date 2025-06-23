@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/context/auth-context';
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Wordmark } from '@/components/wordmark';
 
 export default function Home() {
   const { artists, fractals } = useAuth();
@@ -41,6 +43,7 @@ export default function Home() {
   return (
     <div className="container py-12">
       <div className="flex flex-col items-center justify-center text-center min-h-[50vh] mb-12">
+        <Wordmark className="h-auto w-full max-w-sm mb-4" />
         <h1 className="font-headline text-5xl md:text-6xl font-bold tracking-tight">Democratizing Art</h1>
         <p className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground">
           Crestox is a revolutionary platform dedicated to making the world of art accessible. We believe in the power of art to inspire, connect, and transform.
