@@ -63,9 +63,7 @@ export function CollectionClient() {
 
   const collectionByArtist = useMemo(() => {
     return collection.reduce((acc, fractal) => {
-      if (fractal.status !== 'listed') {
-        (acc[fractal.artistId] = acc[fractal.artistId] || []).push(fractal);
-      }
+      (acc[fractal.artistId] = acc[fractal.artistId] || []).push(fractal);
       return acc;
     }, {} as Record<string, OwnedFractal[]>);
   }, [collection]);
@@ -84,12 +82,14 @@ export function CollectionClient() {
   }, [resaleListings, user]);
 
   const watchedArtists = useMemo(() => {
+      if (!watchlist) return [];
       return artists.filter(a => watchlist.includes(a.id));
   }, [artists, watchlist]);
 
   const handleCardClick = (artistId: string) => {
     const artist = artistMap.get(artistId);
-    if (artist) {
+    const ownedFractals = collection.filter(f => f.artistId === artistId && f.status === 'owned');
+    if (artist && ownedFractals.length > 0) {
         setSelectedArtist(artist);
     }
   };
@@ -98,7 +98,7 @@ export function CollectionClient() {
       setSelectedArtist(null);
   };
   
-  const ownedFractalsForSelectedArtist = selectedArtist ? collectionByArtist[selectedArtist.id] || [] : [];
+  const ownedFractalsForSelectedArtist = selectedArtist ? collection.filter(f => f.artistId === selectedArtist!.id && f.status === 'owned') : [];
 
   const handleSellClick = (e: React.MouseEvent, artist: Artist) => {
     e.stopPropagation();
@@ -184,16 +184,19 @@ export function CollectionClient() {
             </TabsList>
             
             <TabsContent value="holdings" className="mt-6">
-                {Object.keys(collectionByArtist).length > 0 ? (
+                {sortedArtistIds.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {sortedArtistIds.map(artistId => {
-                        const fractalsByArtist = collectionByArtist[artistId];
-                        if (fractalsByArtist.length === 0) return null;
                         const artist = artistMap.get(artistId);
                         if (!artist) return null;
 
-                        const totalCollected = fractalsByArtist.reduce((sum, f) => sum + f.purchasePrice, 0);
-                        const currentValue = fractalsByArtist.reduce((sum) => sum + artist.fractalPrice, 0);
+                        const allFractalsForArtist = collectionByArtist[artistId] || [];
+                        const ownedByArtist = allFractalsForArtist.filter(f => f.status === 'owned');
+                        
+                        if(ownedByArtist.length === 0) return null;
+
+                        const totalCollected = ownedByArtist.reduce((sum, f) => sum + f.purchasePrice, 0);
+                        const currentValue = ownedByArtist.reduce((sum) => sum + artist.fractalPrice, 0);
                         const gainLoss = currentValue - totalCollected;
 
                         return (
@@ -205,7 +208,7 @@ export function CollectionClient() {
                                     <Wallet className="w-8 h-8 text-primary"/>
                                     <div>
                                         <CardTitle className="font-headline text-2xl">{artist.name}</CardTitle>
-                                        <CardDescription>{fractalsByArtist.length} Fractal{fractalsByArtist.length > 1 ? 's' : ''} Owned</CardDescription>
+                                        <CardDescription>{ownedByArtist.length} Fractal{ownedByArtist.length > 1 ? 's' : ''} in Holdings</CardDescription>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="grid gap-4 flex-grow cursor-pointer" onClick={() => handleCardClick(artistId)}>
