@@ -135,7 +135,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
   // --- Core Auth Functions ---
   const login = () => {
-    setUser({ uid: 'mock-user-id', walletBalance: 5000 });
+    setUser({ uid: 'mock-user-id', walletBalance: 50000 });
     setIsLoggedIn(true);
   };
   const logout = () => {
@@ -146,23 +146,69 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   // --- Collection & Wallet ---
   const collectFromPortfolio = useCallback(async (artist: Artist, quantity: number) => {
     if (!user) throw new Error("User must be logged in.");
-    const totalCost = quantity * artist.fractalPrice;
+    
+    const artistToUpdate = artists.find(a => a.id === artist.id);
+    if (!artistToUpdate) throw new Error("Artist not found.");
+
+    const totalCost = quantity * artistToUpdate.fractalPrice;
     if (user.walletBalance < totalCost) {
       toast({ variant: "destructive", title: "Insufficient CreCoins", description: "You don't have enough CreCoins for this transaction." });
       throw new Error("Insufficient funds");
     }
 
-    const newPrice = calculateNewPrice(artist.fractalPrice, quantity, artist.totalEditions);
-    const newTotalPortfolioValue = newPrice * artist.totalEditions;
+    const P_old = artistToUpdate.fractalPrice;
+    const F = artistToUpdate.totalEditions;
+
+    // This is the market impact function. P_new is the new fractal price.
+    const P_new = calculateNewPrice(P_old, quantity, F);
+
+    // --- Reverse Pricing Mechanism ---
+    const artistFractals = fractals.filter(f => f.artistId === artistToUpdate.id);
+    const sum_S_squared = artistFractals.reduce((sum, f) => sum + Math.pow(f.aiScore || 0, 2), 0);
+
+    // Only distribute price change if there are scores to weigh against
+    if (P_old > 0 && sum_S_squared > 0) {
+      const V_old = artistFractals.reduce((sum, f) => sum + f.price, 0);
+      const k_denominator = artistFractals.reduce((sum, f) => sum + (f.aiScore || 0) * f.price, 0);
+      
+      if (k_denominator > 0 && V_old > 0) {
+        const k = V_old / k_denominator;
+        const delta_V_eff = (P_new - P_old) * F;
+        const c = delta_V_eff / (k * sum_S_squared);
+
+        // Update fractals state with new prices
+        setFractals(prevFractals =>
+          prevFractals.map(f => {
+            if (f.artistId === artistToUpdate.id) {
+              const Vi_old = f.price;
+              const Si = f.aiScore || 0;
+              const delta_Vi = c * Si;
+              const Vi_new = Math.max(0, Vi_old + delta_Vi); // Ensure price doesn't go below 0
+              const rounded_Vi_new = Math.round(Vi_new * 100) / 100;
+
+              return {
+                ...f,
+                price: rounded_Vi_new,
+                priceHistory: [...f.priceHistory, { date: new Date().toISOString(), price: rounded_Vi_new }]
+              };
+            }
+            return f;
+          })
+        );
+      }
+    }
+    // --- End Reverse Pricing ---
+
 
     // Update artist state
+    const newTotalPortfolioValue = P_new * F;
     setArtists(prevArtists => prevArtists.map(a => 
-      a.id === artist.id ? {
+      a.id === artistToUpdate.id ? {
         ...a,
-        fractalPrice: newPrice,
+        fractalPrice: P_new,
         availableEditions: a.availableEditions - quantity,
-        priceHistory: [...a.priceHistory, { date: new Date().toISOString(), price: newPrice }],
-        totalPortfolioValueHistory: [...a.totalPortfolioValueHistory, { date: new Date().toISOString(), value: newTotalPortfolioValue }]
+        priceHistory: [...a.priceHistory, { date: new Date().toISOString(), price: P_new }],
+        totalPortfolioValueHistory: [...a.totalPortfolioValueHistory, { date: new Date().toISOString(), value: Math.round(newTotalPortfolioValue) }]
       } : a
     ));
 
@@ -173,15 +219,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       id: `${artist.id}-${Date.now()}-${i}`,
       artistId: artist.id,
       artistName: artist.name,
-      purchasePrice: artist.fractalPrice,
+      purchasePrice: P_old, // Purchase price is the price before the transaction
       purchaseDate: new Date().toISOString(),
       serialNumber: `CRESTOX-${artist.id.split('-')[1]}-${String(Date.now() + i).slice(-6)}`,
       status: 'owned'
     }));
     
     setCollection(prevCollection => [...prevCollection, ...newFractals]);
-
-  }, [user, toast]);
+  }, [user, artists, fractals, collection, toast]);
 
   // --- Resale Market ---
    const listForResale = useCallback(async (artist: Artist, options: { quantity: number; initialPrice: number; minPrice: number; periodDays: number; }) => {
@@ -275,12 +320,15 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
       setFractals(prev => [...prev, newFractal]);
 
-      // Update artist portfolio value and fractals
-      const oldTotalValue = artistProfile.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0;
-      const newTotalValue = oldTotalValue + newFractal.price;
+      // --- Forward Pricing ---
+      const artistFractals = [...fractals, newFractal].filter(f => f.artistId === artistProfile.id);
+      const V = artistFractals.reduce((sum, f) => sum + f.price, 0);
+      const sum_Si_Vi = artistFractals.reduce((sum, f) => sum + (f.aiScore || 0) * f.price, 0);
+      const k = sum_Si_Vi > 0 ? V / sum_Si_Vi : 0;
+      
       const newTotalEditions = artistProfile.totalEditions + artworkData.editionsToIssue;
-
-      const newFractalPrice = newTotalEditions > 0 ? newTotalValue / newTotalEditions : artistProfile.fractalPrice;
+      const V_eff = k * sum_Si_Vi;
+      const newFractalPrice = newTotalEditions > 0 ? V_eff / newTotalEditions : artistProfile.fractalPrice;
 
       setArtists(prevArtists => prevArtists.map(a => {
         if (a.id === artistProfile.id) {
@@ -288,7 +336,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 ...a,
                 totalEditions: newTotalEditions,
                 availableEditions: a.availableEditions + artworkData.editionsToIssue,
-                totalPortfolioValueHistory: [...a.totalPortfolioValueHistory, { date: new Date().toISOString(), value: newTotalValue }],
+                totalPortfolioValueHistory: [...a.totalPortfolioValueHistory, { date: new Date().toISOString(), value: Math.round(V) }],
                 fractalPrice: newFractalPrice,
                 priceHistory: [...a.priceHistory, { date: new Date().toISOString(), price: newFractalPrice }]
             };
@@ -298,7 +346,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         return a;
       }));
 
-  }, [artistProfile, fractals.length]);
+  }, [artistProfile, fractals]);
 
   const updateAndReevaluateArtwork = useCallback(async (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => {
      if (!artistProfile) throw new Error("Artist profile not found.");
@@ -311,8 +359,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
      const finalPrice = useCrestoxPrice ? crestoxPrice : artistPrice;
      const shouldApplyGrade = useCrestoxPrice || artistPrice <= crestoxPrice;
      
-     const priceDifference = finalPrice - oldFractal.price;
-
      const artworkSize: ArtworkSize = { length: artworkData.length, breadth: artworkData.breadth, unit: artworkData.unit };
      if (artworkData.height) artworkSize.height = artworkData.height;
 
@@ -329,12 +375,19 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         artistMinEstimate: artworkData.minEstimatedValue,
         artistMaxEstimate: artworkData.maxEstimatedValue,
      };
-     setFractals(prev => prev.map(f => f.id === artworkId ? updatedFractal : f));
+     
+     const newFractals = fractals.map(f => f.id === artworkId ? updatedFractal : f);
+     setFractals(newFractals);
 
-     const oldTotalValue = artistProfile.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0;
-     const newTotalValue = oldTotalValue + priceDifference;
-     const newTotalEditions = artistProfile.totalEditions + artworkData.editionsToIssue;
-     const newFractalPrice = newTotalEditions > 0 ? newTotalValue / newTotalEditions : artistProfile.fractalPrice;
+      // --- Forward Pricing ---
+      const artistFractals = newFractals.filter(f => f.artistId === artistProfile.id);
+      const V = artistFractals.reduce((sum, f) => sum + f.price, 0);
+      const sum_Si_Vi = artistFractals.reduce((sum, f) => sum + (f.aiScore || 0) * f.price, 0);
+      const k = sum_Si_Vi > 0 ? V / sum_Si_Vi : 0;
+      
+      const newTotalEditions = artistProfile.totalEditions + artworkData.editionsToIssue;
+      const V_eff = k * sum_Si_Vi;
+      const newFractalPrice = newTotalEditions > 0 ? V_eff / newTotalEditions : artistProfile.fractalPrice;
 
      setArtists(prevArtists => prevArtists.map(a => {
         if (a.id === artistProfile.id) {
@@ -342,7 +395,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 ...a,
                 totalEditions: newTotalEditions,
                 availableEditions: a.availableEditions + artworkData.editionsToIssue,
-                totalPortfolioValueHistory: [...a.totalPortfolioValueHistory, { date: new Date().toISOString(), value: newTotalValue }],
+                totalPortfolioValueHistory: [...a.totalPortfolioValueHistory, { date: new Date().toISOString(), value: Math.round(V) }],
                 fractalPrice: newFractalPrice,
                 priceHistory: [...a.priceHistory, { date: new Date().toISOString(), price: newFractalPrice }]
             };
