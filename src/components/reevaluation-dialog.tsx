@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import type { Fractal } from '@/lib/data';
 import { Loader2 } from 'lucide-react';
-import { toast } from './ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReevaluationDialogProps {
   fractal: Fractal | null;
@@ -21,6 +21,7 @@ export function ReevaluationDialog({ fractal, isOpen, onClose }: ReevaluationDia
   const { reevaluateArtworkForGrading } = useAuth();
   const [isReevaluating, setIsReevaluating] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isOpen) {
