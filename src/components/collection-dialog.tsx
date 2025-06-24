@@ -70,7 +70,7 @@ export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogPr
         <div className="grid gap-6 py-4">
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                 <span className="text-muted-foreground">Current Price / Fractal</span>
-                <span className="font-bold">${artist.fractalPrice.toLocaleString()}</span>
+                <span className="font-bold">₹{artist.fractalPrice.toLocaleString('en-IN')}</span>
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="quantity" className="text-left">
@@ -105,7 +105,7 @@ export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogPr
                         <Plus className="h-4 w-4" />
                     </Button>
                 </div>
-                 <p className="text-xs text-muted-foreground text-right">{artist.availableEditions.toLocaleString()} available</p>
+                 <p className="text-xs text-muted-foreground text-right">{artist.availableEditions.toLocaleString('en-IN')} available</p>
             </div>
             
             <Separator />
@@ -113,16 +113,16 @@ export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogPr
             <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-medium">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">G.S.T. (18%)</span>
-                    <span className="font-medium">${taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-medium">₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <Separator className="my-2"/>
                 <div className="flex items-center justify-between text-lg font-bold text-primary">
                     <span>Total Payable</span>
-                    <span>${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
             </div>
         </div>

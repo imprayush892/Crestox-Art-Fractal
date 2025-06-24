@@ -40,7 +40,7 @@ const editArtworkFormSchema = z.object({
   breadth: z.coerce.number().min(0.1, "Breadth is required."),
   height: z.coerce.number().optional(),
   unit: z.enum(['in', 'cm', 'ft', 'px']),
-  minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least $1."),
+  minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least ₹1."),
   maxEstimatedValue: z.coerce.number(),
   editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
   subjectSignificance: z.string().max(500).optional(),
@@ -113,7 +113,7 @@ export default function EditArtworkPage() {
         notFound();
       }
     }
-  }, [fractals, artworkId, artistProfile, form, notFound]);
+  }, [fractals, artworkId, artistProfile, form]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -267,7 +267,7 @@ export default function EditArtworkPage() {
                             <CardDescription>Based on your provided range.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-3xl font-bold">${form.getValues('minEstimatedValue').toLocaleString()} - ${form.getValues('maxEstimatedValue').toLocaleString()}</p>
+                            <p className="text-3xl font-bold">₹{form.getValues('minEstimatedValue').toLocaleString('en-IN')} - ₹{form.getValues('maxEstimatedValue').toLocaleString('en-IN')}</p>
                         </CardContent>
                         <CardContent>
                              <Button size="lg" className="w-full" onClick={() => handlePriceChoice(false)} disabled={isSubmitting}>
@@ -282,7 +282,7 @@ export default function EditArtworkPage() {
                             <CardDescription>Our AI-assisted recommendation.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-3xl font-bold text-primary">${evaluationResult.crestoxPriceRange[0].toLocaleString()} - ${evaluationResult.crestoxPriceRange[1].toLocaleString()}</p>
+                            <p className="text-3xl font-bold text-primary">₹{evaluationResult.crestoxPriceRange[0].toLocaleString('en-IN')} - ₹{evaluationResult.crestoxPriceRange[1].toLocaleString('en-IN')}</p>
                         </CardContent>
                          <CardContent>
                              <Button size="lg" className="w-full" onClick={() => handlePriceChoice(true)} disabled={isSubmitting}>
@@ -383,7 +383,7 @@ export default function EditArtworkPage() {
                       name="minEstimatedValue"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Your Minimum Estimated Value ($)</FormLabel>
+                          <FormLabel>Your Minimum Estimated Value (₹)</FormLabel>
                           <FormControl>
                             <Input type="number" placeholder="100" {...field} />
                           </FormControl>
@@ -396,7 +396,7 @@ export default function EditArtworkPage() {
                       name="maxEstimatedValue"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Your Maximum Estimated Value ($)</FormLabel>
+                          <FormLabel>Your Maximum Estimated Value (₹)</FormLabel>
                           <FormControl>
                             <Input type="number" placeholder="1000" {...field} />
                           </FormControl>

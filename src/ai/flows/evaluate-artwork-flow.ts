@@ -140,8 +140,8 @@ const AiCriterionScoreSchema = z.object({
 
 const ArtworkAnalysisSchema = z.object({
     scores: z.array(AiCriterionScoreSchema).describe('An array of scores for each AI-evaluated criterion.'),
-    minPriceAI: z.number().describe("The AI's estimated minimum market price for the artwork in USD, based on all available data."),
-    maxPriceAI: z.number().describe("The AI's estimated maximum market price for the artwork in USD, based on all available data."),
+    minPriceAI: z.number().describe("The AI's estimated minimum market price for the artwork in INR, based on all available data."),
+    maxPriceAI: z.number().describe("The AI's estimated maximum market price for the artwork in INR, based on all available data."),
 });
 
 interface EvaluateArtworkOutput {
@@ -167,7 +167,7 @@ const evaluationPrompt = ai.definePrompt({
 1.  **Image-Based Criteria:** For criteria related to composition, color, texture, technique, condition, and material, your primary source is the artwork image.
 2.  **Context-Based Criteria:** For criteria related to the artist and the artwork's narrative, evaluate the provided text. Score based on the quality, credibility, and relevance of the information. For example, a high score for "Artist's Intent" requires a compelling statement that is clearly reflected in the visual work.
 3.  **Inferred Criteria:** For "Artist Reputation" and "Uniqueness", synthesize information from the artist's bio, awards, and the artwork itself.
-4.  **Market Valuation:** Based on your complete analysis, provide an estimated minimum and maximum market price for this artwork in USD.
+4.  **Market Valuation:** Based on your complete analysis, provide an estimated minimum and maximum market price for this artwork in INR.
 
 You must provide a score from 0 to 10 for every single criterion marked with type "AI" in the rubric below.
 

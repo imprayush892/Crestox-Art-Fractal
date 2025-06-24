@@ -91,7 +91,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                               tickLine={false}
                               axisLine={false}
                               tickMargin={8}
-                              tickFormatter={(value) => `$${(value as number).toLocaleString()}`}
+                              tickFormatter={(value) => `₹${(value as number).toLocaleString('en-IN')}`}
                           />
                           <Tooltip
                               cursor={{
@@ -100,7 +100,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                                   strokeDasharray: '3 3',
                               }}
                               content={<ChartTooltipContent
-                                  formatter={(value) => `$${(value as number).toLocaleString()}`}
+                                  formatter={(value) => `₹${(value as number).toLocaleString('en-IN')}`}
                                   indicator="dot"
                               />}
                           />
@@ -136,7 +136,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
             )}
 
             <div className="text-4xl font-bold text-primary mt-6">
-                ${fractal.price.toLocaleString()}
+                ₹{fractal.price.toLocaleString('en-IN')}
             </div>
             <p className="text-sm text-muted-foreground">Artwork valuation</p>
 

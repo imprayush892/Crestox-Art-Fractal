@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Artist } from '@/lib/data';
@@ -61,8 +62,8 @@ export function ArtistHoldingsDialog({ isOpen, onClose, artist, ownedFractals }:
                   <TableRow key={fractal.id}>
                     <TableCell className="font-mono text-xs">{fractal.serialNumber}</TableCell>
                     <TableCell>{format(new Date(fractal.purchaseDate), "MMM d, yyyy")}</TableCell>
-                    <TableCell className="text-right">${fractal.purchasePrice.toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-semibold">${currentValue.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">₹{fractal.purchasePrice.toLocaleString('en-IN')}</TableCell>
+                    <TableCell className="text-right font-semibold">₹{currentValue.toLocaleString('en-IN')}</TableCell>
                     <TableCell className="text-right">
                        <div className={`flex items-center justify-end gap-1 font-medium ${gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                          {gainLoss > 0 && <ArrowUp className="h-3 w-3"/>}
