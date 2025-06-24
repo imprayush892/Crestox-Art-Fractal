@@ -144,12 +144,22 @@ const ArtworkAnalysisSchema = z.object({
     maxPriceAI: z.number().describe("The AI's estimated maximum market price for the artwork in INR, based on all available data."),
 });
 
-interface EvaluateArtworkOutput {
-    finalScore: number;
-    grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
-    breakdown: AIScorecardBreakdown[];
-    crestoxPriceRange: [number, number];
-}
+const AIScorecardBreakdownSchema = z.object({
+    id: z.number(),
+    criterion: z.string(),
+    score: z.number(),
+    weight: z.number(),
+    weightedScore: z.number(),
+});
+
+const EvaluateArtworkOutputSchema = z.object({
+    finalScore: z.number(),
+    grade: z.enum(['AAA', 'AA', 'A+', 'A', 'A-']),
+    breakdown: z.array(AIScorecardBreakdownSchema),
+    crestoxPriceRange: z.tuple([z.number(), z.number()]),
+});
+
+type EvaluateArtworkOutput = z.infer<typeof EvaluateArtworkOutputSchema>;
 
 export async function evaluateArtwork(
   input: z.infer<typeof EvaluateArtworkInputSchema>
@@ -210,7 +220,7 @@ const evaluateArtworkFlow = ai.defineFlow(
   {
     name: 'evaluateArtworkFlow',
     inputSchema: EvaluateArtworkInputSchema,
-    outputSchema: z.any(), // Output is manually constructed
+    outputSchema: EvaluateArtworkOutputSchema,
   },
   async (input): Promise<EvaluateArtworkOutput> => {
     const { output } = await evaluationPrompt(input);
