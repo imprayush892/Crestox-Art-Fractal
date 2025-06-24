@@ -2,9 +2,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useMemo } from 'react';
-import { artists as mockArtists, fractals as mockFractals, type Artist, type Fractal, type AIScorecardBreakdown, type ArtworkSize } from '@/lib/data';
+import { artists as mockArtists, fractals as mockFractals, type Artist, type Fractal, type AIScorecardBreakdown, type ArtworkSize, type EditArtworkFormValues } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import type { EditArtworkFormValues } from '@/app/portfolio/artwork/edit/[id]/page';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 
 // --- Interfaces ---

@@ -3,7 +3,6 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -31,29 +30,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { EvaluationResult } from '@/context/auth-context';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-const editArtworkFormSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters.").max(100),
-  description: z.string().min(10, "Description must be at least 10 characters.").max(1000),
-  materials: z.string().min(3, "Please specify the materials used."),
-  length: z.coerce.number().min(0.1, "Length is required."),
-  breadth: z.coerce.number().min(0.1, "Breadth is required."),
-  height: z.coerce.number().optional(),
-  unit: z.enum(['in', 'cm', 'ft', 'px']),
-  minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least ₹1."),
-  maxEstimatedValue: z.coerce.number(),
-  editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
-  subjectSignificance: z.string().max(500).optional(),
-  personalSignificance: z.string().max(500).optional(),
-  timeEffort: z.string().max(500).optional(),
-  biographicalContext: z.string().max(500).optional(),
-  commissionPatronage: z.string().max(500).optional(),
-}).refine(data => data.maxEstimatedValue >= data.minEstimatedValue, {
-  message: "Maximum value must be greater than or equal to minimum value.",
-  path: ["maxEstimatedValue"],
-});
-
-export type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
+import { type EditArtworkFormValues, editArtworkFormSchema } from '@/lib/data';
 
 export default function EditArtworkPage() {
   const { isLoggedIn, artistProfile, fractals, updateAndReevaluateArtwork } = useAuth();
