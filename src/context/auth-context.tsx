@@ -169,10 +169,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     // Only distribute price change if there are scores to weigh against
     if (P_old > 0 && sum_S_squared > 0) {
       const V_old = artistFractals.reduce((sum, f) => sum + f.price, 0);
-      const k_denominator = artistFractals.reduce((sum, f) => sum + (f.aiScore || 0) * f.price, 0);
+      const sum_Si_Vi = artistFractals.reduce((sum, f) => sum + (f.aiScore || 0) * f.price, 0);
+      const k = sum_Si_Vi > 0 ? V_old / sum_Si_Vi : 0;
       
-      if (k_denominator > 0 && V_old > 0) {
-        const k = V_old / k_denominator;
+      if (k > 0) {
         const delta_V_eff = (P_new - P_old) * F;
         const c = delta_V_eff / (k * sum_S_squared);
 
@@ -257,7 +257,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       status: 'active'
     };
     setResaleListings(prev => [...prev, newListing]);
-  }, [user, collection]);
+
+    // Update artist's availableEditions
+    setArtists(prevArtists => prevArtists.map(a => 
+      a.id === artist.id ? {
+        ...a,
+        availableEditions: a.availableEditions + options.quantity
+      } : a
+    ));
+
+  }, [user, collection, toast]);
 
   const cancelListing = useCallback(async (listingId: string) => {
     const listing = resaleListings.find(l => l.id === listingId);
@@ -267,7 +276,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     setResaleListings(prev => prev.map(l => l.id === listingId ? { ...l, status: 'cancelled' } : l));
     // Revert fractals to 'owned' status
     setCollection(prev => prev.map(f => listing.fractalIds.includes(f.id) ? { ...f, status: 'owned' } : f));
-  }, [resaleListings]);
+    // Decrement the availableEditions
+    setArtists(prevArtists => prevArtists.map(a => 
+      a.id === listing.artistId ? {
+        ...a,
+        availableEditions: a.availableEditions - listing.quantity
+      } : a
+    ));
+  }, [resaleListings, collection]);
 
 
   // --- Watchlist ---
