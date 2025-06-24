@@ -1,29 +1,9 @@
-
 'use client';
 
-import type { Artist, Fractal, AIScorecardBreakdown, ArtworkSize } from '@/lib/data';
+import type { Artist, Fractal } from '@/lib/data';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection as firestoreCollection, doc, onSnapshot, runTransaction, query, where, orderBy, limit, getDocs, writeBatch, Timestamp, collection, addDoc, updateDoc, getDoc } from 'firebase/firestore';
-import type { EditArtworkFormValues } from '@/app/portfolio/artwork/edit/[id]/page';
-export interface EvaluationResult {
-    finalScore: number;
-    grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
-    breakdown: AIScorecardBreakdown[];
-    crestoxPriceRange: [number, number];
-}
-
-export interface ResaleListing {
-  id: string;
-  artistId: string;
-  resellerId: string;
-  quantity: number;
-  initialPrice: number;
-  minPrice: number;
-  periodSeconds: number;
-  listingTimestamp: string; // ISO string
-  status: 'active' | 'completed' | 'cancelled';
-}
+import { collection as firestoreCollection, doc, onSnapshot, runTransaction } from 'firebase/firestore';
 
 export interface OwnedFractal {
   id: string;
@@ -32,62 +12,41 @@ export interface OwnedFractal {
   purchasePrice: number;
   purchaseDate: string;
   serialNumber: string;
-  status?: 'available' | 'listed';
-  listingId?: string;
 }
-
-type NewArtworkData = {
-    title: string;
-    description: string;
-    materials: string;
-    artworkSize: ArtworkSize;
-    minEstimatedValue: number;
-    maxEstimatedValue: number;
-    editionsToIssue: number;
-    image: string; // data URI
-    subjectSignificance?: string;
-    personalSignificance?: string;
-    timeEffort?: string;
-    biographicalContext?: string;
-    commissionPatronage?: string;
-};
-
-type CreateArtistProfileData = Omit<Artist, 'id'|'avatar'|'fractalPrice'|'priceHistory'|'totalPortfolioValueHistory'|'totalEditions'|'availableEditions'|'userId'>;
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  user: { uid: string } | null;
-  artistProfile: Artist | null;
-  login: () => Promise<void>;
+  login: () => void;
   logout: () => void;
   collection: OwnedFractal[];
-  collectFromPortfolio: (artist: Artist, quantity: number) => Promise<void>;
-  listForResale: (artist: Artist, details: { quantity: number; initialPrice: number; minPrice: number; periodDays: number }) => Promise<void>;
-  cancelListing: (listingId: string) => Promise<void>;
+  investInPortfolio: (artist: Artist, quantity: number) => Promise<void>;
   holdingsByArtist: Map<string, number>;
   artists: Artist[];
   fractals: Fractal[];
-  resaleListings: ResaleListing[];
-  watchlist: string[];
-  addToWatchlist: (artistId: string) => void;
-  removeFromWatchlist: (artistId: string) => void;
-  createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
-  updateArtistProfile: (profileData: Partial<Omit<Artist, 'id' | 'userId'>>) => Promise<void>;
-  addArtwork: (artworkData: NewArtworkData, evaluation: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
-  updateAndReevaluateArtwork: (artworkId: string, formData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const calculateMarketImpactPrice = (S_current: number, Q_trade: number, V_total: number): number => {
-  const BETA = 1.118;
-  if (V_total === 0 || Q_trade <= 0) {
-    return S_current;
+/**
+ * Calculates the new price based on the "Revised Multiplicative Impact Function".
+ * S_new = S_current * exp(β * sqrt(Q/V))
+ * @param P_old The current price of the fractal share.
+ * @param Q The trade size (number of shares being bought).
+ * @param N The total number of shares outstanding.
+ * @returns The new price after the trade.
+ */
+const calculateNewPrice = (P_old: number, Q: number, N: number): number => {
+  const beta = 1.118; // As per the revised model for Crestox
+  
+  if (N === 0 || Q <= 0) {
+    return P_old;
   }
-  const fraction = Q_trade / V_total;
-  const impactFactor = Math.exp(BETA * Math.sqrt(fraction));
-  const S_new = S_current * impactFactor;
-  return Math.round(S_new * 100) / 100;
+
+  const fraction = Q / N;
+  const impactFactor = Math.exp(beta * Math.sqrt(fraction));
+  const P_new = P_old * impactFactor;
+
+  return Math.round(P_new * 100) / 100;
 };
 
 interface AuthProviderProps {
@@ -99,37 +58,57 @@ interface AuthProviderProps {
 export function AuthProvider({ children, initialArtists, initialFractals }: AuthProviderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<{ uid: string } | null>(null);
-  const [artistProfile, setArtistProfile] = useState<Artist | null>(null);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
   const [artists, setArtists] = useState<Artist[]>(initialArtists);
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
-  const [resaleListings, setResaleListings] = useState<ResaleListing[]>([]);
-  const [watchlist, setWatchlist] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!db) return;
+    if (!db) {
+      console.warn("Firebase not configured. Using mock data.");
+      return;
+    }
 
-    const unsubArtists = onSnapshot(firestoreCollection(db, 'artists'), (snapshot) => {
-      setArtists(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Artist)));
-    }, () => setArtists(initialArtists));
+    const unsubscribeArtists = onSnapshot(
+      firestoreCollection(db, 'artists'),
+      (snapshot) => {
+        const artistsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Artist));
+        if (artistsData.length > 0) {
+          setArtists(artistsData);
+        }
+      },
+      (error) => {
+        console.error("Error listening to 'artists' collection, falling back to mock data:", error);
+        setArtists(initialArtists);
+      }
+    );
 
-    const unsubFractals = onSnapshot(firestoreCollection(db, 'fractals'), (snapshot) => {
-      setFractals(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Fractal)));
-    }, () => setFractals(initialFractals));
-    
-    const unsubResale = onSnapshot(query(firestoreCollection(db, 'resaleListings')), (snapshot) => {
-      setResaleListings(snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as ResaleListing)));
-    });
+    const unsubscribeFractals = onSnapshot(
+      firestoreCollection(db, 'fractals'),
+      (snapshot) => {
+        const fractalsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Fractal));
+        if (fractalsData.length > 0) {
+          setFractals(fractalsData);
+        }
+      },
+      (error) => {
+        console.error("Error listening to 'fractals' collection, falling back to mock data:", error);
+        setFractals(initialFractals);
+      }
+    );
 
-    return () => { unsubArtists(); unsubFractals(); unsubResale(); };
+    return () => {
+      unsubscribeArtists();
+      unsubscribeFractals();
+    };
   }, [initialArtists, initialFractals]);
   
   useEffect(() => {
     let unsubscribe: () => void = () => {};
     if (user && db) {
-      const q = query(firestoreCollection(db, "users", user.uid, "ownedFractals"));
-      unsubscribe = onSnapshot(q, (querySnapshot) => {
-        setCollection(querySnapshot.docs.map(doc => ({...doc.data(), id: doc.id} as OwnedFractal)));
+      const ownedFractalsRef = firestoreCollection(db, "users", user.uid, "ownedFractals");
+      unsubscribe = onSnapshot(ownedFractalsRef, (querySnapshot) => {
+        const userFractals = querySnapshot.docs.map(doc => doc.data() as OwnedFractal);
+        setCollection(userFractals);
       });
     } else {
       setCollection([]);
@@ -137,544 +116,142 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     return () => unsubscribe();
   }, [user]);
 
-  const login = useCallback(async () => {
-    const mockUser = { uid: 'mock-user-id' };
-    setUser(mockUser);
+  const login = () => {
+    setUser({ uid: 'mock-user-id' });
     setIsLoggedIn(true);
-
-    if (db) {
-        try {
-            const artistsQuery = query(collection(db, 'artists'), where('userId', '==', mockUser.uid), limit(1));
-            const snapshot = await getDocs(artistsQuery);
-            if (!snapshot.empty) {
-                const userArtistProfile = { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as Artist;
-                setArtistProfile(userArtistProfile);
-            } else {
-                setArtistProfile(null);
-            }
-        } catch(e) {
-            console.error("Error fetching artist profile:", e);
-            setArtistProfile(null);
-        }
-    } else {
-        const existingProfile = artists.find(a => a.userId === mockUser.uid);
-        setArtistProfile(existingProfile || null);
-    }
-  }, [artists]);
+  }
   
   const logout = () => {
     setUser(null);
     setIsLoggedIn(false);
-    setArtistProfile(null);
   };
 
-  const createArtistProfile = useCallback(async (profileData: CreateArtistProfileData) => {
-    if (!user) throw new Error("User must be logged in to create a profile.");
-
-    const newArtistData: Omit<Artist, 'id'> = {
-        userId: user.uid,
-        name: profileData.name,
-        bio: profileData.bio,
-        location: profileData.location,
-        website: profileData.website,
-        style: profileData.style,
-        awards: profileData.awards,
-        exhibitions: profileData.exhibitions,
-        twitter: profileData.twitter,
-        instagram: profileData.instagram,
-        linkedin: profileData.linkedin,
-        avatar: 'https://placehold.co/100x100.png',
-        fractalPrice: 0,
-        priceHistory: [],
-        totalPortfolioValueHistory: [],
-        totalEditions: 0,
-        availableEditions: 0,
-    };
-    
-    if (db) {
-        const docRef = await addDoc(collection(db, 'artists'), newArtistData);
-        const createdArtist: Artist = { ...newArtistData, id: docRef.id };
-        setArtistProfile(createdArtist);
-    } else {
-        console.warn("Firebase not configured. Simulating artist creation locally.");
-        const createdArtist: Artist = { ...newArtistData, id: `local-artist-${Date.now()}` };
-        setArtistProfile(createdArtist);
-        setArtists(prev => [...prev, createdArtist]);
+  const investInPortfolio = useCallback(async (artistToUpdate: Artist, quantity: number) => {
+    if (!user) {
+        throw new Error("User must be logged in to invest.");
     }
-
-  }, [user]);
-  
-  const updateArtistProfile = useCallback(async (profileData: Partial<Omit<Artist, 'id' | 'userId'>>) => {
-    if (!user || !artistProfile) throw new Error("User or artist profile not available for update.");
     
-    if (db) {
-        const artistRef = doc(db, 'artists', artistProfile.id);
-        await updateDoc(artistRef, profileData);
-        setArtistProfile(prev => prev ? { ...prev, ...profileData } : null);
-    } else {
-        console.warn("Firebase not configured. Simulating profile update locally.");
-        const updatedProfile = { ...artistProfile, ...profileData };
-        setArtistProfile(updatedProfile);
-        setArtists(prev => prev.map(a => a.id === artistProfile.id ? updatedProfile : a));
-    }
-  }, [user, artistProfile]);
-  
-  const addArtwork = useCallback(async (artworkData: NewArtworkData, evaluation: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
-    if (!user || !artistProfile) throw new Error("Artist profile not found.");
-
-    const newFractalData: Omit<Fractal, 'id'> = {
-        title: artworkData.title,
-        image: artworkData.image,
-        artistId: artistProfile.id,
-        description: artworkData.description,
-        materials: artworkData.materials,
-        artworkSize: artworkData.artworkSize,
-        subjectSignificance: artworkData.subjectSignificance,
-        personalSignificance: artworkData.personalSignificance,
-        timeEffort: artworkData.timeEffort,
-        biographicalContext: artworkData.biographicalContext,
-        commissionPatronage: artworkData.commissionPatronage,
-        aiHint: 'custom artwork',
-        width: 1000,
-        height: 1000,
-        price: finalPrice,
-        priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
-        editions: 1,
-        editionsAvailable: 1,
-        aiScore: evaluation.finalScore,
-        crestoxGrade: shouldApplyGrade ? evaluation.grade : undefined,
-        aiScorecard: evaluation.breakdown,
-        crestoxPriceRange: evaluation.crestoxPriceRange,
-        artistMinEstimate: artworkData.minEstimatedValue,
-        artistMaxEstimate: artworkData.maxEstimatedValue,
-    };
-    
-    const artistToUpdate = artists.find(a => a.id === artistProfile.id);
-    if (!artistToUpdate) throw new Error("Could not find artist to update");
-
-    const newTotalPortfolioValue = (artistToUpdate.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + finalPrice;
-    const newTotalEditions = artistToUpdate.totalEditions + artworkData.editionsToIssue;
-    const newAvailableEditions = artistToUpdate.availableEditions + artworkData.editionsToIssue;
-    const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;
-    const roundedNewFractalPrice = Math.round(newFractalPrice * 100) / 100;
-    const now = new Date().toISOString();
-
-    const updatedArtistData = {
-        totalEditions: newTotalEditions,
-        availableEditions: newAvailableEditions,
-        fractalPrice: roundedNewFractalPrice,
-        priceHistory: [...artistToUpdate.priceHistory, { date: now, price: roundedNewFractalPrice }],
-        totalPortfolioValueHistory: [...artistToUpdate.totalPortfolioValueHistory, { date: now, value: newTotalPortfolioValue }],
-    };
-
-    if (db) {
-        const artistRef = doc(db, 'artists', artistProfile.id);
-        const fractalCollectionRef = collection(db, 'fractals');
-
-        await runTransaction(db, async (transaction) => {
-            transaction.set(doc(fractalCollectionRef), newFractalData);
-            transaction.update(artistRef, updatedArtistData);
-        });
-    } else {
-        console.warn("Firebase not configured. Simulating artwork creation locally.");
-        const createdFractal: Fractal = { ...newFractalData, id: `local-fractal-${Date.now()}` };
-        setFractals(prev => [...prev, createdFractal]);
-        const updatedArtist = { ...artistToUpdate, ...updatedArtistData };
-        setArtists(prev => prev.map(a => a.id === artistProfile.id ? updatedArtist : a));
-        setArtistProfile(updatedArtist);
-    }
-  }, [user, artistProfile, artists]);
-  
-  const updateAndReevaluateArtwork = useCallback(async (
-    artworkId: string, 
-    formData: EditArtworkFormValues, 
-    evaluationResult: EvaluationResult, 
-    useCrestoxPrice: boolean
-  ) => {
-    if (!user || !artistProfile) throw new Error("Not available");
-    
-    const artistToUpdate = artists.find(a => a.id === artistProfile.id);
-    const artworkToUpdate = fractals.find(f => f.id === artworkId);
-
-    if (!artistToUpdate || !artworkToUpdate) throw new Error("Artwork or artist not found.");
-
-    const oldPrice = artworkToUpdate.price;
-    const crestoxAvgPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
-    const artistAvgPrice = Math.round((formData.minEstimatedValue + formData.maxEstimatedValue) / 2);
-    
-    const finalPrice = useCrestoxPrice ? crestoxAvgPrice : artistAvgPrice;
-    const shouldApplyGrade = useCrestoxPrice || finalPrice <= crestoxAvgPrice;
-
-    const priceDifference = finalPrice - oldPrice;
-    
-    const { editionsToIssue, ...fractalFormData } = formData;
-    
-    const { length, breadth, height, unit } = formData;
-    const artworkSize: ArtworkSize = { length, breadth, unit };
-    if (height) {
-        artworkSize.height = height;
-    }
-
-    const updatedArtworkData: Partial<Fractal> = {
-        title: fractalFormData.title,
-        description: fractalFormData.description,
-        materials: fractalFormData.materials,
-        artworkSize: artworkSize,
-        subjectSignificance: fractalFormData.subjectSignificance,
-        personalSignificance: fractalFormData.personalSignificance,
-        timeEffort: fractalFormData.timeEffort,
-        biographicalContext: fractalFormData.biographicalContext,
-        commissionPatronage: fractalFormData.commissionPatronage,
-        price: finalPrice,
-        priceHistory: [...artworkToUpdate.priceHistory, { date: new Date().toISOString(), price: finalPrice }],
-        aiScore: evaluationResult.finalScore,
-        crestoxGrade: shouldApplyGrade ? evaluationResult.grade : undefined,
-        aiScorecard: evaluationResult.breakdown,
-        crestoxPriceRange: evaluationResult.crestoxPriceRange,
-        artistMinEstimate: formData.minEstimatedValue,
-        artistMaxEstimate: formData.maxEstimatedValue,
-    };
-
-    const newTotalPortfolioValue = (artistToUpdate.totalPortfolioValueHistory.slice(-1)[0]?.value ?? 0) + priceDifference;
-    const newTotalEditions = artistToUpdate.totalEditions + editionsToIssue;
-    const newAvailableEditions = artistToUpdate.availableEditions + editionsToIssue;
-    const newFractalPrice = newTotalEditions > 0 ? newTotalPortfolioValue / newTotalEditions : 0;
-    const roundedNewFractalPrice = Math.round(newFractalPrice * 100) / 100;
-    const now = new Date().toISOString();
-
-    const updatedArtistData = {
-        totalEditions: newTotalEditions,
-        availableEditions: newAvailableEditions,
-        fractalPrice: roundedNewFractalPrice,
-        priceHistory: [...artistToUpdate.priceHistory, { date: now, price: roundedNewFractalPrice }],
-        totalPortfolioValueHistory: [...artistToUpdate.totalPortfolioValueHistory, { date: now, value: newTotalPortfolioValue }],
-    };
-
-    if (db) {
-        await runTransaction(db, async (transaction) => {
-            const artistRef = doc(db, 'artists', artistProfile.id);
-            const fractalRef = doc(db, 'fractals', artworkId);
-            transaction.update(fractalRef, updatedArtworkData);
-            transaction.update(artistRef, updatedArtistData);
-        });
-    } else {
-        console.warn("Firebase not configured. Simulating artwork update locally.");
-        const updatedArtwork = { ...artworkToUpdate, ...updatedArtworkData } as Fractal;
-        setFractals(prev => prev.map(f => f.id === artworkId ? updatedArtwork : f));
-        
-        const updatedArtist = { ...artistToUpdate, ...updatedArtistData };
-        setArtists(prev => prev.map(a => a.id === artistProfile.id ? updatedArtist : a));
-        setArtistProfile(updatedArtist);
-    }
-  }, [user, artistProfile, artists, fractals]);
-
-  const addToWatchlist = (artistId: string) => {
-    setWatchlist(prev => [...new Set([...prev, artistId])]);
-  };
-
-  const removeFromWatchlist = (artistId: string) => {
-      setWatchlist(prev => prev.filter(id => id !== artistId));
-  };
-  
-  const cancelListing = useCallback(async (listingId: string) => {
-    if (!user) throw new Error("User must be logged in.");
-
     if (!db) {
-        console.warn("Firebase not configured. Simulating cancellation locally.");
-        const listingToCancel = resaleListings.find(l => l.id === listingId);
-        if (!listingToCancel) return;
+        console.warn("Firebase not configured. Simulating investment locally.");
 
-        setResaleListings(prev => prev.map(l => l.id === listingId ? { ...l, status: 'cancelled' } : l));
-        setCollection(prev => prev.map(f => f.listingId === listingId ? { ...f, status: 'available', listingId: undefined } : f));
-        return;
-    }
-
-    const batch = writeBatch(db);
-    const listingRef = doc(db, 'resaleListings', listingId);
-    
-    batch.update(listingRef, { status: 'cancelled' });
-
-    const fractalsToUpdateQuery = query(
-        collection(db, 'users', user.uid, 'ownedFractals'),
-        where('listingId', '==', listingId)
-    );
-    const snapshot = await getDocs(fractalsToUpdateQuery);
-    if(snapshot.empty) {
-      console.warn("No fractals found for this listing to cancel.");
-    }
-    snapshot.docs.forEach(docToUpdate => {
-        batch.update(docToUpdate.ref, { status: 'available', listingId: '' });
-    });
-    
-    await batch.commit();
-
-  }, [user, resaleListings]);
-
-  const listForResale = useCallback(async (artist: Artist, details: { quantity: number, initialPrice: number, minPrice: number, periodDays: number}) => {
-    if (!user) throw new Error("User must be logged in to sell.");
-
-    if (!db) {
-        console.warn("Firebase not configured. Simulating listing locally.");
-        const availableToSell = collection.filter(f => f.artistId === artist.id && f.status !== 'listed');
-        if (availableToSell.length < details.quantity) {
-            throw new Error("Not enough available fractals to sell.");
-        }
-
-        const newListingId = `local-listing-${Date.now()}`;
-        const newListing: ResaleListing = {
-            id: newListingId,
-            artistId: artist.id,
-            resellerId: user.uid,
-            quantity: details.quantity,
-            initialPrice: details.initialPrice,
-            minPrice: details.minPrice,
-            periodSeconds: details.periodDays * 24 * 60 * 60,
-            listingTimestamp: new Date().toISOString(),
-            status: 'active'
-        };
-        
-        setResaleListings(prev => [...prev, newListing]);
-
-        const fractalsToUpdate = availableToSell.slice(0, details.quantity);
-        const fractalIdsToUpdate = new Set(fractalsToUpdate.map(f => f.id));
-
-        setCollection(currentCollection => currentCollection.map(f => 
-            fractalIdsToUpdate.has(f.id) ? { ...f, status: 'listed', listingId: newListingId } : f
-        ));
-        
-        return;
-    }
-
-    const fractalsToSellQuery = query(
-        collection(db, 'users', user.uid, 'ownedFractals'),
-        where('artistId', '==', artist.id),
-        where('status', '==', 'available'),
-        limit(details.quantity)
-    );
-    
-    const snapshot = await getDocs(fractalsToSellQuery);
-    if(snapshot.docs.length < details.quantity) {
-        throw new Error("Not enough available fractals to sell.");
-    }
-
-    const batch = writeBatch(db);
-    const newListingRef = doc(collection(db, 'resaleListings'));
-    const newListingData: Omit<ResaleListing, 'id'> = {
-        artistId: artist.id,
-        resellerId: user.uid,
-        quantity: details.quantity,
-        initialPrice: details.initialPrice,
-        minPrice: details.minPrice,
-        periodSeconds: details.periodDays * 24 * 60 * 60,
-        listingTimestamp: new Date().toISOString(),
-        status: 'active'
-    };
-    batch.set(newListingRef, newListingData);
-
-    snapshot.docs.forEach(doc => {
-        batch.update(doc.ref, { status: 'listed', listingId: newListingRef.id });
-    });
-
-    await batch.commit();
-
-  }, [user, collection]);
-
-  const collectFromPortfolio = useCallback(async (artist: Artist, quantity: number) => {
-    if (!user) throw new Error("User must be logged in to collect.");
-    
-    // OFFLINE / DEMO MODE
-    if (!db) {
-        console.warn("Firebase not configured. Simulating collection locally.");
-        const artistData = artists.find(a => a.id === artist.id);
-        if (!artistData) throw new Error("Artist not found for local simulation");
-
-        const activeResaleListings = resaleListings.filter(l => l.artistId === artist.id && l.status === 'active');
-        
-        type AcquirableFractal = { price: number; isResold: boolean; sourceId: string; resellerId?: string; listingId?: string };
-        const orderBook: AcquirableFractal[] = [];
-        const now = new Date();
-
-        activeResaleListings.forEach(listing => {
-            const t = (now.getTime() - new Date(listing.listingTimestamp).getTime()) / 1000;
-            const P_t = t >= listing.periodSeconds 
-                ? listing.minPrice 
-                : listing.initialPrice - (listing.initialPrice - listing.minPrice) * (t / listing.periodSeconds);
-            
-            for (let i = 0; i < listing.quantity; i++) {
-                orderBook.push({ price: P_t, isResold: true, sourceId: listing.id, resellerId: listing.resellerId, listingId: listing.id });
-            }
-        });
-
-        for (let i = 0; i < artistData.availableEditions; i++) {
-            orderBook.push({ price: artistData.fractalPrice, isResold: false, sourceId: artist.id });
-        }
-
-        orderBook.sort((a, b) => a.price - b.price || (a.isResold ? -1 : 1));
-
-        if (orderBook.length < quantity) throw new Error("Not enough fractals available to fulfill the order.");
-        
-        const fractalsToBuy = orderBook.slice(0, quantity);
-        const purchaseDate = now.toISOString();
-
-        const newOwnedFractals: OwnedFractal[] = [];
-        let newArtistData = { ...artistData };
-        let newResaleListings = [...resaleListings];
-        let newCollection = [...collection];
-
-        for (const fractalToAcquire of fractalsToBuy) {
-            const serialNumber = `CRESTOX-${artist.id.split('-')[1]}-${String(Date.now()).slice(-6)}-${Math.random().toString(36).substring(2, 5)}`;
-            const purchasePriceWithTax = Math.round(fractalToAcquire.price * 1.18 * 100) / 100;
-            
-            const newOwnedFractal: OwnedFractal = {
-                id: `local-fractal-${Date.now()}-${Math.random()}`,
-                artistId: artist.id,
-                artistName: artist.name,
-                purchasePrice: purchasePriceWithTax,
-                purchaseDate: purchaseDate,
-                serialNumber: serialNumber,
-                status: 'available'
-            };
-            newOwnedFractals.push(newOwnedFractal);
-
-            if (fractalToAcquire.isResold && fractalToAcquire.listingId) {
-                const listingIndex = newResaleListings.findIndex(l => l.id === fractalToAcquire.listingId);
-                if (listingIndex !== -1) {
-                    const updatedListing = { ...newResaleListings[listingIndex] };
-                    updatedListing.quantity -= 1;
-                    if (updatedListing.quantity === 0) {
-                        updatedListing.status = 'completed';
-                    }
-                    newResaleListings[listingIndex] = updatedListing;
-                }
-                // Remove a listed fractal from the seller's collection
-                const sellerFractalIndex = newCollection.findIndex(f => f.listingId === fractalToAcquire.listingId);
-                if(sellerFractalIndex > -1){
-                    newCollection.splice(sellerFractalIndex, 1);
-                }
-
-            } else {
-                newArtistData.availableEditions -= 1;
-            }
+        const artistIndex = artists.findIndex(a => a.id === artistToUpdate.id);
+        if (artistIndex === -1) {
+            console.error("Artist not found for local simulation.");
+            return;
         }
         
-        const newMarketPrice = calculateMarketImpactPrice(newArtistData.fractalPrice, quantity, newArtistData.totalEditions);
-        const newTotalPortfolioValue = newMarketPrice * newArtistData.totalEditions;
+        const currentArtistData = artists[artistIndex];
+        const purchasePrice = currentArtistData.fractalPrice;
 
-        newArtistData.fractalPrice = newMarketPrice;
-        newArtistData.priceHistory = [...newArtistData.priceHistory, { date: purchaseDate, price: newMarketPrice }];
-        newArtistData.totalPortfolioValueHistory = [...newArtistData.totalPortfolioValueHistory, { date: purchaseDate, value: newTotalPortfolioValue }];
-        
-        setCollection([...newCollection, ...newOwnedFractals]);
-        setArtists(prevArtists => prevArtists.map(a => a.id === artist.id ? newArtistData : a));
-        setResaleListings(newResaleListings);
-
-        return;
-    }
-    
-    // ONLINE / FIREBASE MODE
-    await runTransaction(db, async (transaction) => {
-        const artistRef = doc(db, 'artists', artist.id);
-        const artistDoc = await transaction.get(artistRef);
-        if (!artistDoc.exists()) throw new Error("Artist not found");
-        const artistData = artistDoc.data() as Artist;
-        
-        const resaleListingsQuery = query(
-            collection(db, 'resaleListings'),
-            where('artistId', '==', artist.id),
-            where('status', '==', 'active')
+        const newPrice = calculateNewPrice(
+            purchasePrice,
+            quantity,
+            currentArtistData.totalEditions
         );
-        const resaleListingsSnapshot = await getDocs(resaleListingsQuery);
-        const activeResaleListings = resaleListingsSnapshot.docs.map(d => ({...d.data(), id: d.id} as ResaleListing));
+        const newTotalPortfolioValue = newPrice * currentArtistData.totalEditions;
 
-        type AcquirableFractal = { price: number; isResold: boolean; sourceId: string; resellerId?: string };
-        const orderBook: AcquirableFractal[] = [];
+        const newPriceHistoryEntry = {
+            date: new Date().toISOString(),
+            price: newPrice,
+        };
+        const newTotalValueHistoryEntry = {
+            date: new Date().toISOString(),
+            value: newTotalPortfolioValue
+        };
 
-        const now = new Date();
-        activeResaleListings.forEach(listing => {
-            const t = (now.getTime() - new Date(listing.listingTimestamp).getTime()) / 1000;
-            const P_t = t >= listing.periodSeconds 
-                ? listing.minPrice 
-                : listing.initialPrice - (listing.initialPrice - listing.minPrice) * (t / listing.periodSeconds);
-            
-            for (let i = 0; i < listing.quantity; i++) {
-                orderBook.push({ price: P_t, isResold: true, sourceId: listing.id, resellerId: listing.resellerId });
-            }
-        });
+        const updatedArtist = {
+            ...currentArtistData,
+            fractalPrice: newPrice,
+            availableEditions: currentArtistData.availableEditions - quantity,
+            priceHistory: [...currentArtistData.priceHistory, newPriceHistoryEntry],
+            totalPortfolioValueHistory: [...currentArtistData.totalPortfolioValueHistory, newTotalValueHistoryEntry]
+        };
 
-        for (let i = 0; i < artistData.availableEditions; i++) {
-            orderBook.push({ price: artistData.fractalPrice, isResold: false, sourceId: artist.id });
-        }
+        const newArtists = [...artists];
+        newArtists[artistIndex] = updatedArtist;
+        setArtists(newArtists);
 
-        orderBook.sort((a, b) => a.price - b.price || (a.isResold ? -1 : 1));
-
-        if (orderBook.length < quantity) throw new Error("Not enough fractals available to fulfill the order.");
-        
-        const fractalsToBuy = orderBook.slice(0, quantity);
-        const purchaseDate = now.toISOString();
-
-        for (const fractalToAcquire of fractalsToBuy) {
-            const newFractalRef = doc(collection(db, 'users', user.uid, 'ownedFractals'));
-            const serialNumber = `CRESTOX-${artist.id.split('-')[1]}-${String(Date.now()).slice(-6)}-${Math.random().toString(36).substring(2, 5)}`;
-            const purchasePriceWithTax = Math.round(fractalToAcquire.price * 1.18 * 100) / 100;
-            const newOwnedFractal: Omit<OwnedFractal, 'id'> = {
-                artistId: artist.id,
-                artistName: artist.name,
-                purchasePrice: purchasePriceWithTax,
+        const purchaseDate = new Date().toISOString();
+        const newOwnedFractals: OwnedFractal[] = [];
+        for (let i = 0; i < quantity; i++) {
+            const serialNumber = `CRESTOX-${currentArtistData.id.split('-')[1]}-${String(Date.now() + i).slice(-6)}`;
+            const newFractal: OwnedFractal = {
+                id: `${currentArtistData.id}-${Date.now()}-${i}`,
+                artistId: currentArtistData.id,
+                artistName: currentArtistData.name,
+                purchasePrice: purchasePrice,
                 purchaseDate: purchaseDate,
                 serialNumber: serialNumber,
-                status: 'available'
             };
-            transaction.set(newFractalRef, newOwnedFractal);
-
-            if (fractalToAcquire.isResold) {
-                const listingRef = doc(db, 'resaleListings', fractalToAcquire.sourceId);
-                const listingDocSnapshot = await transaction.get(listingRef);
-                const listingData = listingDocSnapshot.data() as ResaleListing;
-
-                const newQuantity = listingData.quantity - 1;
-                transaction.update(listingRef, { quantity: newQuantity, status: newQuantity === 0 ? 'completed' : 'active' });
-
-                if (fractalToAcquire.resellerId) {
-                    const resellerFractalQuery = query(
-                        collection(db, 'users', fractalToAcquire.resellerId, 'ownedFractals'),
-                        where('listingId', '==', fractalToAcquire.sourceId),
-                        limit(1)
-                    );
-                    const resellerFractalSnapshot = await getDocs(resellerFractalQuery);
-                    if (!resellerFractalSnapshot.empty) {
-                        transaction.delete(resellerFractalSnapshot.docs[0].ref);
-                    }
-                }
-
-            } else {
-                const currentArtistDoc = await transaction.get(artistRef);
-                const currentArtistData = currentArtistDoc.data() as Artist;
-                transaction.update(artistRef, { availableEditions: currentArtistData.availableEditions - 1 });
-            }
+            newOwnedFractals.push(newFractal);
         }
-        
-        const postTradeArtistDoc = await transaction.get(artistRef);
-        const postTradeArtistData = postTradeArtistDoc.data() as Artist;
+        setCollection(prevCollection => [...prevCollection, ...newOwnedFractals]);
+        return;
+    }
+    
+    const artistRef = doc(db, 'artists', artistToUpdate.id);
 
-        const newMarketPrice = calculateMarketImpactPrice(postTradeArtistData.fractalPrice, quantity, postTradeArtistData.totalEditions);
-        const newTotalPortfolioValue = newMarketPrice * postTradeArtistData.totalEditions;
+    try {
+        await runTransaction(db, async (transaction) => {
+            const artistDoc = await transaction.get(artistRef);
+            if (!artistDoc.exists()) {
+                throw "Artist document does not exist!";
+            }
+            
+            const currentArtistData = artistDoc.data() as Artist;
+            const purchasePrice = currentArtistData.fractalPrice;
 
-        transaction.update(artistRef, {
-            fractalPrice: newMarketPrice,
-            priceHistory: [...postTradeArtistData.priceHistory, { date: purchaseDate, price: newMarketPrice }],
-            totalPortfolioValueHistory: [...postTradeArtistData.totalPortfolioValueHistory, { date: purchaseDate, value: newTotalPortfolioValue }],
+            const newPrice = calculateNewPrice(
+                purchasePrice,
+                quantity,
+                currentArtistData.totalEditions
+            );
+            
+            const newTotalPortfolioValue = newPrice * currentArtistData.totalEditions;
+
+            const newPriceHistoryEntry = {
+              date: new Date().toISOString(),
+              price: newPrice,
+            };
+            const newTotalValueHistoryEntry = {
+                date: new Date().toISOString(),
+                value: newTotalPortfolioValue
+            };
+
+            transaction.update(artistRef, {
+                fractalPrice: newPrice,
+                availableEditions: currentArtistData.availableEditions - quantity,
+                priceHistory: [...currentArtistData.priceHistory, newPriceHistoryEntry],
+                totalPortfolioValueHistory: [...currentArtistData.totalPortfolioValueHistory, newTotalValueHistoryEntry]
+            });
+            
+            const purchaseDate = new Date().toISOString();
+
+            for (let i = 0; i < quantity; i++) {
+                const serialNumber = `CRESTOX-${currentArtistData.id.split('-')[1]}-${String(Date.now() + i).slice(-6)}`;
+                const newFractal: OwnedFractal = {
+                    id: `${currentArtistData.id}-${Date.now()}-${i}`,
+                    artistId: currentArtistData.id,
+                    artistName: currentArtistData.name,
+                    purchasePrice: purchasePrice,
+                    purchaseDate: purchaseDate,
+                    serialNumber: serialNumber,
+                };
+                const newFractalRef = doc(firestoreCollection(db, 'users', user.uid, 'ownedFractals'));
+                transaction.set(newFractalRef, newFractal);
+            }
         });
-    });
-  }, [user, artists, resaleListings, collection]);
+    } catch (e) {
+        console.error("Transaction failed: ", e);
+    }
+  }, [user, artists]);
 
   const holdingsByArtist = new Map<string, number>();
   collection.forEach(fractal => {
-      if (fractal.status !== 'listed') {
-        holdingsByArtist.set(fractal.artistId, (holdingsByArtist.get(fractal.artistId) || 0) + 1);
-      }
+      holdingsByArtist.set(fractal.artistId, (holdingsByArtist.get(fractal.artistId) || 0) + 1);
   });
 
-  const value = { isLoggedIn, user, artistProfile, login, logout, collection, collectFromPortfolio, listForResale, cancelListing, holdingsByArtist, artists, fractals, resaleListings, watchlist, addToWatchlist, removeFromWatchlist, createArtistProfile, updateArtistProfile, addArtwork, updateAndReevaluateArtwork };
+  const value = { isLoggedIn, login, logout, collection, investInPortfolio, holdingsByArtist, artists, fractals };
 
   return (
     <AuthContext.Provider value={value}>
