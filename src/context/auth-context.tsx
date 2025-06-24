@@ -126,12 +126,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
   // --- Core Auth Functions ---
   const login = () => {
-    const newUser: User = { uid: 'mock-user-id', walletBalance: 5000 };
+    const newUser: User = { uid: 'mock-user-id', walletBalance: 50000 };
     setUser(newUser);
     setIsLoggedIn(true);
     toast({
         title: "Welcome!",
-        description: "You've been credited with 5,000 CreCoins to start your collection."
+        description: "You've been credited with 50,000 CreCoins to start your collection."
     });
   };
   const logout = () => {
@@ -143,12 +143,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const collectFromPortfolio = useCallback(async (artist: Artist, quantity: number) => {
     if (!user) throw new Error("User must be logged in.");
     if (quantity <= 0) throw new Error("Quantity must be greater than zero.");
+    
+    let tempArtists = [...artists];
+    let tempFractals = [...fractals];
+    let tempCollection = [...collection];
+    let tempResaleListings = [...resaleListings];
+    let tempUser = {...user};
 
     // --- 1. Build and sort the order book ---
     let orderBook: { price: number; quantity: number; source: 'resale' | 'primary'; id: string; resellerId?: string }[] = [];
     
-    const activeResaleListings = resaleListings.filter(l => l.artistId === artist.id && l.status === 'active');
-    activeResaleListings.forEach(listing => {
+    tempResaleListings.filter(l => l.artistId === artist.id && l.status === 'active').forEach(listing => {
         const now = Date.now();
         const startTime = new Date(listing.listingTimestamp).getTime();
         const elapsedSeconds = (now - startTime) / 1000;
@@ -165,19 +170,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         });
     });
 
-    if (artist.availableEditions > 0) {
+    const artistForTx = tempArtists.find(a => a.id === artist.id)!;
+    if (artistForTx.availableEditions > 0) {
         orderBook.push({
-            price: artist.fractalPrice,
-            quantity: artist.availableEditions,
+            price: artistForTx.fractalPrice,
+            quantity: artistForTx.availableEditions,
             source: 'primary',
-            id: artist.id
+            id: artistForTx.id
         });
     }
 
-    orderBook.sort((a, b) => {
-        if (a.price !== b.price) return a.price - b.price;
-        return a.source === 'resale' ? -1 : 1;
-    });
+    orderBook.sort((a, b) => a.price !== b.price ? a.price - b.price : a.source === 'resale' ? -1 : 1);
 
     // --- 2. Fulfill the order ---
     let remainingQty = quantity;
@@ -193,18 +196,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     }
     
     if (remainingQty > 0) throw new Error("Not enough fractals available to fulfill the order.");
-    if (user.walletBalance < totalCost) throw new Error("Insufficient CreCoins for this transaction.");
+    if (tempUser.walletBalance < totalCost) throw new Error("Insufficient CreCoins for this transaction.");
 
     // --- 3. Execute Transaction & State Updates ---
-    setUser(prev => prev ? { ...prev, walletBalance: prev.walletBalance - totalCost } : null);
-
+    tempUser.walletBalance -= totalCost;
+    
     const newOwnedFractals: OwnedFractal[] = [];
-    let artistPrimarySharesBought = 0;
     
     purchasedShares.forEach(purchase => {
         for (let i = 0; i < purchase.quantity; i++) {
             newOwnedFractals.push({
-                id: `${artist.id}-${Date.now()}-${i}`,
+                id: `${artist.id}-${Date.now()}-${Math.random()}`,
                 artistId: artist.id,
                 artistName: artist.name,
                 purchasePrice: purchase.price,
@@ -213,49 +215,43 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 status: 'owned'
             });
         }
-        if (purchase.source === 'primary') {
-            artistPrimarySharesBought += purchase.quantity;
-        } else { // Resale
-            setResaleListings(prev => prev.map(l => 
-                l.id === purchase.id ? { ...l, quantity: l.quantity - purchase.quantity, status: l.quantity - purchase.quantity === 0 ? 'sold' : 'active' } : l
-            ).filter(l => l.status !== 'sold')); // remove sold out listings
-            // Find which fractals to transfer from reseller
-            const resellerSoldFractals = collection.filter(f => f.status === 'listed' && f.artistId === artist.id).slice(0, purchase.quantity);
-            const resellerSoldFractalIds = resellerSoldFractals.map(f => f.id);
-            setCollection(prev => prev.filter(f => !resellerSoldFractalIds.includes(f.id)));
+        
+        if (purchase.source === 'resale') {
+            const listingIndex = tempResaleListings.findIndex(l => l.id === purchase.id);
+            if(listingIndex > -1) {
+                const listing = tempResaleListings[listingIndex];
+                listing.quantity -= purchase.quantity;
+                if(listing.quantity <= 0) {
+                    listing.status = 'sold';
+                }
+                
+                const sellerFractalIds = listing.fractalIds.splice(0, purchase.quantity);
+                tempCollection = tempCollection.filter(f => !sellerFractalIds.includes(f.id));
+            }
         }
     });
 
-    setCollection(prev => [...prev, ...newOwnedFractals]);
-    
+    tempCollection.push(...newOwnedFractals);
+    tempResaleListings = tempResaleListings.filter(l => l.status !== 'sold');
+
     // --- 4. Market Impact & Reverse Pricing ---
-    const artistToUpdate = artists.find(a => a.id === artist.id)!;
+    const artistToUpdate = tempArtists.find(a => a.id === artist.id)!;
     const P_old = artistToUpdate.fractalPrice;
     const F = artistToUpdate.totalEditions;
     const BETA = 1.118;
-
     const P_new = P_old * Math.exp(BETA * Math.sqrt(quantity / F));
 
-    let updatedArtist = {
-        ...artistToUpdate,
-        fractalPrice: P_new,
-        availableEditions: artistToUpdate.availableEditions - artistPrimarySharesBought,
-        priceHistory: [...artistToUpdate.priceHistory, { date: new Date().toISOString(), price: P_new }],
-    };
-
-    const artistFractals = fractals.filter(f => f.artistId === artist.id);
+    let artistFractals = tempFractals.filter(f => f.artistId === artist.id);
     const V = artistFractals.reduce((sum, f) => sum + f.price, 0);
     const sum_Si_Vi = artistFractals.reduce((sum, f) => sum + (f.aiScore || 0) * f.price, 0);
     const k = sum_Si_Vi > 0 ? V / sum_Si_Vi : 0;
     
-    let newFractals = [...fractals];
-
     if (k > 0) {
         const delta_V_eff = (P_new - P_old) * F;
         const sum_S_squared = artistFractals.reduce((sum, f) => sum + Math.pow(f.aiScore || 0, 2), 0);
         const c = sum_S_squared > 0 ? delta_V_eff / (k * sum_S_squared) : 0;
         
-        newFractals = fractals.map(f => {
+        tempFractals = tempFractals.map(f => {
             if (f.artistId === artist.id) {
                 const Vi_old = f.price;
                 const Si = f.aiScore || 0;
@@ -266,15 +262,29 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             }
             return f;
         });
-        setFractals(newFractals);
     }
     
-    const newTotalPortfolioValue = newFractals.filter(f => f.artistId === artist.id).reduce((sum, f) => sum + f.price, 0);
-    updatedArtist.totalPortfolioValueHistory = [...updatedArtist.totalPortfolioValueHistory, { date: new Date().toISOString(), value: Math.round(newTotalPortfolioValue) }];
+    const newTotalPortfolioValue = tempFractals.filter(f => f.artistId === artist.id).reduce((sum, f) => sum + f.price, 0);
+    const primarySharesBought = purchasedShares.filter(p => p.source === 'primary').reduce((sum, p) => sum + p.quantity, 0);
 
-    setArtists(prev => prev.map(a => a.id === artist.id ? updatedArtist : a));
+    const updatedArtist = {
+        ...artistToUpdate,
+        fractalPrice: P_new,
+        availableEditions: artistToUpdate.availableEditions - primarySharesBought,
+        priceHistory: [...artistToUpdate.priceHistory, { date: new Date().toISOString(), price: P_new }],
+        totalPortfolioValueHistory: [...artistToUpdate.totalPortfolioValueHistory, { date: new Date().toISOString(), value: Math.round(newTotalPortfolioValue) }],
+    };
 
-  }, [user, artists, fractals, collection, resaleListings, toast]);
+    tempArtists = tempArtists.map(a => a.id === artist.id ? updatedArtist : a);
+    
+    // --- 5. Set All States ---
+    setUser(tempUser);
+    setCollection(tempCollection);
+    setResaleListings(tempResaleListings);
+    setArtists(tempArtists);
+    setFractals(tempFractals);
+
+  }, [user, artists, fractals, collection, resaleListings]);
 
 
   // --- Resale Market ---
@@ -290,6 +300,13 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     const fractalIdsToList = fractalsToList.map(f => f.id);
 
     setCollection(prev => prev.map(f => fractalIdsToList.includes(f.id) ? { ...f, status: 'listed' } : f));
+
+    setArtists(prev => prev.map(a => {
+        if (a.id === artist.id) {
+            return { ...a, availableEditions: a.availableEditions + options.quantity };
+        }
+        return a;
+    }));
 
     const newListing: ResaleListing = {
       id: `resale-${Date.now()}`,
@@ -311,8 +328,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     const listing = resaleListings.find(l => l.id === listingId && l.resellerId === user?.uid);
     if (!listing) return;
     
-    setResaleListings(prev => prev.map(l => l.id === listingId ? { ...l, status: 'cancelled' } : l).filter(l => l.status !== 'cancelled'));
+    setResaleListings(prev => prev.filter(l => l.id !== listingId));
     setCollection(prev => prev.map(f => listing.fractalIds.includes(f.id) ? { ...f, status: 'owned' } : f));
+    
+    setArtists(prev => prev.map(a => {
+        if (a.id === listing.artistId) {
+            return { ...a, availableEditions: a.availableEditions - listing.quantity };
+        }
+        return a;
+    }));
+
     toast({ title: 'Listing Cancelled', description: 'Your fractals have been returned to your holdings.'});
   }, [resaleListings, user, toast]);
 

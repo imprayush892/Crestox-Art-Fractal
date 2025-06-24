@@ -69,9 +69,7 @@ export function CollectionClient() {
   }, [collection]);
 
   const sortedArtistIds = useMemo(() => {
-      const artistIdsWithHoldings = Object.keys(collectionByArtist).filter(artistId => 
-        collectionByArtist[artistId].some(f => f.status === 'owned')
-      );
+      const artistIdsWithHoldings = Object.keys(collectionByArtist);
       return artistIdsWithHoldings.sort((a, b) => {
           const artistA = artistMap.get(a)?.name || '';
           const artistB = artistMap.get(b)?.name || '';
@@ -197,7 +195,7 @@ export function CollectionClient() {
                         const ownedByArtist = allFractalsForArtist.filter(f => f.status === 'owned');
                         const listedByArtist = allFractalsForArtist.filter(f => f.status === 'listed');
                         
-                        if(ownedByArtist.length === 0) return null;
+                        if (ownedByArtist.length === 0 && listedByArtist.length === 0) return null;
 
                         const totalCollected = ownedByArtist.reduce((sum, f) => sum + f.purchasePrice, 0);
                         const currentValue = ownedByArtist.reduce((sum) => sum + artist.fractalPrice, 0);

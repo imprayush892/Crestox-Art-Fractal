@@ -20,7 +20,7 @@ import { Label } from './ui/label';
 import { Minus, Plus, Wallet, Loader2 } from 'lucide-react';
 import { Separator } from './ui/separator';
 
-interface CollectionDialogProps {
+interface InvestmentDialogProps {
   artist: Artist;
   isOpen: boolean;
   onClose: () => void;
@@ -32,7 +32,7 @@ interface OrderBreakdown {
     source: string;
 }
 
-export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogProps) {
+export function CollectionDialog({ artist, isOpen, onClose }: InvestmentDialogProps) {
   const [quantity, setQuantity] = useState(1);
   const [breakdown, setBreakdown] = useState<OrderBreakdown[]>([]);
   const [totalCost, setTotalCost] = useState(0);
