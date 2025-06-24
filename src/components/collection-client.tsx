@@ -146,7 +146,7 @@ export function CollectionClient() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₹{portfolioStats.currentValue.toLocaleString('en-IN', {maximumFractionDigits: 0})}</div>
-              <p className="text-xs text-muted-foreground">in Cred Coins</p>
+              <p className="text-xs text-muted-foreground">in CreCoins</p>
             </CardContent>
           </Card>
           <Card>
@@ -156,7 +156,7 @@ export function CollectionClient() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₹{portfolioStats.totalCollectedValue.toLocaleString('en-IN', {minimumFractionDigits: 1, maximumFractionDigits: 1})}</div>
-              <p className="text-xs text-muted-foreground">in Cred Coins</p>
+              <p className="text-xs text-muted-foreground">in CreCoins</p>
             </CardContent>
           </Card>
           <Card>
@@ -169,7 +169,7 @@ export function CollectionClient() {
               ₹{portfolioStats.gainLoss.toLocaleString('en-IN', { signDisplay: 'always', minimumFractionDigits: 1, maximumFractionDigits: 1 })}
               </div>
               <p className={`text-xs ${portfolioStats.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {portfolioStats.gainLossPercent.toFixed(2)}% all time (in Cred Coins)
+                {portfolioStats.gainLossPercent.toFixed(2)}% all time (in CreCoins)
               </p>
             </CardContent>
           </Card>

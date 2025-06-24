@@ -96,7 +96,7 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">List Fractals for Resale: {artist.name}</DialogTitle>
           <DialogDescription>
-            Set your pricing in Cred Coins (1 Cred Coin = ₹1) to list your fractals on the secondary market.
+            Set your pricing in CreCoins (1 CreCoin = ₹1) to list your fractals on the secondary market.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">

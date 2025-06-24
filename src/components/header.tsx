@@ -73,7 +73,7 @@ export function Header() {
                     <div className="flex items-center gap-2">
                         <Wallet className="w-5 h-5 text-primary"/>
                         <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')}</span>
-                        <span className="text-sm text-muted-foreground">Cred Coins</span>
+                        <span className="text-sm text-muted-foreground">CreCoins</span>
                     </div>
                 )}
                 <Button onClick={handleLogout} variant="secondary">Logout</Button>
@@ -143,7 +143,7 @@ export function Header() {
                         {user && (
                             <div className="flex items-center gap-2 text-lg font-medium">
                                 <Wallet className="w-5 h-5"/>
-                                <span>{user.walletBalance.toLocaleString('en-IN')} Cred Coins</span>
+                                <span>{user.walletBalance.toLocaleString('en-IN')} CreCoins</span>
                             </div>
                         )}
                         <div className="flex items-center gap-2 font-medium">

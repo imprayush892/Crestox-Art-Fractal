@@ -148,7 +148,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     if (!user) throw new Error("User must be logged in.");
     const totalCost = quantity * artist.fractalPrice;
     if (user.walletBalance < totalCost) {
-      toast({ variant: "destructive", title: "Insufficient Cred Coins", description: "You don't have enough Cred Coins for this transaction." });
+      toast({ variant: "destructive", title: "Insufficient CreCoins", description: "You don't have enough CreCoins for this transaction." });
       throw new Error("Insufficient funds");
     }
 
@@ -181,7 +181,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     
     setCollection(prevCollection => [...prevCollection, ...newFractals]);
 
-  }, [user, collection, toast]);
+  }, [user, toast]);
 
   // --- Resale Market ---
    const listForResale = useCallback(async (artist: Artist, options: { quantity: number; initialPrice: number; minPrice: number; periodDays: number; }) => {

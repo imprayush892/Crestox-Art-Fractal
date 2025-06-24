@@ -67,7 +67,7 @@ export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogPr
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">Collect from {artist.name}</DialogTitle>
           <DialogDescription>
-            Acquire fractals from this artist's portfolio using your Cred Coins.
+            Acquire fractals from this artist's portfolio using your CreCoins.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
@@ -77,7 +77,7 @@ export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogPr
                         <Wallet className="w-4 h-4" />
                         <span>Your Balance</span>
                     </div>
-                    <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')} Cred Coins</span>
+                    <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')} CreCoins</span>
                 </div>
             )}
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
@@ -127,7 +127,7 @@ export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogPr
                     <span>Total Cost</span>
                     <span>₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                 <p className="text-xs text-muted-foreground text-right">Payable in Cred Coins</p>
+                 <p className="text-xs text-muted-foreground text-right">Payable in CreCoins</p>
             </div>
         </div>
         <DialogFooter>
