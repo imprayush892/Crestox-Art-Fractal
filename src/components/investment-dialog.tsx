@@ -32,7 +32,7 @@ interface OrderBreakdown {
     source: string;
 }
 
-export function CollectionDialog({ artist, isOpen, onClose }: InvestmentDialogProps) {
+export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogProps) {
   const [quantity, setQuantity] = useState(1);
   const [breakdown, setBreakdown] = useState<OrderBreakdown[]>([]);
   const [totalCost, setTotalCost] = useState(0);

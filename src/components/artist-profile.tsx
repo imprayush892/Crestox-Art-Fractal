@@ -14,7 +14,7 @@ import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Pale
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
-import { CollectionDialog } from './investment-dialog';
+import { InvestmentDialog } from './investment-dialog';
 import Link from 'next/link';
 
 interface ArtistProfileProps {
@@ -23,12 +23,28 @@ interface ArtistProfileProps {
 }
 
 export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
-  const { isLoggedIn, artistProfile, holdingsByArtist, watchlist, addToWatchlist, removeFromWatchlist } = useAuth();
+  const { 
+    isLoggedIn, 
+    artistProfile, 
+    collection,
+    watchlist, 
+    addToWatchlist, 
+    removeFromWatchlist 
+  } = useAuth();
   const router = useRouter();
   const [isCollecting, setIsCollecting] = useState(false);
 
   const isOwnProfile = artistProfile?.id === artist.id;
-  const ownedFractals = holdingsByArtist.get(artist.id) || 0;
+  
+  const { ownedCount, listedCount } = useMemo(() => {
+    if (!collection) return { ownedCount: 0, listedCount: 0 };
+    const artistCollection = collection.filter(f => f.artistId === artist.id);
+    return {
+        ownedCount: artistCollection.filter(f => f.status === 'owned').length,
+        listedCount: artistCollection.filter(f => f.status === 'listed').length,
+    };
+  }, [collection, artist.id]);
+
   const isWatched = watchlist.includes(artist.id);
 
   const handleCollectClick = () => {
@@ -72,7 +88,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
 
   return (
     <>
-      <CollectionDialog
+      <InvestmentDialog
         artist={artist}
         isOpen={isCollecting}
         onClose={() => setIsCollecting(false)}
@@ -153,10 +169,10 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                             <Star className={`w-5 h-5 transition-colors ${isWatched ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'}`} />
                         </Button>
                       </div>
-                      {ownedFractals > 0 && (
+                      {(ownedCount > 0 || listedCount > 0) && (
                           <div className="mt-4 text-center text-sm text-green-600 font-medium flex items-center justify-center gap-2">
                               <CheckCircle className="w-4 h-4" />
-                              You own {ownedFractals} fractal{ownedFractals > 1 ? 's' : ''} from this portfolio.
+                              <span>You have {ownedCount} in holdings{listedCount > 0 ? ` and ${listedCount} on sale` : ''} from this artist.</span>
                           </div>
                       )}
                   </CardContent>
