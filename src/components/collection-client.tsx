@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { ArrowUpRight, BarChart, DollarSign, TrendingUp, Wallet, Eye, Store, Package } from 'lucide-react';
+import { ArrowUpRight, BarChart, DollarSign, TrendingUp, Wallet, Eye, Store, Package, Loader2 } from 'lucide-react';
 import type { OwnedFractal } from '@/context/auth-context';
 import type { Artist } from '@/lib/data';
 import { ArtistHoldingsDialog } from './artist-holdings-dialog';
@@ -30,6 +30,7 @@ export function CollectionClient() {
   const router = useRouter();
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [artistToSell, setArtistToSell] = useState<Artist | null>(null);
+  const [isCancelling, setIsCancelling] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -68,14 +69,28 @@ export function CollectionClient() {
     }, {} as Record<string, OwnedFractal[]>);
   }, [collection]);
 
-  const sortedArtistIds = useMemo(() => {
-      const artistIdsWithHoldings = Object.keys(collectionByArtist);
-      return artistIdsWithHoldings.sort((a, b) => {
-          const artistA = artistMap.get(a)?.name || '';
-          const artistB = artistMap.get(b)?.name || '';
-          return artistA.localeCompare(artistB);
+  const sortedArtistHoldings = useMemo(() => {
+      const artistHoldings: { artist: Artist; ownedCount: number; listedCount: number }[] = [];
+      const processedArtists = new Set<string>();
+
+      collection.forEach(fractal => {
+        if (!processedArtists.has(fractal.artistId)) {
+          const artist = artistMap.get(fractal.artistId);
+          if (artist) {
+            const allFractalsForArtist = collectionByArtist[fractal.artistId] || [];
+            const ownedCount = allFractalsForArtist.filter(f => f.status === 'owned').length;
+            const listedCount = allFractalsForArtist.filter(f => f.status === 'listed').length;
+            if (ownedCount > 0 || listedCount > 0) {
+              artistHoldings.push({ artist, ownedCount, listedCount });
+            }
+          }
+          processedArtists.add(fractal.artistId);
+        }
       });
-  }, [collectionByArtist, artistMap]);
+      
+      return artistHoldings.sort((a,b) => a.artist.name.localeCompare(b.artist.name));
+
+  }, [collection, collectionByArtist, artistMap]);
   
   const userActiveListings = useMemo(() => {
     if (!user) return [];
@@ -87,18 +102,15 @@ export function CollectionClient() {
       return artists.filter(a => watchlist.includes(a.id));
   }, [artists, watchlist]);
 
-  const handleCardClick = (artistId: string) => {
-    const artist = artistMap.get(artistId);
-    if (artist) {
-        setSelectedArtist(artist);
-    }
+  const handleCardClick = (artist: Artist) => {
+    setSelectedArtist(artist);
   };
   
   const handleCloseDialog = () => {
       setSelectedArtist(null);
   };
   
-  const ownedFractalsForSelectedArtist = selectedArtist ? collection.filter(f => f.artistId === selectedArtist!.id && f.status === 'owned') : [];
+  const ownedFractalsForSelectedArtist = selectedArtist ? collection.filter(f => f.artistId === selectedArtist!.id) : [];
 
   const handleSellClick = (e: React.MouseEvent, artist: Artist) => {
     e.stopPropagation();
@@ -109,7 +121,7 @@ export function CollectionClient() {
     setArtistToSell(null);
   }
   
-  const ownedFractalsForSellDialog = artistToSell ? collection.filter(f => f.artistId === artistToSell!.id) : [];
+  const ownedFractalsForSellDialog = artistToSell ? collection.filter(f => f.artistId === artistToSell!.id && f.status === 'owned') : [];
 
   const calculateCurrentResalePrice = (listing: ResaleListing) => {
     const now = Date.now();
@@ -123,6 +135,12 @@ export function CollectionClient() {
     const price = listing.initialPrice - (listing.initialPrice - listing.minPrice) * (elapsedSeconds / listing.periodSeconds);
     return Math.round(price * 100) / 100;
   };
+  
+  const handleCancelListing = async (listingId: string) => {
+    setIsCancelling(listingId);
+    await cancelListing(listingId);
+    setIsCancelling(null);
+  }
 
   if (!isLoggedIn) {
     return null;
@@ -184,17 +202,11 @@ export function CollectionClient() {
             </TabsList>
             
             <TabsContent value="holdings" className="mt-6">
-                {sortedArtistIds.length > 0 ? (
+                {sortedArtistHoldings.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {sortedArtistIds.map(artistId => {
-                        const artist = artistMap.get(artistId);
-                        if (!artist) return null;
-
-                        const allFractalsForArtist = collectionByArtist[artistId] || [];
+                    {sortedArtistHoldings.map(({ artist, ownedCount, listedCount }) => {
+                        const allFractalsForArtist = collectionByArtist[artist.id] || [];
                         const ownedByArtist = allFractalsForArtist.filter(f => f.status === 'owned');
-                        const listedByArtist = allFractalsForArtist.filter(f => f.status === 'listed');
-                        
-                        if (ownedByArtist.length === 0 && listedByArtist.length === 0) return null;
 
                         const totalCollected = ownedByArtist.reduce((sum, f) => sum + f.purchasePrice, 0);
                         const currentValue = ownedByArtist.reduce((sum) => sum + artist.fractalPrice, 0);
@@ -202,17 +214,17 @@ export function CollectionClient() {
 
                         return (
                             <Card 
-                                key={artistId} 
+                                key={artist.id} 
                                 className="flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
                             >
-                                <CardHeader className="flex-row items-center gap-4 cursor-pointer" onClick={() => handleCardClick(artistId)}>
+                                <CardHeader className="flex-row items-center gap-4 cursor-pointer" onClick={() => handleCardClick(artist)}>
                                     <Wallet className="w-8 h-8 text-primary"/>
                                     <div>
                                         <CardTitle className="font-headline text-2xl">{artist.name}</CardTitle>
-                                        <CardDescription>{ownedByArtist.length} in Holdings, {listedByArtist.length} on Sale</CardDescription>
+                                        <CardDescription>{ownedCount} in Holdings, {listedCount} on Sale</CardDescription>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="grid gap-4 flex-grow cursor-pointer" onClick={() => handleCardClick(artistId)}>
+                                <CardContent className="grid gap-4 flex-grow cursor-pointer" onClick={() => handleCardClick(artist)}>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                                         <span className="text-sm text-muted-foreground">Total Spent</span>
                                         <span className="font-semibold">₹{totalCollected.toLocaleString('en-IN')}</span>
@@ -231,7 +243,7 @@ export function CollectionClient() {
                                         <Link href={`/artist/${artist.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-primary hover:underline text-xs">
                                             View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
                                         </Link>
-                                        <Button size="sm" variant="outline" onClick={(e) => handleSellClick(e, artist)} disabled={ownedByArtist.length === 0}>
+                                        <Button size="sm" variant="outline" onClick={(e) => handleSellClick(e, artist)} disabled={ownedCount === 0}>
                                             <DollarSign className="mr-1 h-3 w-3" /> Sell
                                         </Button>
                                     </div>
@@ -279,7 +291,10 @@ export function CollectionClient() {
                                         <TableCell className="font-semibold">₹{currentPrice.toFixed(2)}</TableCell>
                                         <TableCell>{formatDistanceToNow(endDate, { addSuffix: true })}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="outline" size="sm" onClick={() => cancelListing(listing.id)}>Cancel</Button>
+                                            <Button variant="outline" size="sm" onClick={() => handleCancelListing(listing.id)} disabled={isCancelling === listing.id}>
+                                              {isCancelling === listing.id && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                              Cancel
+                                            </Button>
                                         </TableCell>
                                     </TableRow>
                                 )

@@ -3,7 +3,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Artist } from '@/lib/data';
-import { useAuth, type OwnedFractal } from '@/context/auth-context';
+import { useAuth } from '@/context/auth-context';
+import type { OwnedFractal } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -17,7 +18,7 @@ import {
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Separator } from './ui/separator';
 
@@ -33,20 +34,24 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
   const [initialPrice, setInitialPrice] = useState<string>('');
   const [minPrice, setMinPrice] = useState<string>('');
   const [periodDays, setPeriodDays] = useState<string>('7');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { listForResale } = useAuth();
   const { toast } = useToast();
 
-  const ownedShares = useMemo(() => ownedFractals.filter(f => f.status !== 'listed').length, [ownedFractals]);
+  const ownedShares = useMemo(() => ownedFractals.length, [ownedFractals]);
   
   const initialSaleValue = useMemo(() => quantity * (Number(initialPrice) || 0), [quantity, initialPrice]);
-  const transactionFee = useMemo(() => initialSaleValue * 0.02, [initialSaleValue]);
-  const netProceeds = useMemo(() => initialSaleValue - transactionFee, [initialSaleValue, transactionFee]);
+  const netProceeds = useMemo(() => initialSaleValue, [initialSaleValue]);
 
   useEffect(() => {
     if (artist) {
       setInitialPrice(String(artist.fractalPrice));
       setMinPrice(String(Math.round(artist.fractalPrice * 0.8)));
+    }
+     if (isOpen) {
+      setQuantity(1);
+      setIsSubmitting(false);
     }
   }, [artist, isOpen]);
 
@@ -58,6 +63,7 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
   
   const handleConfirm = async () => {
     if (!artist || !initialPrice || !minPrice || !periodDays) return;
+    setIsSubmitting(true);
     
     try {
       await listForResale(artist, {
@@ -66,10 +72,6 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
         minPrice: Number(minPrice),
         periodDays: Number(periodDays)
       });
-      toast({
-        title: 'Listing Successful!',
-        description: `You have listed ${quantity} fractal${quantity > 1 ? 's' : ''} of ${artist.name}'s portfolio for sale.`,
-      });
       onClose();
     } catch(e: any) {
         toast({
@@ -77,18 +79,14 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
             title: "Listing Failed",
             description: e.message || "Could not list fractals for sale.",
         });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    if (isOpen) {
-      setQuantity(1);
-    }
-  }, [isOpen]);
   
   if (!artist) return null;
 
-  const isFormInvalid = !initialPrice || !minPrice || !periodDays || Number(initialPrice) <= Number(minPrice) || Number(initialPrice) <= 0 || Number(minPrice) < 0;
+  const isFormInvalid = isSubmitting || !initialPrice || !minPrice || !periodDays || Number(initialPrice) <= Number(minPrice) || Number(initialPrice) <= 0 || Number(minPrice) < 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -96,7 +94,7 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">List Fractals for Resale: {artist.name}</DialogTitle>
           <DialogDescription>
-            Set your pricing in CreCoins (1 CreCoin = ₹1) to list your fractals on the secondary market.
+            Set your pricing in CreCoins to list your fractals on the secondary market.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -119,11 +117,11 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
             
             <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                    <Label htmlFor="initial-price">Initial Price (in ₹)</Label>
+                    <Label htmlFor="initial-price">Initial Price (per fractal)</Label>
                     <Input id="initial-price" type="number" placeholder="e.g. 120" value={initialPrice} onChange={(e) => setInitialPrice(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
-                    <Label htmlFor="min-price">Minimum Price (in ₹)</Label>
+                    <Label htmlFor="min-price">Minimum Price (per fractal)</Label>
                     <Input id="min-price" type="number" placeholder="e.g. 80" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} />
                 </div>
             </div>
@@ -152,24 +150,21 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
              <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Est. Gross Sale (at initial price)</span>
-                    <span className="font-medium">₹{initialSaleValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Transaction Fee (2%)</span>
-                    <span className="font-medium text-red-500">-₹{transactionFee.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-medium">{initialSaleValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
                 </div>
                 <Separator className="my-2"/>
                 <div className="flex items-center justify-between text-base font-bold">
                     <span>Est. Net Proceeds</span>
-                    <span>₹{netProceeds.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>{netProceeds.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
                 </div>
             </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="secondary">Cancel</Button>
+            <Button type="button" variant="secondary" disabled={isSubmitting}>Cancel</Button>
           </DialogClose>
           <Button type="button" onClick={handleConfirm} disabled={isFormInvalid}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
             Confirm Listing
           </Button>
         </DialogFooter>
