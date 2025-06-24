@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useCallback, use
 import { artists as mockArtists, fractals as mockFractals, type Artist, type Fractal, type AIScorecardBreakdown, type ArtworkSize } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import type { EditArtworkFormValues } from '@/app/portfolio/artwork/edit/[id]/page';
+import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 
 // --- Interfaces ---
 export interface User {
@@ -85,6 +86,7 @@ interface AuthContextType {
   updateArtistProfile: (profileData: Partial<ArtistProfile>) => Promise<void>;
   addArtwork: (artworkData: NewArtworkData, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
+  reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -501,6 +503,78 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     });
 
   }, [artistProfile]);
+  
+  const reevaluateArtworkForGrading = useCallback(async (fractalToReevaluate: Fractal) => {
+    if (!artistProfile) throw new Error("Artist profile not found.");
+    
+    const artworkSizeString = `${fractalToReevaluate.artworkSize.length} x ${fractalToReevaluate.artworkSize.breadth}${fractalToReevaluate.artworkSize.height ? ` x ${fractalToReevaluate.artworkSize.height}` : ''} ${fractalToReevaluate.artworkSize.unit}`;
+
+    const evaluationInput = {
+        photoDataUri: fractalToReevaluate.image,
+        title: fractalToReevaluate.title,
+        description: fractalToReevaluate.description,
+        materials: fractalToReevaluate.materials,
+        artworkSize: artworkSizeString,
+        minEstimatedValue: fractalToReevaluate.artistMinEstimate || 0,
+        maxEstimatedValue: fractalToReevaluate.artistMaxEstimate || 0,
+        subjectSignificance: fractalToReevaluate.subjectSignificance,
+        personalSignificance: fractalToReevaluate.personalSignificance,
+        timeEffort: fractalToReevaluate.timeEffort,
+        biographicalContext: fractalToReevaluate.biographicalContext,
+        commissionPatronage: fractalToReevaluate.commissionPatronage,
+        artistBio: artistProfile.bio,
+        artistAwards: artistProfile.awards.join(', '),
+        artistExhibitions: artistProfile.exhibitions.join(', '),
+    };
+
+    const evaluationResult = await evaluateArtwork(evaluationInput);
+
+    const artworkId = fractalToReevaluate.id;
+    let finalFractals: Fractal[] = [];
+    
+    setFractals(prevFractals => {
+        const oldFractal = prevFractals.find(f => f.id === artworkId);
+        if (!oldFractal) return prevFractals;
+
+        const crestoxPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
+        
+        const updatedFractal: Fractal = {
+          ...oldFractal,
+          price: crestoxPrice,
+          priceHistory: [...oldFractal.priceHistory, { date: new Date().toISOString(), price: crestoxPrice }],
+          aiScore: evaluationResult.finalScore,
+          crestoxGrade: evaluationResult.grade,
+          aiScorecard: evaluationResult.breakdown,
+          crestoxPriceRange: evaluationResult.crestoxPriceRange,
+        };
+        
+        finalFractals = prevFractals.map(f => f.id === artworkId ? updatedFractal : f);
+        return finalFractals;
+    });
+
+    setArtists(prevArtists => {
+        if (finalFractals.length === 0) return prevArtists;
+
+        const artistIndex = prevArtists.findIndex(a => a.id === artistProfile.id);
+        if (artistIndex === -1) return prevArtists;
+
+        let tempArtists = [...prevArtists];
+        let artistToUpdate = { ...tempArtists[artistIndex] };
+        
+        const artistFractals = finalFractals.filter(f => f.artistId === artistToUpdate.id);
+        const V = artistFractals.reduce((sum, f) => sum + f.price, 0);
+
+        const updatedArtist = {
+            ...artistToUpdate,
+            totalPortfolioValueHistory: [...artistToUpdate.totalPortfolioValueHistory, { date: new Date().toISOString(), value: Math.round(V) }],
+        };
+        
+        tempArtists[artistIndex] = updatedArtist;
+        setArtistProfile(updatedArtist as ArtistProfile);
+        return tempArtists;
+    });
+
+  }, [artistProfile]);
 
   const holdingsByArtist = useMemo(() => {
     return collection.reduce((acc, fractal) => {
@@ -512,7 +586,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const value = {
     isLoggedIn, user, artistProfile, artists, fractals, collection, watchlist, resaleListings, holdingsByArtist,
     login, logout, collectFromPortfolio, listForResale, cancelListing, addToWatchlist, removeFromWatchlist,
-    createArtistProfile, updateArtistProfile, addArtwork, updateAndReevaluateArtwork
+    createArtistProfile, updateArtistProfile, addArtwork, updateAndReevaluateArtwork, reevaluateArtworkForGrading
   };
 
   return (
