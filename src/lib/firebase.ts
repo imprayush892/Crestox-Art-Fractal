@@ -22,6 +22,9 @@ if (firebaseConfig.projectId) {
     console.error("Firebase initialization failed:", error);
     // db remains null if initialization fails
   }
+} else {
+  // Log a clear warning once if Firebase is not configured.
+  console.warn("Firebase configuration variables are missing. App will run with mock data. Please check your .env file or environment settings.");
 }
 
 export { db };

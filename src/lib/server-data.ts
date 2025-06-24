@@ -10,7 +10,7 @@ import { artists as mockArtists, fractals as mockFractals, type Artist, type Fra
 async function getDataFromCollection<T>(collectionName: string, fallbackData: T[]): Promise<T[]> {
   // If db is null, it means Firebase is not configured or failed to initialize.
   if (!db) {
-    console.warn(`Firebase not configured. Using mock data for ${collectionName}.`);
+    // The warning is now logged once in firebase.ts
     return fallbackData;
   }
 
