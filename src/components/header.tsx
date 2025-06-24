@@ -4,7 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, User, X, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetTrigger,
+  SheetClose,
+} from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
@@ -103,18 +111,22 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-full">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Mobile Menu</SheetTitle>
+                <SheetDescription>Navigation links for the Crestox platform.</SheetDescription>
+              </SheetHeader>
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between border-b p-4">
                     <Link href="/" onClick={closeMenu} className="flex items-center gap-2">
                       <Logo className="h-14 w-14" />
                       <span className="font-bold font-headline">Crestox</span>
                     </Link>
-                    <SheetTrigger asChild>
+                    <SheetClose asChild>
                        <Button variant="ghost" size="icon">
                         <X className="h-5 w-5" />
                         <span className="sr-only">Close Menu</span>
                       </Button>
-                    </SheetTrigger>
+                    </SheetClose>
                 </div>
                 <nav className="flex flex-col gap-4 p-4">
                   {navLinks.map((link) => (
