@@ -111,8 +111,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   
   // --- Effects ---
   useEffect(() => {
-    setArtists(mockArtists);
-    setFractals(mockFractals);
+    // This effect is for initializing with mock data.
+    // In a real app, you would fetch from a database.
   }, []);
 
   useEffect(() => {
@@ -144,15 +144,18 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     if (!user) throw new Error("User must be logged in.");
     if (quantity <= 0) throw new Error("Quantity must be greater than zero.");
     
+    // Create mutable copies of state for the transaction
     let tempArtists = [...artists];
     let tempFractals = [...fractals];
     let tempCollection = [...collection];
     let tempResaleListings = [...resaleListings];
     let tempUser = {...user};
+    const artistForTx = tempArtists.find(a => a.id === artist.id)!;
 
     // --- 1. Build and sort the order book ---
-    let orderBook: { price: number; quantity: number; source: 'resale' | 'primary'; id: string; resellerId?: string }[] = [];
+    let orderBook: { price: number; quantity: number; source: 'resale' | 'primary'; id: string; resellerId?: string, fractalIds?: string[] }[] = [];
     
+    // Add resold shares to the order book
     tempResaleListings.filter(l => l.artistId === artist.id && l.status === 'active').forEach(listing => {
         const now = Date.now();
         const startTime = new Date(listing.listingTimestamp).getTime();
@@ -167,10 +170,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             source: 'resale',
             id: listing.id,
             resellerId: listing.resellerId,
+            fractalIds: listing.fractalIds,
         });
     });
 
-    const artistForTx = tempArtists.find(a => a.id === artist.id)!;
+    // Add primary shares from the artist
     if (artistForTx.availableEditions > 0) {
         orderBook.push({
             price: artistForTx.fractalPrice,
@@ -180,12 +184,13 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         });
     }
 
+    // Sort by price (asc), prioritizing resold shares if prices are equal
     orderBook.sort((a, b) => a.price !== b.price ? a.price - b.price : a.source === 'resale' ? -1 : 1);
 
     // --- 2. Fulfill the order ---
     let remainingQty = quantity;
     let totalCost = 0;
-    const purchasedShares: { price: number; quantity: number; source: 'resale' | 'primary'; id: string, resellerId?: string }[] = [];
+    const purchasedShares: { price: number; quantity: number; source: 'resale' | 'primary'; id: string, resellerId?: string, fractalIds?: string[] }[] = [];
     
     for (const order of orderBook) {
         if (remainingQty <= 0) break;
@@ -204,6 +209,18 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     const newOwnedFractals: OwnedFractal[] = [];
     
     purchasedShares.forEach(purchase => {
+        // Handle consumption from the source
+        if (purchase.source === 'resale') {
+            const listingIndex = tempResaleListings.findIndex(l => l.id === purchase.id);
+            if(listingIndex > -1) {
+                tempResaleListings[listingIndex].quantity -= purchase.quantity;
+                 if (tempResaleListings[listingIndex].quantity <= 0) {
+                    tempResaleListings[listingIndex].status = 'sold';
+                }
+            }
+        }
+        
+        // Create new fractals for the buyer
         for (let i = 0; i < purchase.quantity; i++) {
             newOwnedFractals.push({
                 id: `${artist.id}-${Date.now()}-${Math.random()}`,
@@ -215,40 +232,25 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
                 status: 'owned'
             });
         }
-        
-        if (purchase.source === 'resale') {
-            const listingIndex = tempResaleListings.findIndex(l => l.id === purchase.id);
-            if(listingIndex > -1) {
-                const listing = tempResaleListings[listingIndex];
-                listing.quantity -= purchase.quantity;
-                if(listing.quantity <= 0) {
-                    listing.status = 'sold';
-                }
-                
-                const sellerFractalIds = listing.fractalIds.splice(0, purchase.quantity);
-                tempCollection = tempCollection.filter(f => !sellerFractalIds.includes(f.id));
-            }
-        }
     });
 
     tempCollection.push(...newOwnedFractals);
     tempResaleListings = tempResaleListings.filter(l => l.status !== 'sold');
 
     // --- 4. Market Impact & Reverse Pricing ---
-    const artistToUpdate = tempArtists.find(a => a.id === artist.id)!;
-    const P_old = artistToUpdate.fractalPrice;
-    const F = artistToUpdate.totalEditions;
+    const P_old = artistForTx.fractalPrice;
+    const F = artistForTx.totalEditions;
     const BETA = 1.118;
-    const P_new = P_old * Math.exp(BETA * Math.sqrt(quantity / F));
+    const P_new = F > 0 ? P_old * Math.exp(BETA * Math.sqrt(quantity / F)) : P_old;
 
-    let artistFractals = tempFractals.filter(f => f.artistId === artist.id);
-    const V = artistFractals.reduce((sum, f) => sum + f.price, 0);
-    const sum_Si_Vi = artistFractals.reduce((sum, f) => sum + (f.aiScore || 0) * f.price, 0);
+    let artistArtworks = tempFractals.filter(f => f.artistId === artist.id);
+    const V = artistArtworks.reduce((sum, f) => sum + f.price, 0);
+    const sum_Si_Vi = artistArtworks.reduce((sum, f) => sum + (f.aiScore || 0) * f.price, 0);
     const k = sum_Si_Vi > 0 ? V / sum_Si_Vi : 0;
     
     if (k > 0) {
         const delta_V_eff = (P_new - P_old) * F;
-        const sum_S_squared = artistFractals.reduce((sum, f) => sum + Math.pow(f.aiScore || 0, 2), 0);
+        const sum_S_squared = artistArtworks.reduce((sum, f) => sum + Math.pow(f.aiScore || 0, 2), 0);
         const c = sum_S_squared > 0 ? delta_V_eff / (k * sum_S_squared) : 0;
         
         tempFractals = tempFractals.map(f => {
@@ -266,18 +268,18 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     
     const newTotalPortfolioValue = tempFractals.filter(f => f.artistId === artist.id).reduce((sum, f) => sum + f.price, 0);
     const primarySharesBought = purchasedShares.filter(p => p.source === 'primary').reduce((sum, p) => sum + p.quantity, 0);
-
-    const updatedArtist = {
-        ...artistToUpdate,
-        fractalPrice: P_new,
-        availableEditions: artistToUpdate.availableEditions - primarySharesBought,
-        priceHistory: [...artistToUpdate.priceHistory, { date: new Date().toISOString(), price: P_new }],
-        totalPortfolioValueHistory: [...artistToUpdate.totalPortfolioValueHistory, { date: new Date().toISOString(), value: Math.round(newTotalPortfolioValue) }],
-    };
-
-    tempArtists = tempArtists.map(a => a.id === artist.id ? updatedArtist : a);
     
-    // --- 5. Set All States ---
+    const artistIndexToUpdate = tempArtists.findIndex(a => a.id === artist.id);
+    const updatedArtist = {
+        ...artistForTx,
+        fractalPrice: P_new,
+        availableEditions: artistForTx.availableEditions - primarySharesBought,
+        priceHistory: [...artistForTx.priceHistory, { date: new Date().toISOString(), price: P_new }],
+        totalPortfolioValueHistory: [...artistForTx.totalPortfolioValueHistory, { date: new Date().toISOString(), value: Math.round(newTotalPortfolioValue) }],
+    };
+    tempArtists[artistIndexToUpdate] = updatedArtist;
+    
+    // --- 5. Set All States Atomically ---
     setUser(tempUser);
     setCollection(tempCollection);
     setResaleListings(tempResaleListings);
@@ -299,14 +301,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     const fractalsToList = availableToSell.slice(0, options.quantity);
     const fractalIdsToList = fractalsToList.map(f => f.id);
 
-    setCollection(prev => prev.map(f => fractalIdsToList.includes(f.id) ? { ...f, status: 'listed' } : f));
-
-    setArtists(prev => prev.map(a => {
-        if (a.id === artist.id) {
-            return { ...a, availableEditions: a.availableEditions + options.quantity };
-        }
-        return a;
-    }));
+    // This is the correct way to update multiple states that depend on each other.
+    // We create new versions of the arrays and then set them.
+    const newCollection = collection.map(f => fractalIdsToList.includes(f.id) ? { ...f, status: 'listed' } : f);
 
     const newListing: ResaleListing = {
       id: `resale-${Date.now()}`,
@@ -320,26 +317,48 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
       listingTimestamp: new Date().toISOString(),
       status: 'active'
     };
-    setResaleListings(prev => [...prev, newListing]);
+    const newResaleListings = [...resaleListings, newListing];
+    
+    const newArtists = artists.map(a => {
+        if (a.id === artist.id) {
+            // Add the newly listed shares back to the available pool for buyers
+            return { ...a, availableEditions: a.availableEditions + options.quantity };
+        }
+        return a;
+    });
 
-  }, [user, collection]);
+    // Set all states at once
+    setCollection(newCollection);
+    setResaleListings(newResaleListings);
+    setArtists(newArtists);
+    
+    toast({
+        title: 'Listing Successful!',
+        description: `You have listed ${options.quantity} fractal${options.quantity > 1 ? 's' : ''} of ${artist.name}'s portfolio for sale.`,
+    });
+
+  }, [user, collection, artists, resaleListings, toast]);
 
   const cancelListing = useCallback(async (listingId: string) => {
     const listing = resaleListings.find(l => l.id === listingId && l.resellerId === user?.uid);
     if (!listing) return;
     
-    setResaleListings(prev => prev.filter(l => l.id !== listingId));
-    setCollection(prev => prev.map(f => listing.fractalIds.includes(f.id) ? { ...f, status: 'owned' } : f));
-    
-    setArtists(prev => prev.map(a => {
+    const newCollection = collection.map(f => listing.fractalIds.includes(f.id) ? { ...f, status: 'owned' } : f);
+    const newResaleListings = resaleListings.filter(l => l.id !== listingId);
+    const newArtists = artists.map(a => {
         if (a.id === listing.artistId) {
+            // Remove the shares from the available pool
             return { ...a, availableEditions: a.availableEditions - listing.quantity };
         }
         return a;
-    }));
+    });
+    
+    setCollection(newCollection);
+    setResaleListings(newResaleListings);
+    setArtists(newArtists);
 
     toast({ title: 'Listing Cancelled', description: 'Your fractals have been returned to your holdings.'});
-  }, [resaleListings, user, toast]);
+  }, [resaleListings, user, collection, artists, toast]);
 
 
   // --- Watchlist ---
@@ -358,7 +377,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         priceHistory: [{ date: new Date().toISOString(), price: 25.00 }],
         totalPortfolioValueHistory: [{ date: new Date().toISOString(), value: 0 }],
         totalEditions: 0,
-        availableEditions: 0
+        availableEditions: 0,
+        avatar: profileData.avatar || 'https://placehold.co/100x100.png'
      };
      setArtists(prev => [...prev, newProfile]);
      setArtistProfile(newProfile);
@@ -366,9 +386,13 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   
   const updateArtistProfile = useCallback(async (profileData: Partial<ArtistProfile>) => {
     if (!artistProfile) throw new Error("Artist profile not found.");
-    setArtists(prev => prev.map(a => a.id === artistProfile.id ? { ...a, ...profileData } as Artist : a));
-    setArtistProfile(prev => prev ? { ...prev, ...profileData } : null);
-  }, [artistProfile]);
+    
+    const newArtists = artists.map(a => a.id === artistProfile.id ? { ...a, ...profileData } as Artist : a);
+    const newArtistProfile = { ...artistProfile, ...profileData };
+
+    setArtists(newArtists);
+    setArtistProfile(newArtistProfile);
+  }, [artistProfile, artists]);
 
   const addArtwork = useCallback(async (artworkData: NewArtworkData, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
       if (!artistProfile) throw new Error("Artist profile not found.");

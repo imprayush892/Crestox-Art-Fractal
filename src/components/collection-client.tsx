@@ -89,8 +89,7 @@ export function CollectionClient() {
 
   const handleCardClick = (artistId: string) => {
     const artist = artistMap.get(artistId);
-    const ownedFractals = collection.filter(f => f.artistId === artistId && f.status === 'owned');
-    if (artist && ownedFractals.length > 0) {
+    if (artist) {
         setSelectedArtist(artist);
     }
   };
