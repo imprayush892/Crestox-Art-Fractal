@@ -125,55 +125,60 @@ export default function CreateArtworkPage() {
     }
   });
 
-  async function onFormSubmit(data: ArtworkFormValues) {
+  const onFormSubmit = async (data: ArtworkFormValues) => {
     if (!artistProfile) return;
     setIsEvaluating(true);
-    
-    try {
+
+    const fileToDataUrl = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.readAsDataURL(data.image);
-        reader.onloadend = async () => {
-            const imageDataUri = reader.result as string;
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      });
+    };
 
-            let artworkSizeString = `${data.length} x ${data.breadth}`;
-            if (data.height) {
-                artworkSizeString += ` x ${data.height}`;
-            }
-            artworkSizeString += ` ${data.unit}`;
+    try {
+      const imageDataUri = await fileToDataUrl(data.image);
 
-            const evaluationInput = {
-                photoDataUri: imageDataUri,
-                title: data.title,
-                description: data.description,
-                materials: data.materials,
-                artworkSize: artworkSizeString,
-                minEstimatedValue: data.minEstimatedValue,
-                maxEstimatedValue: data.maxEstimatedValue,
-                subjectSignificance: data.subjectSignificance,
-                personalSignificance: data.personalSignificance,
-                timeEffort: data.timeEffort,
-                biographicalContext: data.biographicalContext,
-                commissionPatronage: data.commissionPatronage,
-                artistBio: artistProfile.bio,
-                artistAwards: artistProfile.awards.join(', '),
-                artistExhibitions: artistProfile.exhibitions.join(', '),
-            };
+      let artworkSizeString = `${data.length} x ${data.breadth}`;
+      if (data.height) {
+        artworkSizeString += ` x ${data.height}`;
+      }
+      artworkSizeString += ` ${data.unit}`;
 
-            const result = await evaluateArtwork(evaluationInput);
-            setProgress(100);
-            setEvaluationResult(result);
-            setIsEvaluating(false);
-        }
+      const evaluationInput = {
+        photoDataUri: imageDataUri,
+        title: data.title,
+        description: data.description,
+        materials: data.materials,
+        artworkSize: artworkSizeString,
+        minEstimatedValue: data.minEstimatedValue,
+        maxEstimatedValue: data.maxEstimatedValue,
+        subjectSignificance: data.subjectSignificance || "",
+        personalSignificance: data.personalSignificance || "",
+        timeEffort: data.timeEffort || "",
+        biographicalContext: data.biographicalContext || "",
+        commissionPatronage: data.commissionPatronage || "",
+        artistBio: artistProfile.bio,
+        artistAwards: artistProfile.awards.join(', '),
+        artistExhibitions: artistProfile.exhibitions.join(', '),
+      };
+      
+      const result = await evaluateArtwork(evaluationInput);
+      setProgress(100);
+      setEvaluationResult(result);
     } catch (error) {
-        console.error("Error during artwork evaluation:", error);
-        toast({
-            variant: "destructive",
-            title: "Uh oh! Something went wrong.",
-            description: "There was a problem evaluating your artwork. Please try again.",
-        });
-        setIsEvaluating(false);
+      console.error("Error during artwork evaluation:", error);
+      toast({
+        variant: "destructive",
+        title: "Evaluation Failed",
+        description: "There was a problem evaluating your artwork. This could be due to a network issue or a problem with the AI service. Please try again.",
+      });
+    } finally {
+      setIsEvaluating(false);
     }
-  }
+  };
 
   const handlePriceChoice = async (useCrestoxPrice: boolean) => {
     if (!addArtwork || !evaluationResult) return;
