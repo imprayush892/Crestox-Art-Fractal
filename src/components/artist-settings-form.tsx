@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
@@ -141,7 +140,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
                     <FormLabel>Avatar</FormLabel>
                     <div className="flex items-center gap-6">
                         <Avatar className="w-24 h-24">
-                            <AvatarImage src={avatarPreview} alt={artist.name} data-ai-hint="artist avatar" />
+                            <AvatarImage src={avatarPreview ?? undefined} alt={artist.name} data-ai-hint="artist avatar" />
                             <AvatarFallback><User className="w-10 h-10" /></AvatarFallback>
                         </Avatar>
                         <FormControl>
