@@ -133,7 +133,7 @@ export function CollectionClient() {
       <div className="text-center mb-8">
         <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">My Collection</h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-          Stay on top of all your fractal activities.
+          Track your fractal portfolio, manage holdings, and discover new art.
         </p>
       </div>
 
@@ -141,22 +141,22 @@ export function CollectionClient() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Current Portfolio Value</CardTitle>
+              <CardTitle className="text-sm font-medium">Portfolio Value</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₹{portfolioStats.currentValue.toLocaleString('en-IN', {maximumFractionDigits: 0})}</div>
-              <p className="text-xs text-muted-foreground">Based on current market prices</p>
+              <p className="text-xs text-muted-foreground">in Cred Coins</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Collected</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
               <BarChart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₹{portfolioStats.totalCollectedValue.toLocaleString('en-IN', {minimumFractionDigits: 1, maximumFractionDigits: 1})}</div>
-              <p className="text-xs text-muted-foreground">The total amount spent collecting</p>
+              <p className="text-xs text-muted-foreground">in Cred Coins</p>
             </CardContent>
           </Card>
           <Card>
@@ -169,7 +169,7 @@ export function CollectionClient() {
               ₹{portfolioStats.gainLoss.toLocaleString('en-IN', { signDisplay: 'always', minimumFractionDigits: 1, maximumFractionDigits: 1 })}
               </div>
               <p className={`text-xs ${portfolioStats.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {portfolioStats.gainLossPercent.toFixed(2)}% all time
+                {portfolioStats.gainLossPercent.toFixed(2)}% all time (in Cred Coins)
               </p>
             </CardContent>
           </Card>
@@ -210,7 +210,7 @@ export function CollectionClient() {
                                 </CardHeader>
                                 <CardContent className="grid gap-4 flex-grow cursor-pointer" onClick={() => handleCardClick(artistId)}>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                                        <span className="text-sm text-muted-foreground">Total Collected</span>
+                                        <span className="text-sm text-muted-foreground">Total Spent</span>
                                         <span className="font-semibold">₹{totalCollected.toLocaleString('en-IN')}</span>
                                     </div>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">

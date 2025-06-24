@@ -17,7 +17,7 @@ import {
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, Wallet } from 'lucide-react';
 import { Separator } from './ui/separator';
 
 interface CollectionDialogProps {
@@ -28,12 +28,10 @@ interface CollectionDialogProps {
 
 export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogProps) {
   const [quantity, setQuantity] = useState(1);
-  const { collectFromPortfolio } = useAuth();
+  const { user, collectFromPortfolio } = useAuth();
   const { toast } = useToast();
 
-  const subtotal = useMemo(() => quantity * artist.fractalPrice, [quantity, artist.fractalPrice]);
-  const taxAmount = useMemo(() => subtotal * 0.18, [subtotal]);
-  const totalCost = useMemo(() => subtotal + taxAmount, [subtotal, taxAmount]);
+  const totalCost = useMemo(() => quantity * artist.fractalPrice, [quantity, artist.fractalPrice]);
 
   useEffect(() => {
     if (isOpen) {
@@ -47,13 +45,18 @@ export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogPr
     }
   };
 
-  const handleConfirm = () => {
-    collectFromPortfolio(artist, quantity);
-    toast({
-      title: 'Collection Successful!',
-      description: `You have purchased ${quantity} fractal${quantity > 1 ? 's' : ''} of ${artist.name}'s portfolio.`,
-    });
-    onClose();
+  const handleConfirm = async () => {
+    try {
+        await collectFromPortfolio(artist, quantity);
+        toast({
+          title: 'Collection Successful!',
+          description: `You have collected ${quantity} fractal${quantity > 1 ? 's' : ''} of ${artist.name}'s portfolio.`,
+        });
+        onClose();
+    } catch (error) {
+        // Error toast is handled in the context
+        console.error("Collection failed:", error);
+    }
   };
   
   if (!artist) return null;
@@ -64,12 +67,21 @@ export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogPr
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">Collect from {artist.name}</DialogTitle>
           <DialogDescription>
-            Select how many fractals of this artist's portfolio you'd like to acquire.
+            Acquire fractals from this artist's portfolio using your Cred Coins.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
+            {user && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Wallet className="w-4 h-4" />
+                        <span>Your Balance</span>
+                    </div>
+                    <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')} Cred Coins</span>
+                </div>
+            )}
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                <span className="text-muted-foreground">Current Price / Fractal</span>
+                <span className="text-muted-foreground">Price / Fractal</span>
                 <span className="font-bold">₹{artist.fractalPrice.toLocaleString('en-IN')}</span>
             </div>
             <div className="grid gap-2">
@@ -111,19 +123,11 @@ export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogPr
             <Separator />
 
             <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">G.S.T. (18%)</span>
-                    <span className="font-medium">₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <Separator className="my-2"/>
                 <div className="flex items-center justify-between text-lg font-bold text-primary">
-                    <span>Total Payable</span>
+                    <span>Total Cost</span>
                     <span>₹{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
+                 <p className="text-xs text-muted-foreground text-right">Payable in Cred Coins</p>
             </div>
         </div>
         <DialogFooter>
@@ -132,7 +136,7 @@ export function CollectionDialog({ artist, isOpen, onClose }: CollectionDialogPr
                 Cancel
             </Button>
           </DialogClose>
-          <Button type="button" onClick={handleConfirm}>
+          <Button type="button" onClick={handleConfirm} disabled={!user || user.walletBalance < totalCost}>
             Confirm Collection
           </Button>
         </DialogFooter>

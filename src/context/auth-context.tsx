@@ -148,7 +148,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     if (!user) throw new Error("User must be logged in.");
     const totalCost = quantity * artist.fractalPrice;
     if (user.walletBalance < totalCost) {
-      toast({ variant: "destructive", title: "Insufficient Funds", description: "You don't have enough CreCoins to make this purchase." });
+      toast({ variant: "destructive", title: "Insufficient Cred Coins", description: "You don't have enough Cred Coins for this transaction." });
       throw new Error("Insufficient funds");
     }
 
@@ -382,4 +382,3 @@ export function useAuth() {
   }
   return context;
 }
-    

@@ -131,8 +131,8 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
            ) : (
             <Card className="sticky top-24">
                   <CardHeader>
-                      <CardTitle className="font-headline text-2xl">Collect from the Portfolio</CardTitle>
-                      <CardDescription>Purchase a "fractal" to own a piece of this artist's entire collection.</CardDescription>
+                      <CardTitle className="font-headline text-2xl">Collect with Cred Coins</CardTitle>
+                      <CardDescription>Purchase a "fractal" using Cred Coins to own a piece of this artist's collection.</CardDescription>
                   </CardHeader>
                   <CardContent>
                       <div className="flex justify-between items-center mb-4">
@@ -226,7 +226,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                 <CardContent className="p-0">
                     <TabsContent value="fractal-value" className="mt-0">
                        <CardDescription className="px-4 sm:px-6 mb-4 text-sm">
-                            Historical value of one fractal from {artist.name}'s portfolio.
+                            Historical value (in Cred Coins) of one fractal from {artist.name}'s portfolio.
                         </CardDescription>
                         <div className="p-4 pt-0 sm:p-6 sm:pt-0">
                             <ChartContainer 
@@ -272,7 +272,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     </TabsContent>
                     <TabsContent value="total-valuation" className="mt-0">
                         <CardDescription className="px-4 sm:px-6 mb-4 text-sm">
-                            Historical total valuation of {artist.name}'s entire collection.
+                            Historical total valuation (in Cred Coins) of {artist.name}'s entire collection.
                         </CardDescription>
                         <div className="p-4 pt-0 sm:p-6 sm:pt-0">
                             <ChartContainer 

@@ -1,7 +1,8 @@
+
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, User, X } from 'lucide-react';
+import { Menu, User, X, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -10,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { Logo } from './logo';
 
 export function Header() {
-  const { isLoggedIn, logout, artistProfile } = useAuth();
+  const { isLoggedIn, logout, artistProfile, user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
@@ -68,6 +69,13 @@ export function Header() {
           <div className="flex items-center gap-4">
             {isLoggedIn ? (
               <>
+                {user && (
+                    <div className="flex items-center gap-2">
+                        <Wallet className="w-5 h-5 text-primary"/>
+                        <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')}</span>
+                        <span className="text-sm text-muted-foreground">Cred Coins</span>
+                    </div>
+                )}
                 <Button onClick={handleLogout} variant="secondary">Logout</Button>
                 <Avatar>
                   <AvatarImage src={artistProfile?.avatar} alt="User" data-ai-hint="user avatar" />
@@ -132,6 +140,12 @@ export function Header() {
                 <div className="mt-auto border-t p-4">
                  {isLoggedIn ? (
                     <div className="flex flex-col gap-4">
+                        {user && (
+                            <div className="flex items-center gap-2 text-lg font-medium">
+                                <Wallet className="w-5 h-5"/>
+                                <span>{user.walletBalance.toLocaleString('en-IN')} Cred Coins</span>
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 font-medium">
                             <Avatar>
                               <AvatarImage src={artistProfile?.avatar} alt="User" data-ai-hint="user avatar" />

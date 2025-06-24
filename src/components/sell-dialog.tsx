@@ -96,7 +96,7 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl">List Fractals for Resale: {artist.name}</DialogTitle>
           <DialogDescription>
-            Set your pricing and terms to list your fractals on the secondary market.
+            Set your pricing in Cred Coins (1 Cred Coin = ₹1) to list your fractals on the secondary market.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -119,17 +119,17 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
             
             <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                    <Label htmlFor="initial-price">Initial Price (Q)</Label>
+                    <Label htmlFor="initial-price">Initial Price (in ₹)</Label>
                     <Input id="initial-price" type="number" placeholder="e.g. 120" value={initialPrice} onChange={(e) => setInitialPrice(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
-                    <Label htmlFor="min-price">Minimum Price (S)</Label>
+                    <Label htmlFor="min-price">Minimum Price (in ₹)</Label>
                     <Input id="min-price" type="number" placeholder="e.g. 80" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} />
                 </div>
             </div>
 
             <div className="grid gap-2">
-                <Label htmlFor="period">Selling Period (T)</Label>
+                <Label htmlFor="period">Selling Period</Label>
                 <Select value={periodDays} onValueChange={setPeriodDays}>
                     <SelectTrigger>
                         <SelectValue placeholder="Select a period" />
