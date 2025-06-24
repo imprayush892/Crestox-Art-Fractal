@@ -40,7 +40,7 @@ export function CollectionClient() {
   const artistMap = useMemo(() => new Map(artists.map(a => [a.id, a])), [artists]);
 
   const portfolioStats = useMemo(() => {
-    const holdings = collection.filter(f => f.status !== 'listed');
+    const holdings = collection.filter(f => f.status === 'owned');
     
     const totalCollectedValue = holdings.reduce((sum, f) => sum + f.purchasePrice, 0);
     
@@ -69,7 +69,10 @@ export function CollectionClient() {
   }, [collection]);
 
   const sortedArtistIds = useMemo(() => {
-      return Object.keys(collectionByArtist).sort((a, b) => {
+      const artistIdsWithHoldings = Object.keys(collectionByArtist).filter(artistId => 
+        collectionByArtist[artistId].some(f => f.status === 'owned')
+      );
+      return artistIdsWithHoldings.sort((a, b) => {
           const artistA = artistMap.get(a)?.name || '';
           const artistB = artistMap.get(b)?.name || '';
           return artistA.localeCompare(artistB);
@@ -192,6 +195,7 @@ export function CollectionClient() {
 
                         const allFractalsForArtist = collectionByArtist[artistId] || [];
                         const ownedByArtist = allFractalsForArtist.filter(f => f.status === 'owned');
+                        const listedByArtist = allFractalsForArtist.filter(f => f.status === 'listed');
                         
                         if(ownedByArtist.length === 0) return null;
 
@@ -208,7 +212,7 @@ export function CollectionClient() {
                                     <Wallet className="w-8 h-8 text-primary"/>
                                     <div>
                                         <CardTitle className="font-headline text-2xl">{artist.name}</CardTitle>
-                                        <CardDescription>{ownedByArtist.length} Fractal{ownedByArtist.length > 1 ? 's' : ''} in Holdings</CardDescription>
+                                        <CardDescription>{ownedByArtist.length} in Holdings, {listedByArtist.length} on Sale</CardDescription>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="grid gap-4 flex-grow cursor-pointer" onClick={() => handleCardClick(artistId)}>
@@ -230,7 +234,7 @@ export function CollectionClient() {
                                         <Link href={`/artist/${artist.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-primary hover:underline text-xs">
                                             View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
                                         </Link>
-                                        <Button size="sm" variant="outline" onClick={(e) => handleSellClick(e, artist)}>
+                                        <Button size="sm" variant="outline" onClick={(e) => handleSellClick(e, artist)} disabled={ownedByArtist.length === 0}>
                                             <DollarSign className="mr-1 h-3 w-3" /> Sell
                                         </Button>
                                     </div>

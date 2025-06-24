@@ -145,7 +145,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     if (quantity <= 0) throw new Error("Quantity must be greater than zero.");
 
     // --- 1. Build and sort the order book ---
-    let orderBook: { price: number; quantity: number; source: 'resale' | 'primary'; id: string }[] = [];
+    let orderBook: { price: number; quantity: number; source: 'resale' | 'primary'; id: string; resellerId?: string }[] = [];
     
     const activeResaleListings = resaleListings.filter(l => l.artistId === artist.id && l.status === 'active');
     activeResaleListings.forEach(listing => {
@@ -160,7 +160,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
             price: Math.round(currentPrice * 100) / 100,
             quantity: listing.quantity,
             source: 'resale',
-            id: listing.id
+            id: listing.id,
+            resellerId: listing.resellerId,
         });
     });
 
@@ -181,7 +182,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     // --- 2. Fulfill the order ---
     let remainingQty = quantity;
     let totalCost = 0;
-    const purchasedShares: { price: number; quantity: number; source: 'resale' | 'primary'; id: string }[] = [];
+    const purchasedShares: { price: number; quantity: number; source: 'resale' | 'primary'; id: string, resellerId?: string }[] = [];
     
     for (const order of orderBook) {
         if (remainingQty <= 0) break;
@@ -217,7 +218,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         } else { // Resale
             setResaleListings(prev => prev.map(l => 
                 l.id === purchase.id ? { ...l, quantity: l.quantity - purchase.quantity, status: l.quantity - purchase.quantity === 0 ? 'sold' : 'active' } : l
-            ));
+            ).filter(l => l.status !== 'sold')); // remove sold out listings
+            // Find which fractals to transfer from reseller
+            const resellerSoldFractals = collection.filter(f => f.status === 'listed' && f.artistId === artist.id).slice(0, purchase.quantity);
+            const resellerSoldFractalIds = resellerSoldFractals.map(f => f.id);
+            setCollection(prev => prev.filter(f => !resellerSoldFractalIds.includes(f.id)));
         }
     });
 
@@ -239,9 +244,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     };
 
     const artistFractals = fractals.filter(f => f.artistId === artist.id);
-    const sum_V = artistFractals.reduce((sum, f) => sum + f.price, 0);
+    const V = artistFractals.reduce((sum, f) => sum + f.price, 0);
     const sum_Si_Vi = artistFractals.reduce((sum, f) => sum + (f.aiScore || 0) * f.price, 0);
-    const k = sum_Si_Vi > 0 ? sum_V / sum_Si_Vi : 0;
+    const k = sum_Si_Vi > 0 ? V / sum_Si_Vi : 0;
     
     let newFractals = [...fractals];
 
@@ -300,21 +305,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     };
     setResaleListings(prev => [...prev, newListing]);
 
-    setArtists(prevArtists => prevArtists.map(a => 
-      a.id === artist.id ? { ...a, availableEditions: a.availableEditions + options.quantity } : a
-    ));
-
   }, [user, collection]);
 
   const cancelListing = useCallback(async (listingId: string) => {
     const listing = resaleListings.find(l => l.id === listingId && l.resellerId === user?.uid);
     if (!listing) return;
     
-    setResaleListings(prev => prev.map(l => l.id === listingId ? { ...l, status: 'cancelled' } : l));
+    setResaleListings(prev => prev.map(l => l.id === listingId ? { ...l, status: 'cancelled' } : l).filter(l => l.status !== 'cancelled'));
     setCollection(prev => prev.map(f => listing.fractalIds.includes(f.id) ? { ...f, status: 'owned' } : f));
-    setArtists(prevArtists => prevArtists.map(a => 
-      a.id === listing.artistId ? { ...a, availableEditions: a.availableEditions - listing.quantity } : a
-    ));
     toast({ title: 'Listing Cancelled', description: 'Your fractals have been returned to your holdings.'});
   }, [resaleListings, user, toast]);
 
