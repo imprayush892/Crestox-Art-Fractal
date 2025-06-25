@@ -76,6 +76,11 @@
     margin: 0;
     border: none !important;
     box-shadow: none !important;
+    background: white !important;
+  }
+  .printable-area .overflow-y-auto {
+    overflow-y: visible !important;
+    max-height: none !important;
   }
   .no-print {
     display: none !important;

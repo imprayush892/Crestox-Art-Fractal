@@ -44,46 +44,48 @@ export function ScorecardDialog({ isOpen, onClose, fractal }: ScorecardDialogPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl printable-area">
-        <DialogHeader>
-          <DialogTitle className="font-headline text-2xl">Crestox Evaluation Scorecard</DialogTitle>
-          <DialogDescription>
-            Detailed analysis for "{fractal.title}".
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="flex items-center justify-between my-4 bg-muted/50 p-4 rounded-lg">
-            <div className="text-center">
-                <p className="text-sm text-muted-foreground">Final Score</p>
-                <p className="text-3xl font-bold">{fractal.aiScore}</p>
-            </div>
-             <div className="text-center">
-                <p className="text-sm text-muted-foreground">Crestox Grade</p>
-                <Badge variant="secondary" className="text-2xl mt-1 px-4 py-1">{fractal.crestoxGrade || 'N/A'}</Badge>
-            </div>
-        </div>
+      <DialogContent className="sm:max-w-2xl">
+        <div className="printable-area">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-2xl">Crestox Evaluation Scorecard</DialogTitle>
+            <DialogDescription>
+              Detailed analysis for "{fractal.title}".
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex items-center justify-between my-4 bg-muted/50 p-4 rounded-lg">
+              <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Final Score</p>
+                  <p className="text-3xl font-bold">{fractal.aiScore}</p>
+              </div>
+              <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Crestox Grade</p>
+                  <Badge variant="secondary" className="text-2xl mt-1 px-4 py-1">{fractal.crestoxGrade || 'N/A'}</Badge>
+              </div>
+          </div>
 
-        <div className="mt-4 max-h-[50vh] overflow-y-auto">
-          <Table>
-            <TableHeader className="sticky top-0 bg-background z-10">
-              <TableRow>
-                <TableHead>Criterion</TableHead>
-                <TableHead className="text-center">Weight</TableHead>
-                <TableHead className="text-center">Score (0-10)</TableHead>
-                <TableHead className="text-right">Weighted Score</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {fractal.aiScorecard?.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium text-xs">{item.criterion}</TableCell>
-                  <TableCell className="text-center">{item.weight}%</TableCell>
-                  <TableCell className={`text-center font-bold text-lg ${getScoreColor(item.score)}`}>{item.score}</TableCell>
-                  <TableCell className="text-right font-medium">{item.weightedScore.toFixed(2)}</TableCell>
+          <div className="mt-4 max-h-[50vh] overflow-y-auto">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow>
+                  <TableHead>Criterion</TableHead>
+                  <TableHead className="text-center">Weight</TableHead>
+                  <TableHead className="text-center">Score (0-10)</TableHead>
+                  <TableHead className="text-right">Weighted Score</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {fractal.aiScorecard?.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium text-xs">{item.criterion}</TableCell>
+                    <TableCell className="text-center">{item.weight}%</TableCell>
+                    <TableCell className={`text-center font-bold text-lg ${getScoreColor(item.score)}`}>{item.score}</TableCell>
+                    <TableCell className="text-right font-medium">{item.weightedScore.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         <DialogFooter className="mt-6 no-print">
