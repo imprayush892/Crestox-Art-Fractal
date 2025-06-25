@@ -39,7 +39,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
   const [maxAvailable, setMaxAvailable] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { user, collectFromPortfolio, resaleListings, artists } = useAuth();
+  const { user, collectFromPortfolio, resaleListings, artists, collection } = useAuth();
   const { toast } = useToast();
 
   const currentArtist = useMemo(() => {
@@ -53,15 +53,21 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
       const availableFromResale = activeResaleListings.reduce((sum, l) => sum + l.quantity, 0);
       const availableFromArtist = currentArtist.availableEditions;
       const totalAvailable = availableFromResale + availableFromArtist;
-      setMaxAvailable(totalAvailable);
 
-      if (quantity > totalAvailable) {
-        setQuantity(totalAvailable > 0 ? 1 : 0);
-      } else if(quantity === 0 && totalAvailable > 0) {
+      const currentUserHoldings = collection.filter(f => f.artistId === currentArtist.id && f.status === 'owned').length;
+      const holdingLimit = currentArtist.totalEditions > 0 ? Math.floor(currentArtist.totalEditions * 0.1) : 0;
+      const purchaseLimit = Math.max(0, holdingLimit - currentUserHoldings);
+
+      const finalMaxAvailable = Math.min(totalAvailable, purchaseLimit);
+      setMaxAvailable(finalMaxAvailable);
+
+      if (quantity > finalMaxAvailable) {
+        setQuantity(finalMaxAvailable > 0 ? 1 : 0);
+      } else if(quantity === 0 && finalMaxAvailable > 0) {
         setQuantity(1);
       }
     }
-  }, [isOpen, currentArtist, resaleListings, quantity]);
+  }, [isOpen, currentArtist, resaleListings, quantity, collection]);
 
 
   useEffect(() => {
@@ -173,7 +179,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
                     <Input id="quantity" type="number" value={quantity} onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 0)} className="col-span-3 text-center h-10" min="0" max={maxAvailable} />
                     <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity + 1)} disabled={quantity >= maxAvailable}> <Plus className="h-4 w-4" /> </Button>
                 </div>
-                 <p className="text-xs text-muted-foreground text-right">{maxAvailable.toLocaleString('en-IN')} available</p>
+                 <p className="text-xs text-muted-foreground text-right">{maxAvailable.toLocaleString('en-IN')} available (10% portfolio cap)</p>
             </div>
             
             <Separator />

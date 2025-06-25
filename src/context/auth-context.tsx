@@ -34,6 +34,7 @@ export interface ResaleListing {
     quantity: number;
     initialPrice: number;
     minPrice: number;
+
     periodSeconds: number;
     listingTimestamp: string;
     status: 'active' | 'sold' | 'cancelled';
@@ -150,6 +151,18 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     const artist = artists.find(a => a.id === artistToUpdate.id);
     if (!artist) {
         toast({ variant: 'destructive', title: 'Error', description: 'Artist not found.' });
+        return;
+    }
+
+    const currentUserHoldings = collection.filter(f => f.artistId === artist.id && f.status === 'owned').length;
+    const holdingLimit = artist.totalEditions > 0 ? Math.floor(artist.totalEditions * 0.1) : 0;
+
+    if (artist.totalEditions > 0 && currentUserHoldings + quantity > holdingLimit) {
+        toast({
+            variant: 'destructive',
+            title: 'Purchase Limit Exceeded',
+            description: `You cannot own more than 10% (${holdingLimit} fractals) of this artist's portfolio. You currently own ${currentUserHoldings}.`,
+        });
         return;
     }
 
