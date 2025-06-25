@@ -108,7 +108,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const [artists, setArtists] = useState<Artist[]>(initialArtists);
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
-  const [watchlist, setWatchlist] = useState<string[]>(['artist-2', 'artist-5']);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
   const [resaleListings, setResaleListings] = useState<ResaleListing[]>([]);
   const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
   
@@ -387,8 +387,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         id: newArtistId,
         userId: user.uid,
         ...profileData,
-        fractalPrice: 25.00,
-        priceHistory: [{ date: new Date().toISOString(), price: 25.00 }],
+        fractalPrice: 0,
+        priceHistory: [{ date: new Date().toISOString(), price: 0 }],
         totalPortfolioValueHistory: [{ date: new Date().toISOString(), value: 0 }],
         totalEditions: 0,
         availableEditions: 0,
