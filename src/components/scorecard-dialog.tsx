@@ -20,9 +20,10 @@ import {
 } from "@/components/ui/table"
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Download } from 'lucide-react';
-import { createPortal } from 'react-dom';
-import { useState, useEffect } from 'react';
+import { Download, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const ScorecardContent = ({ fractal }: { fractal: Fractal | null }) => {
   if (!fractal) return null;
@@ -34,7 +35,7 @@ const ScorecardContent = ({ fractal }: { fractal: Fractal | null }) => {
   }
 
   return (
-    <div className="p-4">
+    <div id="scorecard-content" className="bg-background p-4">
       <DialogHeader>
         <DialogTitle className="font-headline text-2xl">Crestox Evaluation Scorecard</DialogTitle>
         <DialogDescription>
@@ -87,40 +88,62 @@ interface ScorecardDialogProps {
 }
 
 export function ScorecardDialog({ isOpen, onClose, fractal }: ScorecardDialogProps) {
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
+  const [isDownloading, setIsDownloading] = useState(false);
+  
   if (!fractal) return null;
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownload = async () => {
+    const input = document.getElementById('scorecard-content');
+    if (!input) return;
+
+    setIsDownloading(true);
+
+    try {
+      const canvas = await html2canvas(input, {
+        scale: 2,
+        backgroundColor: '#FDFCF6',
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = imgWidth / imgHeight;
+      let newImgWidth = pdfWidth - 20; // with margin
+      let newImgHeight = newImgWidth / ratio;
+
+      if (newImgHeight > pdfHeight - 20) {
+        newImgHeight = pdfHeight - 20;
+        newImgWidth = newImgHeight * ratio;
+      }
+      
+      const x = (pdfWidth - newImgWidth) / 2;
+      const y = 10;
+      
+      pdf.addImage(imgData, 'PNG', x, y, newImgWidth, newImgHeight);
+      pdf.save(`Crestox-Scorecard-${fractal.title.replace(/\s/g, '_')}.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
-    <>
-        {isClient && isOpen && createPortal(
-            <div className="print-only">
-                <ScorecardContent fractal={fractal} />
-            </div>,
-            document.body
-        )}
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-2xl">
-                <div className="max-h-[80vh] overflow-y-auto">
-                  <ScorecardContent fractal={fractal} />
-                </div>
-                <DialogFooter className="mt-6">
-                    <Button onClick={handlePrint} variant="outline">
-                        <Download className="mr-2 h-4 w-4" />
-                        Download as PDF
-                    </Button>
-                    <Button onClick={onClose}>Close</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    </>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-2xl">
+            <div className="max-h-[80vh] overflow-y-auto">
+              <ScorecardContent fractal={fractal} />
+            </div>
+            <DialogFooter className="mt-6">
+                <Button onClick={handleDownload} variant="outline" disabled={isDownloading}>
+                    {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    Download as PDF
+                </Button>
+                <Button onClick={onClose}>Close</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
   );
 }

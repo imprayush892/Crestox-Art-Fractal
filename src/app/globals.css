@@ -58,19 +58,3 @@
     background-image: linear-gradient(to bottom, #FDFCF6, #EADDC6);
   }
 }
-
-.print-only {
-  display: none;
-}
-
-@media print {
-  body > *:not(.print-only) {
-    display: none !important;
-  }
-  .print-only {
-    display: block !important;
-  }
-  body {
-      background: white !important;
-  }
-}

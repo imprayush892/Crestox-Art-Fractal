@@ -39,7 +39,7 @@ export function HoldingCertificate({ artist, ownedFractals, allArtistFractals }:
   }
   
   return (
-    <div className="bg-background text-foreground font-serif p-8 max-w-4xl mx-auto">
+    <div id="certificate-content" className="bg-background text-foreground font-serif p-8 max-w-4xl mx-auto">
         <h1 className="text-center font-headline text-3xl font-bold tracking-tight mb-8">
             Certificate of Authentic Fractal Holding
         </h1>
