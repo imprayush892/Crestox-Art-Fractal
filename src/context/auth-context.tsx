@@ -57,7 +57,8 @@ interface NewArtworkData {
     minEstimatedValue: number;
     maxEstimatedValue: number;
     editionsToIssue: number;
-    image: string;
+    images: string[];
+    heroImage: string;
     subjectSignificance?: string;
     personalSignificance?: string;
     timeEffort?: string;
@@ -87,6 +88,7 @@ interface AuthContextType {
   createArtistProfile: (profileData: Omit<ArtistProfile, 'id' | 'userId' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'avatar'> & { avatar?: any; artistMessage?: string; }) => Promise<void>;
   updateArtistProfile: (profileData: Partial<ArtistProfile>) => Promise<void>;
   addArtwork: (artworkData: NewArtworkData, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
+  updateArtworkDetails: (artworkId: string, data: Partial<Fractal>) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
   reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
 }
@@ -461,6 +463,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
   }, [artistProfile, fractals]);
 
+  const updateArtworkDetails = useCallback(async (artworkId: string, data: Partial<Fractal>) => {
+    setFractals(prevFractals => 
+        prevFractals.map(f => f.id === artworkId ? { ...f, ...data } : f)
+    );
+    toast({
+        title: "Artwork Updated",
+        description: "Your changes have been saved."
+    })
+  }, [toast]);
+
   const updateAndReevaluateArtwork = useCallback(async (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => {
     if (!artistProfile) throw new Error("Artist profile not found.");
 
@@ -470,7 +482,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
         if (!oldFractal) return prevFractals;
 
         const crestoxPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
-        const artistPrice = Math.round((artworkData.minEstimatedValue + artworkData.maxEstimatedValue) / 2);
+        const artistPrice = (artworkData.minEstimatedValue && artworkData.maxEstimatedValue) 
+            ? Math.round((artworkData.minEstimatedValue + artworkData.maxEstimatedValue) / 2)
+            : oldFractal.price;
+
         const finalPrice = useCrestoxPrice ? crestoxPrice : artistPrice;
         const shouldApplyGrade = useCrestoxPrice || artistPrice <= crestoxPrice;
         
@@ -487,8 +502,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
           crestoxGrade: shouldApplyGrade ? evaluationResult.grade : oldFractal.crestoxGrade,
           aiScorecard: evaluationResult.breakdown,
           crestoxPriceRange: evaluationResult.crestoxPriceRange,
-          artistMinEstimate: artworkData.minEstimatedValue,
-          artistMaxEstimate: artworkData.maxEstimatedValue,
+          artistMinEstimate: artworkData.minEstimatedValue || oldFractal.artistMinEstimate,
+          artistMaxEstimate: artworkData.maxEstimatedValue || oldFractal.artistMaxEstimate,
+          heroImage: artworkData.heroImage || oldFractal.heroImage,
         };
         
         finalFractals = prevFractals.map(f => f.id === artworkId ? updatedFractal : f);
@@ -535,7 +551,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     const artworkSizeString = `${fractalToReevaluate.artworkSize.length} x ${fractalToReevaluate.artworkSize.breadth}${fractalToReevaluate.artworkSize.height ? ` x ${fractalToReevaluate.artworkSize.height}` : ''} ${fractalToReevaluate.artworkSize.unit}`;
 
     const evaluationInput = {
-        photoDataUri: fractalToReevaluate.image,
+        photoDataUri: fractalToReevaluate.heroImage,
         title: fractalToReevaluate.title,
         description: fractalToReevaluate.description,
         materials: fractalToReevaluate.materials,
@@ -611,7 +627,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   const value = {
     isLoggedIn, user, artistProfile, artists, fractals, collection, watchlist, resaleListings, holdingsByArtist,
     login, logout, collectFromPortfolio, listForResale, cancelListing, addToWatchlist, removeFromWatchlist,
-    createArtistProfile, updateArtistProfile, addArtwork, updateAndReevaluateArtwork, reevaluateArtworkForGrading
+    createArtistProfile, updateArtistProfile, addArtwork, updateArtworkDetails, updateAndReevaluateArtwork, reevaluateArtworkForGrading
   };
 
   return (

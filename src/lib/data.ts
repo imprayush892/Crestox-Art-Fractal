@@ -41,7 +41,8 @@ export interface Artist {
 export interface Fractal {
   id: string;
   title: string;
-  image: string;
+  images: string[];
+  heroImage: string;
   artistId: string;
   description: string;
   materials: string;
@@ -74,15 +75,21 @@ export const editArtworkFormSchema = z.object({
   breadth: z.coerce.number().min(0.1, "Breadth is required."),
   height: z.coerce.number().optional(),
   unit: z.enum(['in', 'cm', 'ft', 'px']),
-  minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least ₹1."),
-  maxEstimatedValue: z.coerce.number(),
+  minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least ₹1.").optional(),
+  maxEstimatedValue: z.coerce.number().optional(),
   editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
   subjectSignificance: z.string().max(500).optional(),
   personalSignificance: z.string().max(500).optional(),
   timeEffort: z.string().max(500).optional(),
   biographicalContext: z.string().max(500).optional(),
   commissionPatronage: z.string().max(500).optional(),
-}).refine(data => data.maxEstimatedValue >= data.minEstimatedValue, {
+  heroImage: z.string().optional(), // Now storing the hero image URL
+}).refine(data => {
+    if (data.minEstimatedValue !== undefined && data.maxEstimatedValue !== undefined) {
+        return data.maxEstimatedValue >= data.minEstimatedValue;
+    }
+    return true;
+}, {
   message: "Maximum value must be greater than or equal to minimum value.",
   path: ["maxEstimatedValue"],
 });
@@ -251,10 +258,14 @@ const tempFractals: Fractal[] = (() => {
         else if (aiScore > 40) crestoxGrade = 'A+';
         else if (aiScore > 20) crestoxGrade = 'A';
         
+        const numImages = randomInt(1,3);
+        const images = Array.from({length: numImages}, () => `https://placehold.co/${width}x${height}.png`);
+
         return {
             id: `fractal-${String(index + 1).padStart(3, '0')}`,
             title,
-            image: `https://placehold.co/${width}x${height}.png`,
+            images: images,
+            heroImage: images[0],
             artistId: getRandom(tempArtists).id,
             description: getRandom(fractalDescriptions),
             materials: 'Digital Render',

@@ -16,7 +16,7 @@ export function FractalCard({ fractal, artist }: FractalCardProps) {
         <CardContent className="p-0">
            <div className="relative overflow-hidden">
             <Image
-              src={fractal.image}
+              src={fractal.heroImage}
               alt={fractal.title}
               width={fractal.width}
               height={fractal.height}

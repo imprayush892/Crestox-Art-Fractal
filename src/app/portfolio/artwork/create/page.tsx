@@ -21,8 +21,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState, useRef } from 'react';
-import { Loader2, UploadCloud, X, Wand2, ArrowRight } from 'lucide-react';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { Loader2, UploadCloud, X, Wand2, ArrowRight, Star, Info } from 'lucide-react';
 import Image from 'next/image';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 import { Progress } from '@/components/ui/progress';
@@ -31,6 +31,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArtworkSize } from '@/lib/data';
 import type { EvaluationResult } from '@/context/auth-context';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { cn } from '@/lib/utils';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -46,13 +48,15 @@ const artworkFormSchema = z.object({
   minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least ₹1."),
   maxEstimatedValue: z.coerce.number(),
   editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
-  image: z.any()
-    .refine((file) => file, "Image is required.")
-    .refine((file) => file?.size <= MAX_FILE_SIZE, `Max file size is 5MB.`)
+  images: z.array(z.any())
+    .min(1, "At least one image is required.")
+    .max(3, "You can upload a maximum of 3 images.")
+    .refine((files) => files.every((file) => file?.size <= MAX_FILE_SIZE), `Max file size is 5MB.`)
     .refine(
-      (file) => ACCEPTED_IMAGE_TYPES.includes(file?.type),
+      (files) => files.every((file) => ACCEPTED_IMAGE_TYPES.includes(file?.type)),
       ".jpg, .jpeg, .png and .webp files are accepted."
     ),
+  heroImageIndex: z.coerce.number().min(0).max(2).default(0),
   subjectSignificance: z.string().max(500).optional(),
   personalSignificance: z.string().max(500).optional(),
   timeEffort: z.string().max(500).optional(),
@@ -71,14 +75,13 @@ type ArtworkSubmissionData = {
     shouldApplyGrade: boolean;
 };
 
-
 export default function CreateArtworkPage() {
   const { isLoggedIn, artistProfile, addArtwork, updateArtistProfile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,6 +89,38 @@ export default function CreateArtworkPage() {
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [artworkSubmissionData, setArtworkSubmissionData] = useState<ArtworkSubmissionData | null>(null);
+  
+  const form = useForm<ArtworkFormValues>({
+    resolver: zodResolver(artworkFormSchema),
+    mode: "onChange",
+    defaultValues: {
+      title: "",
+      description: "",
+      materials: "",
+      length: 24,
+      breadth: 36,
+      unit: "in",
+      minEstimatedValue: 100,
+      maxEstimatedValue: 1000,
+      editionsToIssue: 100,
+      images: [],
+      heroImageIndex: 0,
+      subjectSignificance: "",
+      personalSignificance: "",
+      timeEffort: "",
+      biographicalContext: "",
+      commissionPatronage: "",
+    }
+  });
+  
+  const editionsToIssue = form.watch("editionsToIssue");
+  const estimatedFractalPrice = useMemo(() => {
+    if (!artistProfile || editionsToIssue <= 0) return 0;
+    const currentPortfolioValue = artistProfile.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
+    const newTotalEditions = artistProfile.totalEditions + editionsToIssue;
+    if (newTotalEditions === 0) return 0;
+    return currentPortfolioValue / newTotalEditions;
+  }, [editionsToIssue, artistProfile]);
   
   useEffect(() => {
     if (!isLoggedIn) {
@@ -115,28 +150,6 @@ export default function CreateArtworkPage() {
     return () => clearInterval(timer);
   }, [isEvaluating]);
 
-  const form = useForm<ArtworkFormValues>({
-    resolver: zodResolver(artworkFormSchema),
-    mode: "onChange",
-    defaultValues: {
-      title: "",
-      description: "",
-      materials: "",
-      length: 24,
-      breadth: 36,
-      unit: "in",
-      minEstimatedValue: 100,
-      maxEstimatedValue: 1000,
-      editionsToIssue: 100,
-      image: undefined,
-      subjectSignificance: "",
-      personalSignificance: "",
-      timeEffort: "",
-      biographicalContext: "",
-      commissionPatronage: "",
-    }
-  });
-
   const onFormSubmit = async (data: ArtworkFormValues) => {
     if (!artistProfile) return;
     setIsEvaluating(true);
@@ -151,7 +164,7 @@ export default function CreateArtworkPage() {
     };
 
     try {
-      const imageDataUri = await fileToDataUrl(data.image);
+      const heroImageDataUri = await fileToDataUrl(data.images[data.heroImageIndex]);
 
       let artworkSizeString = `${data.length} x ${data.breadth}`;
       if (data.height) {
@@ -160,7 +173,7 @@ export default function CreateArtworkPage() {
       artworkSizeString += ` ${data.unit}`;
 
       const evaluationInput = {
-        photoDataUri: imageDataUri,
+        photoDataUri: heroImageDataUri,
         title: data.title,
         description: data.description,
         materials: data.materials,
@@ -212,7 +225,8 @@ export default function CreateArtworkPage() {
         minEstimatedValue: formData.minEstimatedValue,
         maxEstimatedValue: formData.maxEstimatedValue,
         editionsToIssue: formData.editionsToIssue,
-        image: imagePreview!,
+        images: imagePreviews,
+        heroImage: imagePreviews[formData.heroImageIndex],
         subjectSignificance: formData.subjectSignificance,
         personalSignificance: formData.personalSignificance,
         timeEffort: formData.timeEffort,
@@ -380,69 +394,101 @@ export default function CreateArtworkPage() {
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-8">
                   
-                  <FormField
+                <FormField
                     control={form.control}
-                    name="image"
+                    name="images"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Artwork File</FormLabel>
+                        <FormLabel>Artwork Files (up to 3)</FormLabel>
                         <FormControl>
-                          <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80 transition-colors">
-                            {imagePreview ? (
-                              <div className="relative w-full h-full">
-                                <Image src={imagePreview} alt="Preview" fill style={{ objectFit: 'contain' }} />
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="icon"
-                                  className="absolute top-2 right-2 z-10 h-8 w-8"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    form.setValue('image', null, { shouldValidate: true });
-                                    setImagePreview(null);
-                                    if (fileInputRef.current) {
-                                      fileInputRef.current.value = "";
-                                    }
-                                  }}
+                          <div
+                            className="flex flex-col items-center justify-center w-full min-h-64 p-4 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80 transition-colors"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            {imagePreviews.length > 0 ? (
+                                <RadioGroup
+                                    defaultValue={form.getValues("heroImageIndex").toString()}
+                                    onValueChange={(value) => form.setValue("heroImageIndex", parseInt(value))}
+                                    className="flex flex-wrap justify-center gap-4"
                                 >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
+                                    {imagePreviews.map((preview, index) => (
+                                        <div key={index} className="relative group">
+                                            <label htmlFor={`hero-image-${index}`}>
+                                                <Image src={preview} alt={`Preview ${index + 1}`} width={150} height={150} className={cn("rounded-md object-contain cursor-pointer border-4", form.watch('heroImageIndex') === index ? "border-primary" : "border-transparent" )} />
+                                                <div className="absolute top-2 left-2 flex items-center gap-2 bg-black/50 text-white p-1 rounded-full text-xs">
+                                                   <RadioGroupItem value={index.toString()} id={`hero-image-${index}`} className="h-5 w-5 border-white text-white"/>
+                                                    <Star className="h-4 w-4"/> Hero
+                                                </div>
+                                            </label>
+                                            <Button
+                                              type="button"
+                                              variant="destructive"
+                                              size="icon"
+                                              className="absolute top-2 right-2 z-10 h-6 w-6 opacity-50 group-hover:opacity-100"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const newPreviews = [...imagePreviews];
+                                                newPreviews.splice(index, 1);
+                                                setImagePreviews(newPreviews);
+                                                
+                                                const currentFiles = form.getValues('images');
+                                                const newFiles = [...currentFiles];
+                                                newFiles.splice(index, 1);
+                                                form.setValue('images', newFiles, { shouldValidate: true });
+                                                
+                                                if (form.getValues('heroImageIndex') === index) {
+                                                    form.setValue('heroImageIndex', 0);
+                                                } else if (form.getValues('heroImageIndex') > index) {
+                                                    form.setValue('heroImageIndex', form.getValues('heroImageIndex') - 1);
+                                                }
+                                              }}
+                                            >
+                                              <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </RadioGroup>
                             ) : (
                               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <UploadCloud className="w-10 h-10 mb-3 text-muted-foreground" />
                                 <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p className="text-xs text-muted-foreground">PNG, JPG, or WEBP (MAX. 5MB)</p>
+                                <p className="text-xs text-muted-foreground">PNG, JPG, or WEBP (MAX. 5MB each)</p>
                               </div>
                             )}
                             <input
                               id="dropzone-file"
                               type="file"
+                              multiple
                               className="hidden"
                               accept="image/png, image/jpeg, image/webp"
                               ref={fileInputRef}
                               onBlur={field.onBlur}
                               name={field.name}
                               onChange={(e) => {
-                                const file = e.target.files?.[0] || null;
-                                field.onChange(file);
-                                if (file) {
-                                  const reader = new FileReader();
-                                  reader.onloadend = () => {
-                                    setImagePreview(reader.result as string);
-                                  };
-                                  reader.readAsDataURL(file);
-                                } else {
-                                  setImagePreview(null);
-                                }
+                                const files = Array.from(e.target.files || []);
+                                const currentFiles = form.getValues("images") || [];
+                                const combinedFiles = [...currentFiles, ...files].slice(0, 3);
+                                
+                                form.setValue("images", combinedFiles, { shouldValidate: true });
+
+                                const previewPromises = combinedFiles.map(file => {
+                                  return new Promise<string>((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => resolve(reader.result as string);
+                                    reader.readAsDataURL(file);
+                                  });
+                                });
+
+                                Promise.all(previewPromises).then(setImagePreviews);
                               }}
                             />
-                          </label>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
 
                   <div className="space-y-8">
                     <FormField
@@ -539,20 +585,31 @@ export default function CreateArtworkPage() {
                       />
                     </div>
                     
-                    <FormField
-                      control={form.control}
-                      name="editionsToIssue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>New Portfolio Fractals to Issue</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="100" {...field} />
-                          </FormControl>
-                          <FormDescription> New 'fractals' to add to your total supply. </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="flex items-end gap-4">
+                        <FormField
+                            control={form.control}
+                            name="editionsToIssue"
+                            render={({ field }) => (
+                                <FormItem className="flex-1">
+                                <FormLabel>New Portfolio Fractals to Issue</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="100" {...field} />
+                                </FormControl>
+                                <FormDescription> New 'fractals' to add to your total supply. </FormDescription>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <div className="w-[200px] flex-shrink-0">
+                            <Card className="bg-muted/50 p-3">
+                                <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3" /> Est. Price Per Fractal</p>
+                                <p className="font-bold text-lg text-primary">
+                                    {estimatedFractalPrice > 0 ? `₹${estimatedFractalPrice.toFixed(2)}` : 'N/A'}
+                                </p>
+                            </Card>
+                        </div>
+                    </div>
+
 
                     <Accordion type="single" collapsible className="w-full">
                       <AccordionItem value="item-1">

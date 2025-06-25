@@ -48,7 +48,7 @@ export function HoldingCertificate({ artist, ownedFractals, allArtistFractals }:
             {allArtistFractals.map((fractal) => (
                 <div key={fractal.id} className="break-inside-avoid">
                     <Image
-                        src={fractal.image}
+                        src={fractal.heroImage}
                         alt={fractal.title}
                         width={fractal.width}
                         height={fractal.height}

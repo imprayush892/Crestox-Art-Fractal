@@ -13,8 +13,9 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { format } from 'date-fns';
 import { Star } from 'lucide-react';
-import React from 'react';
+import React, { useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { cn } from '@/lib/utils';
 
 interface FractalDetailProps {
     fractal: Fractal;
@@ -42,6 +43,7 @@ const formatSize = (size: ArtworkSize) => {
 };
 
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
+  const [hero, setHero] = useState(fractal.heroImage);
   const artworkValueHistory = fractal.priceHistory.map(p => ({ date: p.date, value: p.price }));
   const hasContext = fractal.subjectSignificance || fractal.personalSignificance || fractal.timeEffort || fractal.biographicalContext || fractal.commissionPatronage;
   const formattedSize = formatSize(fractal.artworkSize);
@@ -50,9 +52,9 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
     <>
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
         <div className="lg:col-span-3">
-          <div className="bg-muted rounded-lg overflow-hidden shadow-lg mb-8 relative">
+          <div className="bg-muted rounded-lg overflow-hidden shadow-lg mb-4 relative">
             <Image
-              src={fractal.image}
+              src={hero}
               alt={fractal.title}
               width={fractal.width}
               height={fractal.height}
@@ -67,6 +69,15 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                 </Badge>
             )}
           </div>
+          {fractal.images.length > 1 && (
+            <div className="flex gap-2 mb-8">
+              {fractal.images.map(img => (
+                <button key={img} onClick={() => setHero(img)} className={cn("rounded-md overflow-hidden border-2", hero === img ? 'border-primary' : 'border-transparent')}>
+                  <Image src={img} alt="thumbnail" width={80} height={80} className="object-cover h-20 w-20" />
+                </button>
+              ))}
+            </div>
+          )}
             <h2 className="font-headline text-3xl font-bold mb-6">Artwork Value History</h2>
             <Card>
               <CardHeader>

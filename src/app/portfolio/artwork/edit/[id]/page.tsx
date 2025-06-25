@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -21,8 +20,8 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
-import { Loader2, Wand2, ArrowRight, ArrowLeft } from 'lucide-react';
-import type { Fractal, ArtworkSize } from '@/lib/data';
+import { Loader2, Wand2, ArrowLeft, Save } from 'lucide-react';
+import type { Fractal } from '@/lib/data';
 import Image from 'next/image';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 import { Progress } from '@/components/ui/progress';
@@ -31,9 +30,12 @@ import type { EvaluationResult } from '@/context/auth-context';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type EditArtworkFormValues, editArtworkFormSchema } from '@/lib/data';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { cn } from '@/lib/utils';
+import { Star } from 'lucide-react';
 
 export default function EditArtworkPage() {
-  const { isLoggedIn, artistProfile, fractals, updateAndReevaluateArtwork } = useAuth();
+  const { isLoggedIn, artistProfile, fractals, updateAndReevaluateArtwork, updateArtworkDetails } = useAuth();
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -82,6 +84,7 @@ export default function EditArtworkPage() {
             timeEffort: foundArtwork.timeEffort,
             biographicalContext: foundArtwork.biographicalContext,
             commissionPatronage: foundArtwork.commissionPatronage,
+            heroImage: foundArtwork.heroImage,
           });
         } else {
           notFound();
@@ -111,7 +114,7 @@ export default function EditArtworkPage() {
     return () => clearInterval(timer);
   }, [isEvaluating]);
   
-  async function onFormSubmit(data: EditArtworkFormValues) {
+  async function onReevaluateSubmit(data: EditArtworkFormValues) {
     if (!artistProfile || !artwork) return;
     setIsEvaluating(true);
     
@@ -123,13 +126,13 @@ export default function EditArtworkPage() {
         artworkSizeString += ` ${data.unit}`;
 
         const evaluationInput = {
-            photoDataUri: artwork.image,
+            photoDataUri: data.heroImage || artwork.heroImage,
             title: data.title,
             description: data.description,
             materials: data.materials,
             artworkSize: artworkSizeString,
-            minEstimatedValue: data.minEstimatedValue,
-            maxEstimatedValue: data.maxEstimatedValue,
+            minEstimatedValue: data.minEstimatedValue || artwork.artistMinEstimate || 0,
+            maxEstimatedValue: data.maxEstimatedValue || artwork.artistMaxEstimate || 0,
             subjectSignificance: data.subjectSignificance,
             personalSignificance: data.personalSignificance,
             timeEffort: data.timeEffort,
@@ -155,6 +158,20 @@ export default function EditArtworkPage() {
         setIsEvaluating(false);
     }
   }
+
+  const handleSimpleSave = async () => {
+    if (!updateArtworkDetails || !artwork) return;
+    setIsSubmitting(true);
+    const data = form.getValues();
+    try {
+        await updateArtworkDetails(artwork.id, data);
+        router.push('/portfolio');
+    } catch(e) {
+        toast({ variant: "destructive", title: "Update Failed", description: "Could not save changes." });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
 
   const handlePriceChoice = async (useCrestoxPrice: boolean) => {
     if (!updateAndReevaluateArtwork || !evaluationResult || !artwork) return;
@@ -205,7 +222,7 @@ export default function EditArtworkPage() {
       <Card className="w-full max-w-3xl">
         <CardHeader>
           <div className='flex items-center justify-between'>
-            <CardTitle className="font-headline text-3xl">Re-evaluate Artwork</CardTitle>
+            <CardTitle className="font-headline text-3xl">Edit Artwork</CardTitle>
             <Button variant="ghost" asChild>
                 <Link href="/portfolio">
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -214,7 +231,7 @@ export default function EditArtworkPage() {
             </Button>
           </div>
           <CardDescription>
-            Update artwork details and submit for a fresh AI-assisted evaluation to get a quality grade.
+            Update artwork details. You can save simple text changes or trigger a full re-evaluation.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -232,7 +249,7 @@ export default function EditArtworkPage() {
               <div className="space-y-6">
                  <Alert>
                     <Wand2 className="h-4 w-4" />
-                    <AlertTitle>Evaluation Complete!</AlertTitle>
+                    <AlertTitle>Re-evaluation Complete!</AlertTitle>
                     <AlertDescription>
                         Choose a valuation for your artwork. Accepting the Crestox price ensures you receive a grade badge.
                     </AlertDescription>
@@ -244,7 +261,7 @@ export default function EditArtworkPage() {
                             <CardDescription>Based on your provided range.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-3xl font-bold">₹{form.getValues('minEstimatedValue').toLocaleString('en-IN')} - ₹{form.getValues('maxEstimatedValue').toLocaleString('en-IN')}</p>
+                            <p className="text-3xl font-bold">₹{(form.getValues('minEstimatedValue') || 0).toLocaleString('en-IN')} - ₹{(form.getValues('maxEstimatedValue') || 0).toLocaleString('en-IN')}</p>
                         </CardContent>
                         <CardContent>
                              <Button size="lg" className="w-full" onClick={() => handlePriceChoice(false)} disabled={isSubmitting}>
@@ -263,7 +280,7 @@ export default function EditArtworkPage() {
                         </CardContent>
                          <CardContent>
                              <Button size="lg" className="w-full" onClick={() => handlePriceChoice(true)} disabled={isSubmitting}>
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ArrowRight className="mr-2 h-4 w-4" />}
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
                                 Accept Crestox Valuation
                             </Button>
                         </CardContent>
@@ -274,18 +291,29 @@ export default function EditArtworkPage() {
 
           {!isEvaluating && !evaluationResult && (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-8">
+              <form onSubmit={form.handleSubmit(onReevaluateSubmit)} className="space-y-8">
                 
-                <div className="bg-muted/50 rounded-lg p-4 flex justify-center">
-                  <Image
-                    src={artwork.image}
-                    alt={artwork.title}
-                    width={300}
-                    height={300}
-                    className="rounded-md object-contain"
-                    data-ai-hint={artwork.aiHint}
-                  />
-                </div>
+                <FormItem>
+                  <FormLabel>Artwork Images</FormLabel>
+                  <RadioGroup
+                      value={form.watch('heroImage')}
+                      onValueChange={(value) => form.setValue("heroImage", value, { shouldDirty: true })}
+                      className="flex flex-wrap justify-center gap-4 p-4 bg-muted/50 rounded-lg"
+                  >
+                      {artwork.images.map((img, index) => (
+                          <div key={index} className="relative group">
+                              <label htmlFor={`hero-image-${index}`}>
+                                  <Image src={img} alt={`Artwork image ${index + 1}`} width={150} height={150} className={cn("rounded-md object-contain cursor-pointer border-4", form.watch('heroImage') === img ? "border-primary" : "border-transparent" )} />
+                                  <div className="absolute top-2 left-2 flex items-center gap-2 bg-black/50 text-white p-1 rounded-full text-xs">
+                                     <RadioGroupItem value={img} id={`hero-image-${index}`} className="h-5 w-5 border-white text-white"/>
+                                      <Star className="h-4 w-4"/> Hero
+                                  </div>
+                              </label>
+                          </div>
+                      ))}
+                  </RadioGroup>
+                </FormItem>
+
 
                 <div className="space-y-8">
                   <FormField
@@ -353,35 +381,40 @@ export default function EditArtworkPage() {
                     </div>
                   </FormItem>
                   
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <FormField
-                      control={form.control}
-                      name="minEstimatedValue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Your Minimum Estimated Value (₹)</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="100" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="maxEstimatedValue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Your Maximum Estimated Value (₹)</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="1000" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <Card className="bg-muted/50 p-6">
+                    <h3 className="text-lg font-semibold mb-2">Re-evaluation Details</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        To get a new AI Grade and valuation, please fill out these fields and click "Re-evaluate Artwork". For simple text edits, use "Save Changes".
+                    </p>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <FormField
+                        control={form.control}
+                        name="minEstimatedValue"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Your Minimum Estimated Value (₹)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="100" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="maxEstimatedValue"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Your Maximum Estimated Value (₹)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="1000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </Card>
                   
                   <FormField
                     control={form.control}
@@ -476,10 +509,17 @@ export default function EditArtworkPage() {
                     </AccordionItem>
                   </Accordion>
                 </div>
-                <Button type="submit" size="lg">
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  Re-evaluate Artwork
-                </Button>
+                <div className="flex items-center gap-4">
+                  <Button type="button" size="lg" variant="secondary" onClick={handleSimpleSave} disabled={isSubmitting || !form.formState.isDirty}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </Button>
+                  <Button type="submit" size="lg">
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Re-evaluate Artwork
+                  </Button>
+                </div>
               </form>
             </Form>
           )}
