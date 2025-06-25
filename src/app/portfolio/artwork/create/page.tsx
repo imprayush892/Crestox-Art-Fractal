@@ -113,14 +113,25 @@ export default function CreateArtworkPage() {
     }
   });
   
-  const editionsToIssue = form.watch("editionsToIssue");
+  const { editionsToIssue, minEstimatedValue, maxEstimatedValue } = form.watch();
+
   const estimatedFractalPrice = useMemo(() => {
-    if (!artistProfile || editionsToIssue <= 0) return 0;
+    if (!artistProfile) return 0;
+
+    const newArtworkValue = (minEstimatedValue && maxEstimatedValue) ? (minEstimatedValue + maxEstimatedValue) / 2 : 0;
+    
+    if (newArtworkValue <= 0 || !editionsToIssue || editionsToIssue <= 0) return 0;
+
     const currentPortfolioValue = artistProfile.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
-    const newTotalEditions = artistProfile.totalEditions + editionsToIssue;
-    if (newTotalEditions === 0) return 0;
-    return currentPortfolioValue / newTotalEditions;
-  }, [editionsToIssue, artistProfile]);
+    const currentTotalEditions = artistProfile.totalEditions;
+
+    const projectedPortfolioValue = currentPortfolioValue + newArtworkValue;
+    const projectedTotalEditions = currentTotalEditions + editionsToIssue;
+
+    if (projectedTotalEditions === 0) return 0;
+
+    return projectedPortfolioValue / projectedTotalEditions;
+  }, [editionsToIssue, minEstimatedValue, maxEstimatedValue, artistProfile]);
   
   useEffect(() => {
     if (!isLoggedIn) {
