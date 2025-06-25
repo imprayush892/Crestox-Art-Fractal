@@ -70,4 +70,7 @@
   .print-only {
     display: block !important;
   }
+  body {
+      background: white !important;
+  }
 }

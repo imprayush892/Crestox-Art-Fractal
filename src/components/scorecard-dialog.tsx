@@ -21,6 +21,8 @@ import {
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Download } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { useState, useEffect } from 'react';
 
 const ScorecardContent = ({ fractal }: { fractal: Fractal | null }) => {
   if (!fractal) return null;
@@ -85,6 +87,12 @@ interface ScorecardDialogProps {
 }
 
 export function ScorecardDialog({ isOpen, onClose, fractal }: ScorecardDialogProps) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   if (!fractal) return null;
 
   const handlePrint = () => {
@@ -93,11 +101,14 @@ export function ScorecardDialog({ isOpen, onClose, fractal }: ScorecardDialogPro
 
   return (
     <>
-        <div className="print-only">
-            <ScorecardContent fractal={fractal} />
-        </div>
+        {isClient && isOpen && createPortal(
+            <div className="print-only">
+                <ScorecardContent fractal={fractal} />
+            </div>,
+            document.body
+        )}
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-2xl no-print">
+            <DialogContent className="sm:max-w-2xl">
                 <div className="max-h-[80vh] overflow-y-auto">
                   <ScorecardContent fractal={fractal} />
                 </div>
