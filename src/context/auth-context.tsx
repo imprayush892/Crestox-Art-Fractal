@@ -9,6 +9,8 @@ import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 // --- Interfaces ---
 export interface User {
   uid: string;
+  firstName: string;
+  lastName: string;
   walletBalance: number;
 }
 
@@ -129,7 +131,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   }, [isLoggedIn, user, toast]);
 
   const login = () => {
-    const newUser: User = { uid: 'mock-user-id', walletBalance: 50000 };
+    const newUser: User = { uid: 'mock-user-id', firstName: 'Valued', lastName: 'Collector', walletBalance: 50000 };
     setUser(newUser);
     setIsLoggedIn(true);
   };

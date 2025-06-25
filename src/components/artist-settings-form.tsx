@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
@@ -30,6 +31,7 @@ interface ArtistSettingsFormProps {
 const profileFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters.").max(50),
   bio: z.string().max(500, "Bio must be at most 500 characters.").min(10, "Bio must be at least 10 characters."),
+  artistMessage: z.string().min(20, "Message must be at least 20 characters.").max(1000, "Message must be at most 1000 characters."),
   avatar: z.any().optional(),
   location: z.string().max(100).optional(),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
@@ -56,6 +58,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
     defaultValues: {
       name: artist.name || "",
       bio: artist.bio || "",
+      artistMessage: artist.artistMessage || "",
       avatar: artist.avatar || "",
       location: artist.location || "",
       website: artist.website || "",
@@ -72,6 +75,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
     form.reset({
       name: artist.name || "",
       bio: artist.bio || "",
+      artistMessage: artist.artistMessage || "",
       avatar: artist.avatar || "",
       location: artist.location || "",
       website: artist.website || "",
@@ -198,6 +202,27 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
               </FormControl>
                <FormDescription>
                 Share your story, your process, and what inspires you.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="artistMessage"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Message to Your Collectors</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Write a personal message that will be shared with people who collect your art..."
+                  className="resize-y min-h-[120px]"
+                  {...field}
+                />
+              </FormControl>
+                <FormDescription>
+                This message is exclusive to your fractal holders and will appear on their Certificate of Holding.
               </FormDescription>
               <FormMessage />
             </FormItem>

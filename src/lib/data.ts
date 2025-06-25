@@ -22,6 +22,7 @@ export interface Artist {
   name: string;
   avatar: string;
   bio: string;
+  artistMessage?: string;
   location?: string;
   website?: string;
   style?: string;
@@ -105,6 +106,13 @@ const bios = [
   'Their work is a meditation on the nature of reality and perception.',
   'Specializes in creating immersive, large-scale digital installations.'
 ];
+const artistMessages = [
+    'To my collectors, thank you for believing in the vision. Each fractal you hold is a piece of a larger journey we are on together. Your support fuels the exploration of these digital worlds.',
+    'I am deeply grateful for your support. My art is an exploration of the unseen patterns that govern our world, and by collecting it, you become part of that discovery.',
+    'Thank you for joining me on this artistic voyage. I hope these fractals bring a sense of wonder and complexity to your life, as they have to mine during their creation.',
+    'Every collector is a patron of the digital renaissance. Your appreciation for this new form of art allows me and others to continue pushing the boundaries of creativity and technology.',
+];
+
 const locations = ['Berlin, Germany', 'Tokyo, Japan', 'New York, USA', 'London, UK', 'Virtual Realm', 'Cyber City', 'The Void'];
 const styles = ['Generative', 'Abstract', 'Algorithmic', 'Surreal', 'Minimalist', 'Glitch Art'];
 const awardsData = [
@@ -207,6 +215,7 @@ const tempArtists = (() => {
             name,
             avatar: 'https://placehold.co/100x100.png',
             bio: getRandom(bios),
+            artistMessage: getRandom(artistMessages),
             location: getRandom(locations),
             website: `https://example.com/${slug}`,
             style: `${getRandom(styles)}, ${getRandom(styles)}`,

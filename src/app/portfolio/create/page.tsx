@@ -34,6 +34,7 @@ const profileFormSchema = z.object({
   }).min(10, {
     message: "Bio must be at least 10 characters.",
   }),
+  artistMessage: z.string().min(20, "Message must be at least 20 characters.").max(1000, "Message must be at most 1000 characters."),
   location: z.string().max(100).optional(),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   style: z.string().max(100).optional(),
@@ -63,6 +64,7 @@ export default function CreateArtistProfilePage() {
     defaultValues: {
       name: "",
       bio: "",
+      artistMessage: "",
       location: "",
       website: "",
       style: "",
@@ -161,6 +163,26 @@ export default function CreateArtistProfilePage() {
                     </FormControl>
                      <FormDescription>
                       Share your story, your process, and what inspires you.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="artistMessage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Message to Your Collectors</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Write a personal message that will be shared with people who collect your art..."
+                        className="resize-y min-h-[120px]"
+                        {...field}
+                      />
+                    </FormControl>
+                     <FormDescription>
+                      This message is exclusive to your fractal holders and will appear on their Certificate of Holding.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

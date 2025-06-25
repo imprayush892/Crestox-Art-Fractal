@@ -7,21 +7,23 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { ArrowUpRight, BarChart, DollarSign, TrendingUp, Wallet, Eye, Store, Package, Loader2 } from 'lucide-react';
+import { ArrowUpRight, BarChart, DollarSign, TrendingUp, Wallet, Eye, Store, Package, Loader2, Download } from 'lucide-react';
 import type { OwnedFractal } from '@/context/auth-context';
-import type { Artist } from '@/lib/data';
+import type { Artist, Fractal } from '@/lib/data';
 import { ArtistHoldingsDialog } from './artist-holdings-dialog';
 import { SellDialog } from './sell-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDistanceToNow } from 'date-fns';
 import { ArtistCard } from './artist-card';
+import { HoldingCertificateDialog } from './holding-certificate-dialog';
 
 export function CollectionClient() {
   const { 
     isLoggedIn, 
     collection, 
     artists, 
+    fractals,
     user,
     resaleListings,
     watchlist,
@@ -30,6 +32,7 @@ export function CollectionClient() {
   const router = useRouter();
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [artistToSell, setArtistToSell] = useState<Artist | null>(null);
+  const [certificateArtist, setCertificateArtist] = useState<Artist | null>(null);
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,6 +42,12 @@ export function CollectionClient() {
   }, [isLoggedIn, router]);
 
   const artistMap = useMemo(() => new Map(artists.map(a => [a.id, a])), [artists]);
+  const fractalsByArtist = useMemo(() => {
+      return fractals.reduce((acc, fractal) => {
+          (acc[fractal.artistId] = acc[fractal.artistId] || []).push(fractal);
+          return acc;
+      }, {} as Record<string, Fractal[]>)
+  }, [fractals]);
 
   const portfolioStats = useMemo(() => {
     const holdings = collection.filter(f => f.status === 'owned');
@@ -235,18 +244,21 @@ export function CollectionClient() {
                                     </div>
                                 </CardContent>
                                 <CardFooter className="flex-col items-start w-full">
-                                <div className={`w-full text-sm font-semibold flex items-center justify-between ${gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        <span>Gain/Loss:</span>
-                                        <span>₹{gainLoss.toLocaleString('en-IN', { signDisplay: 'always' })}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center w-full mt-4">
-                                        <Link href={`/artist/${artist.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-primary hover:underline text-xs">
-                                            View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
-                                        </Link>
-                                        <Button size="sm" variant="outline" onClick={(e) => handleSellClick(e, artist)} disabled={ownedCount === 0}>
-                                            <DollarSign className="mr-1 h-3 w-3" /> Sell
-                                        </Button>
-                                    </div>
+                                    <div className={`w-full text-sm font-semibold flex items-center justify-between ${gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            <span>Gain/Loss:</span>
+                                            <span>₹{gainLoss.toLocaleString('en-IN', { signDisplay: 'always' })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center w-full mt-4 gap-2">
+                                            <Button size="sm" variant="outline" onClick={() => setCertificateArtist(artist)} className="flex-1">
+                                                <Download className="mr-1 h-3 w-3" /> Certificate
+                                            </Button>
+                                            <Button size="sm" variant="outline" onClick={(e) => handleSellClick(e, artist)} disabled={ownedCount === 0} className="flex-1">
+                                                <DollarSign className="mr-1 h-3 w-3" /> Sell
+                                            </Button>
+                                        </div>
+                                    <Link href={`/artist/${artist.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-primary hover:underline text-xs mt-4">
+                                        View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
+                                    </Link>
                                 </CardFooter>
                             </Card>
                         )
@@ -341,6 +353,13 @@ export function CollectionClient() {
           onClose={handleCloseSellDialog}
           artist={artistToSell}
           ownedFractals={ownedFractalsForSellDialog}
+      />
+      <HoldingCertificateDialog
+          isOpen={!!certificateArtist}
+          onClose={() => setCertificateArtist(null)}
+          artist={certificateArtist}
+          ownedFractals={certificateArtist ? collectionByArtist[certificateArtist.id] : []}
+          allArtistFractals={certificateArtist ? fractalsByArtist[certificateArtist.id] : []}
       />
     </>
   );
