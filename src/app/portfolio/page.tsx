@@ -119,7 +119,7 @@ export default function PortfolioPage() {
                               <DollarSign className="h-4 w-4 text-muted-foreground" />
                           </CardHeader>
                           <CardContent>
-                              <div className="text-2xl font-bold">₹{currentPortfolioValue.toLocaleString('en-IN')}</div>
+                              <div className="text-2xl font-bold">₹{currentPortfolioValue.toLocaleString()}</div>
                               <p className="text-xs text-muted-foreground">Based on artwork valuations</p>
                           </CardContent>
                       </Card>
@@ -129,7 +129,7 @@ export default function PortfolioPage() {
                               <Tag className="h-4 w-4 text-muted-foreground" />
                           </CardHeader>
                           <CardContent>
-                              <div className="text-2xl font-bold">₹{artistProfile.fractalPrice.toLocaleString('en-IN')}</div>
+                              <div className="text-2xl font-bold">₹{artistProfile.fractalPrice.toLocaleString()}</div>
                               <p className="text-xs text-muted-foreground">Market price per portfolio fractal</p>
                           </CardContent>
                       </Card>
@@ -139,7 +139,7 @@ export default function PortfolioPage() {
                               <Layers className="h-4 w-4 text-muted-foreground" />
                           </CardHeader>
                           <CardContent>
-                              <div className="text-2xl font-bold">{artistProfile.availableEditions.toLocaleString('en-IN')}</div>
+                              <div className="text-2xl font-bold">{artistProfile.availableEditions.toLocaleString()}</div>
                               <p className="text-xs text-muted-foreground">Portfolio fractals available to buy</p>
                           </CardContent>
                       </Card>
@@ -149,7 +149,7 @@ export default function PortfolioPage() {
                               <TrendingUp className="h-4 w-4 text-muted-foreground" />
                           </CardHeader>
                           <CardContent>
-                              <div className="text-2xl font-bold">+{fractalsSoldCount.toLocaleString('en-IN')}</div>
+                              <div className="text-2xl font-bold">+{fractalsSoldCount.toLocaleString()}</div>
                               <p className="text-xs text-muted-foreground">Total fractals sold from your portfolio</p>
                           </CardContent>
                       </Card>
@@ -206,10 +206,10 @@ export default function PortfolioPage() {
                               {artistFractals.length > 0 ? artistFractals.map(fractal => (
                                   <TableRow key={fractal.id}>
                                       <TableCell className="hidden md:table-cell">
-                                          <Image src={fractal.image} alt={fractal.title} width={40} height={40} className="rounded-md object-cover" />
+                                          <Image src={fractal.heroImage} alt={fractal.title} width={40} height={40} className="rounded-md object-cover" />
                                       </TableCell>
                                       <TableCell className="font-medium">{fractal.title}</TableCell>
-                                      <TableCell>₹{fractal.price.toLocaleString('en-IN')}</TableCell>
+                                      <TableCell>₹{fractal.price.toLocaleString()}</TableCell>
                                       <TableCell>
                                         {fractal.crestoxGrade ? (
                                             <Button variant="ghost" size="sm" className="p-1 h-auto" onClick={() => setSelectedFractal(fractal)}>

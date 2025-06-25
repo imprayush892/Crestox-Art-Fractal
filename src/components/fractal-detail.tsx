@@ -12,7 +12,7 @@ import { FractalCard } from '@/components/fractal-card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { format } from 'date-fns';
-import { Star } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import React, { useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
@@ -43,7 +43,13 @@ const formatSize = (size: ArtworkSize) => {
 };
 
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
-  const [hero, setHero] = useState(fractal.heroImage);
+  const [currentIndex, setCurrentIndex] = useState(
+    fractal.images.indexOf(fractal.heroImage) > -1 ? fractal.images.indexOf(fractal.heroImage) : 0
+  );
+
+  const handlePrev = () => setCurrentIndex((prev) => (prev === 0 ? fractal.images.length - 1 : prev - 1));
+  const handleNext = () => setCurrentIndex((prev) => (prev === fractal.images.length - 1 ? 0 : prev + 1));
+  
   const artworkValueHistory = fractal.priceHistory.map(p => ({ date: p.date, value: p.price }));
   const hasContext = fractal.subjectSignificance || fractal.personalSignificance || fractal.timeEffort || fractal.biographicalContext || fractal.commissionPatronage;
   const formattedSize = formatSize(fractal.artworkSize);
@@ -52,15 +58,16 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
     <>
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
         <div className="lg:col-span-3">
-          <div className="bg-muted rounded-lg overflow-hidden shadow-lg mb-4 relative">
+          <div className="bg-muted rounded-lg overflow-hidden shadow-lg mb-4 relative group">
             <Image
-              src={hero}
+              src={fractal.images[currentIndex]}
               alt={fractal.title}
               width={fractal.width}
               height={fractal.height}
-              className="w-full h-auto object-cover"
+              className="w-full h-auto object-cover transition-opacity duration-300"
               data-ai-hint={fractal.aiHint}
               priority
+              key={currentIndex}
             />
             {fractal.crestoxGrade && (
                 <Badge variant="secondary" className="absolute top-4 right-4 text-base py-1 px-3 shadow-lg">
@@ -68,16 +75,32 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                     Crestox Grade: {fractal.crestoxGrade}
                 </Badge>
             )}
+
+            {fractal.images.length > 1 && (
+                <>
+                    <Button onClick={handlePrev} size="icon" variant="ghost" className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 text-white hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ChevronLeft />
+                    </Button>
+                    <Button onClick={handleNext} size="icon" variant="ghost" className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 text-white hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ChevronRight />
+                    </Button>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                        {fractal.images.map((_, index) => (
+                            <button 
+                                key={index} 
+                                onClick={() => setCurrentIndex(index)} 
+                                className={cn(
+                                    "w-2.5 h-2.5 rounded-full transition-colors", 
+                                    currentIndex === index ? "bg-white" : "bg-white/50 hover:bg-white/75"
+                                )}
+                                aria-label={`View image ${index + 1}`}
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
           </div>
-          {fractal.images.length > 1 && (
-            <div className="flex gap-2 mb-8">
-              {fractal.images.map(img => (
-                <button key={img} onClick={() => setHero(img)} className={cn("rounded-md overflow-hidden border-2", hero === img ? 'border-primary' : 'border-transparent')}>
-                  <Image src={img} alt="thumbnail" width={80} height={80} className="object-cover h-20 w-20" />
-                </button>
-              ))}
-            </div>
-          )}
+         
             <h2 className="font-headline text-3xl font-bold mb-6">Artwork Value History</h2>
             <Card>
               <CardHeader>
