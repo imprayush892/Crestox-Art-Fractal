@@ -1,8 +1,8 @@
-
 'use client';
 
 import { useAuth } from '@/context/auth-context';
-import type { Artist, Fractal, OwnedFractal } from '@/lib/data';
+import type { Artist, Fractal } from '@/lib/data';
+import type { OwnedFractal } from '@/context/auth-context';
 import { Wordmark } from './wordmark';
 import { format } from 'date-fns';
 import Image from 'next/image';

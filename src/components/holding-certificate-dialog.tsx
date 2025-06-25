@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -9,7 +8,8 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
-import type { Artist, Fractal, OwnedFractal } from '@/lib/data';
+import type { Artist, Fractal } from '@/lib/data';
+import type { OwnedFractal } from '@/context/auth-context';
 import { Button } from './ui/button';
 import { Download, Loader2 } from 'lucide-react';
 import { HoldingCertificate } from './holding-certificate';
