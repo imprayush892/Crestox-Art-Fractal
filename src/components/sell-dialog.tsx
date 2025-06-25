@@ -112,7 +112,7 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
                         <Plus className="h-4 w-4" />
                     </Button>
                 </div>
-                 <p className="text-xs text-muted-foreground text-right">You own {ownedShares.toLocaleString('en-IN')} available fractals</p>
+                 <p className="text-xs text-muted-foreground text-right">You own {ownedShares.toLocaleString()} available fractals</p>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -150,12 +150,12 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
              <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Est. Gross Sale (at initial price)</span>
-                    <span className="font-medium">{initialSaleValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
+                    <span className="font-medium">{initialSaleValue.toLocaleString('default', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
                 </div>
                 <Separator className="my-2"/>
                 <div className="flex items-center justify-between text-base font-bold">
                     <span>Est. Net Proceeds</span>
-                    <span>{netProceeds.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
+                    <span>{netProceeds.toLocaleString('default', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
                 </div>
             </div>
         </div>

@@ -172,7 +172,7 @@ export function CollectionClient() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹{portfolioStats.currentValue.toLocaleString('en-IN')}</div>
+              <div className="text-2xl font-bold">₹{portfolioStats.currentValue.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">in CreCoins</p>
             </CardContent>
           </Card>
@@ -182,7 +182,7 @@ export function CollectionClient() {
               <BarChart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹{portfolioStats.totalCollectedValue.toLocaleString('en-IN')}</div>
+              <div className="text-2xl font-bold">₹{portfolioStats.totalCollectedValue.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">in CreCoins</p>
             </CardContent>
           </Card>
@@ -193,7 +193,7 @@ export function CollectionClient() {
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${portfolioStats.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ₹{portfolioStats.gainLoss.toLocaleString('en-IN', { signDisplay: 'always' })}
+              ₹{portfolioStats.gainLoss.toLocaleString('default', { signDisplay: 'always' })}
               </div>
               <p className={`text-xs ${portfolioStats.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {portfolioStats.gainLossPercent.toFixed(2)}% all time (in CreCoins)
@@ -236,17 +236,17 @@ export function CollectionClient() {
                                 <CardContent className="grid gap-4 flex-grow cursor-pointer" onClick={() => handleCardClick(artist)}>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                                         <span className="text-sm text-muted-foreground">Total Spent</span>
-                                        <span className="font-semibold">₹{totalCollected.toLocaleString('en-IN')}</span>
+                                        <span className="font-semibold">₹{totalCollected.toLocaleString()}</span>
                                     </div>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                                         <span className="text-sm text-muted-foreground">Current Value</span>
-                                        <span className="font-semibold">₹{currentValue.toLocaleString('en-IN')}</span>
+                                        <span className="font-semibold">₹{currentValue.toLocaleString()}</span>
                                     </div>
                                 </CardContent>
                                 <CardFooter className="flex-col items-start w-full">
                                     <div className={`w-full text-sm font-semibold flex items-center justify-between ${gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                             <span>Gain/Loss:</span>
-                                            <span>₹{gainLoss.toLocaleString('en-IN', { signDisplay: 'always' })}</span>
+                                            <span>₹{gainLoss.toLocaleString('default', { signDisplay: 'always' })}</span>
                                         </div>
                                         <div className="flex justify-between items-center w-full mt-4 gap-2">
                                             <Button size="sm" variant="outline" onClick={() => setCertificateArtist(artist)} className="flex-1">

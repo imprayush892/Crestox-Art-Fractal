@@ -160,10 +160,10 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                       <div className="flex justify-between items-center mb-4">
                           <div className="text-sm text-muted-foreground flex items-center gap-2">
                               <Layers className="w-4 h-4" />
-                              <span>{artist.availableEditions.toLocaleString('en-IN')} of {artist.totalEditions.toLocaleString('en-IN')} available</span>
+                              <span>{artist.availableEditions.toLocaleString()} of {artist.totalEditions.toLocaleString()} available</span>
                           </div>
                           <div className="text-3xl font-bold text-primary">
-                              ₹{artist.fractalPrice.toLocaleString('en-IN')}
+                              ₹{artist.fractalPrice.toLocaleString()}
                           </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -273,7 +273,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                         tickLine={false}
                                         axisLine={false}
                                         tickMargin={8}
-                                        tickFormatter={(value) => `₹${(value as number).toLocaleString('en-IN')}`}
+                                        tickFormatter={(value) => `₹${(value as number).toLocaleString()}`}
                                     />
                                     <Tooltip
                                         cursor={{
@@ -282,7 +282,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                             strokeDasharray: '3 3',
                                         }}
                                         content={<ChartTooltipContent
-                                            formatter={(value) => `₹${(value as number).toLocaleString('en-IN')}`}
+                                            formatter={(value) => `₹${(value as number).toLocaleString()}`}
                                             indicator="dot"
                                         />}
                                     />
@@ -319,7 +319,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                         tickLine={false}
                                         axisLine={false}
                                         tickMargin={8}
-                                        tickFormatter={(value) => `₹${(value as number).toLocaleString('en-IN')}`}
+                                        tickFormatter={(value) => `₹${(value as number).toLocaleString()}`}
                                     />
                                     <Tooltip
                                         cursor={{
@@ -328,7 +328,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                             strokeDasharray: '3 3',
                                         }}
                                         content={<ChartTooltipContent
-                                            formatter={(value) => `₹${(value as number).toLocaleString('en-IN')}`}
+                                            formatter={(value) => `₹${(value as number).toLocaleString()}`}
                                             indicator="dot"
                                         />}
                                     />

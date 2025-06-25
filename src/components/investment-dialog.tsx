@@ -166,7 +166,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
                         <Wallet className="w-4 h-4" />
                         <span>Your Balance</span>
                     </div>
-                    <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')} CreCoins</span>
+                    <span className="font-semibold">{user.walletBalance.toLocaleString()} CreCoins</span>
                 </div>
             )}
             
@@ -179,7 +179,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
                     <Input id="quantity" type="number" value={quantity} onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 0)} className="col-span-3 text-center h-10" min="0" max={maxAvailable} />
                     <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity + 1)} disabled={quantity >= maxAvailable}> <Plus className="h-4 w-4" /> </Button>
                 </div>
-                 <p className="text-xs text-muted-foreground text-right">{maxAvailable.toLocaleString('en-IN')} available (10% portfolio cap)</p>
+                 <p className="text-xs text-muted-foreground text-right">{maxAvailable.toLocaleString()} available (10% portfolio cap)</p>
             </div>
             
             <Separator />
@@ -201,7 +201,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
             <div className="space-y-2">
                 <div className="flex items-center justify-between text-lg font-bold text-primary">
                     <span>Total Cost</span>
-                    <span>{totalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
+                    <span>{totalCost.toLocaleString('default', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
                 </div>
             </div>
         </div>
