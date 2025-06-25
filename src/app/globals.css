@@ -60,11 +60,10 @@
 }
 
 @media print {
-  body > *:not(.printable-area) {
-    display: none !important;
+  body * {
+    visibility: hidden;
   }
-  .printable-area,
-  .printable-area * {
+  .printable-area, .printable-area * {
     visibility: visible;
   }
   .printable-area {
@@ -72,10 +71,9 @@
     left: 0;
     top: 0;
     width: 100%;
-    height: 100%;
+    height: auto;
     padding: 20px;
     margin: 0;
-    float: none;
     border: none !important;
     box-shadow: none !important;
   }
