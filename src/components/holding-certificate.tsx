@@ -3,7 +3,7 @@
 
 import { useAuth } from '@/context/auth-context';
 import type { Artist, Fractal, OwnedFractal } from '@/lib/data';
-import { Logo } from './logo';
+import { Wordmark } from './wordmark';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { useMemo } from 'react';
@@ -26,7 +26,7 @@ export function HoldingCertificate({ artist, ownedFractals, allArtistFractals }:
     return new Date(sorted[0].purchaseDate);
   }, [ownedFractals]);
 
-  const sumerSerialNumber = useMemo(() => {
+  const authenticationNumber = useMemo(() => {
       if(!user) return 'N/A';
       const dataToEncode = `${user.uid}-${artist.id}-${numberOfFractals}-${latestPurchaseDate.toISOString()}`;
       // A simple way to create a "serial number" like string
@@ -59,9 +59,9 @@ export function HoldingCertificate({ artist, ownedFractals, allArtistFractals }:
             ))}
         </div>
         
-        <div className="text-center space-y-6 text-sm">
+        <div className="text-left space-y-6 text-sm">
             <p className="leading-relaxed">
-                This is to formally certify that <span className="font-bold">{collectorName}</span> holds <span className="font-bold">{numberOfFractals}</span> authentic Collector&apos;s Edition Fractal(s) from the portfolio of <span className="font-bold">{artist.name}</span>, as of <span className="font-bold">{format(latestPurchaseDate, 'MMMM d, yyyy')}</span>.
+                This is to formally certify that <span className="font-bold">{collectorName}</span> holds <span className="font-bold">{numberOfFractals}</span> authentic Collector's Edition Fractal(s) from the portfolio of <span className="font-bold">{artist.name}</span>, as of <span className="font-bold">{format(latestPurchaseDate, 'MMMM d, yyyy')}</span>.
             </p>
 
             {artist.artistMessage && (
@@ -72,17 +72,17 @@ export function HoldingCertificate({ artist, ownedFractals, allArtistFractals }:
             )}
 
             <div>
-                <p className="text-muted-foreground uppercase text-xs tracking-widest">Sumer Serial Number</p>
-                <p className="font-mono text-base mt-1 break-all">{sumerSerialNumber}</p>
+                <p className="text-muted-foreground uppercase text-xs tracking-widest">Authentication number</p>
+                <p className="font-mono text-base mt-1 break-all">{authenticationNumber}</p>
             </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+            <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
                 This certificate affirms the authenticity of the Fractal(s) held by {collectorName}, while clarifying that these do not constitute ownership rights over the original physical or digital artwork by {artist.name}.
             </p>
 
-            <div className="flex flex-col items-center justify-center pt-8">
+            <div className="flex flex-col items-start pt-8">
                  <p className="text-muted-foreground mb-2">With appreciation,</p>
-                 <Logo className="h-16 w-16" />
+                 <Wordmark className="h-16 w-auto" />
             </div>
         </div>
     </div>

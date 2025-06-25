@@ -173,7 +173,7 @@ export default function CreateArtworkPage() {
       toast({
         variant: "destructive",
         title: "Evaluation Failed",
-        description: "There was a problem evaluating your artwork. This could be due to a network issue or a problem with the AI service. Please try again.",
+        description: "There was a problem evaluating your artwork. Please ensure your GOOGLE_API_KEY is set up correctly, or check for network issues.",
       });
     } finally {
       setIsEvaluating(false);
