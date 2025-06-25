@@ -181,7 +181,7 @@ export default function CreateArtworkPage() {
   };
 
   const handlePriceChoice = async (useCrestoxPrice: boolean) => {
-    if (!addArtwork || !evaluationResult) return;
+    if (!addArtwork || !evaluationResult || !artistProfile) return;
     
     setIsSubmitting(true);
     const formData = form.getValues();
@@ -193,6 +193,13 @@ export default function CreateArtworkPage() {
     const shouldApplyGrade = useCrestoxPrice || artistPrice <= crestoxPrice;
     
     try {
+        if (!artistProfile.artistMessage) {
+            toast({
+                title: "Action Required",
+                description: "Add a 'Message to Collectors' in your profile settings to make this artwork collectible.",
+                duration: 8000,
+            });
+        }
         const artworkSize : ArtworkSize = { length: formData.length, breadth: formData.breadth, unit: formData.unit };
         if(formData.height) artworkSize.height = formData.height;
 

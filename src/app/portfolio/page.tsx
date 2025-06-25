@@ -9,13 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, Wand2 } from 'lucide-react';
+import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, Wand2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { ArtistSettingsForm } from '@/components/artist-settings-form';
 import Image from 'next/image';
 import type { Fractal } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { ScorecardDialog } from '@/components/scorecard-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function PortfolioPage() {
   const { isLoggedIn, artistProfile, fractals } = useAuth();
@@ -56,6 +57,7 @@ export default function PortfolioPage() {
   
   const currentPortfolioValue = artistProfile.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
   const fractalsSoldCount = artistProfile.totalEditions - artistProfile.availableEditions;
+  const needsArtistMessage = artistFractals.length > 0 && !artistProfile.artistMessage;
   
   // This is a placeholder for now, as earnings tracking is not yet implemented.
   const totalEarnings = 0;
@@ -91,7 +93,16 @@ export default function PortfolioPage() {
           <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
             <TabsTrigger value="overview"><TrendingUp className="mr-2" /> Overview</TabsTrigger>
             <TabsTrigger value="artworks"><Palette className="mr-2" /> My Artworks</TabsTrigger>
-            <TabsTrigger value="settings"><Settings className="mr-2" /> Profile Settings</TabsTrigger>
+            <TabsTrigger value="settings" className="relative">
+              <Settings className="mr-2" />
+              Profile Settings
+              {needsArtistMessage && (
+                <span className="absolute top-1 right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="mt-6 space-y-6">
@@ -241,6 +252,15 @@ export default function PortfolioPage() {
                       <CardDescription>Update your public artist profile and manage account settings.</CardDescription>
                   </CardHeader>
                   <CardContent>
+                      {needsArtistMessage && (
+                        <Alert variant="destructive" className="mb-6">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertTitle>Action Required</AlertTitle>
+                            <AlertDescription>
+                                Add a "Message to your Collectors" to make your artworks collectible. This message will be included on their certificate of holding.
+                            </AlertDescription>
+                        </Alert>
+                      )}
                       <ArtistSettingsForm artist={artistProfile} />
                   </CardContent>
               </Card>

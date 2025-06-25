@@ -84,7 +84,7 @@ interface AuthContextType {
   cancelListing: (listingId: string) => Promise<void>;
   addToWatchlist: (artistId: string) => void;
   removeFromWatchlist: (artistId: string) => void;
-  createArtistProfile: (profileData: Omit<ArtistProfile, 'id' | 'userId' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'avatar'> & { avatar?: any; }) => Promise<void>;
+  createArtistProfile: (profileData: Omit<ArtistProfile, 'id' | 'userId' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'avatar'> & { avatar?: any; artistMessage?: string; }) => Promise<void>;
   updateArtistProfile: (profileData: Partial<ArtistProfile>) => Promise<void>;
   addArtwork: (artworkData: NewArtworkData, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
@@ -153,6 +153,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     const artist = artists.find(a => a.id === artistToUpdate.id);
     if (!artist) {
         toast({ variant: 'destructive', title: 'Error', description: 'Artist not found.' });
+        return;
+    }
+
+    // Check if artist has artworks but no message
+    const artistHasArtworks = fractals.some(f => f.artistId === artist.id);
+    if (artistHasArtworks && !artist.artistMessage) {
+        toast({
+            variant: "destructive",
+            title: "Collection Unavailable",
+            description: `This artist has not yet provided a collector's message. Their fractals cannot be collected at this time.`,
+        });
         return;
     }
 

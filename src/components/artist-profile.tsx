@@ -47,6 +47,12 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
 
   const isWatched = watchlist.includes(artist.id);
 
+  const isCollectible = useMemo(() => {
+    if (isOwnProfile) return false;
+    // Artworks can be collected if the artist has no art yet OR if they have art AND a message.
+    return artistFractals.length === 0 || !!artist.artistMessage;
+  }, [artist, artistFractals, isOwnProfile]);
+
   const handleCollectClick = () => {
     if (!isLoggedIn) {
       router.push(`/login?redirect=/artist/${artist.id}`);
@@ -161,7 +167,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                           </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button size="lg" className="w-full" onClick={handleCollectClick}>
+                        <Button size="lg" className="w-full" onClick={handleCollectClick} disabled={!isCollectible}>
                             <ShoppingCart className="mr-2 h-5 w-5" />
                             Collect Now
                         </Button>
@@ -169,6 +175,11 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                             <Star className={`w-5 h-5 transition-colors ${isWatched ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'}`} />
                         </Button>
                       </div>
+                       {!isCollectible && (
+                          <p className="text-xs text-center text-destructive mt-2">
+                              This artist's fractals are not available for collection until they provide a message to their collectors.
+                          </p>
+                      )}
                       {(ownedCount > 0 || listedCount > 0) && (
                           <div className="mt-4 text-center text-sm text-green-600 font-medium flex items-center justify-center gap-2">
                               <CheckCircle className="w-4 h-4" />
