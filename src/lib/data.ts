@@ -283,7 +283,7 @@ const finalArtists: Artist[] = tempArtists.map(artist => {
 
     const initialFractalPrice = totalPortfolioValue > 0 && artist.totalEditions > 0
         ? totalPortfolioValue / artist.totalEditions
-        : 25; 
+        : 0; 
 
     const roundedFractalPrice = Math.round(initialFractalPrice * 100) / 100;
 
