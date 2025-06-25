@@ -421,6 +421,10 @@ export default function CreateArtworkPage() {
                                     defaultValue={form.getValues("heroImageIndex").toString()}
                                     onValueChange={(value) => form.setValue("heroImageIndex", parseInt(value))}
                                     className="flex flex-wrap justify-center gap-4"
+                                    onClick={(e) => {
+                                      // Stop the click from propagating to the parent div which triggers file upload.
+                                      e.stopPropagation();
+                                    }}
                                 >
                                     {imagePreviews.map((preview, index) => (
                                         <div key={index} className="relative group">
