@@ -227,7 +227,7 @@ export default function PortfolioPage() {
                                           <Button variant="outline" size="sm" asChild>
                                               <Link href={`/portfolio/artwork/edit/${fractal.id}`}>
                                                 <Wand2 className="mr-2 h-3 w-3" />
-                                                Re-evaluate
+                                                Edit
                                               </Link>
                                           </Button>
                                       </TableCell>
