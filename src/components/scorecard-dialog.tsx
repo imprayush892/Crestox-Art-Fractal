@@ -99,34 +99,41 @@ export function ScorecardDialog({ isOpen, onClose, fractal }: ScorecardDialogPro
     setIsDownloading(true);
 
     try {
-      const canvas = await html2canvas(input, {
-        scale: 2,
-        backgroundColor: '#FDFCF6',
-      });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = imgWidth / imgHeight;
-      let newImgWidth = pdfWidth - 20; // with margin
-      let newImgHeight = newImgWidth / ratio;
+        const canvas = await html2canvas(input, {
+            scale: 2,
+            backgroundColor: '#FDFCF6',
+            useCORS: true,
+        });
 
-      if (newImgHeight > pdfHeight - 20) {
-        newImgHeight = pdfHeight - 20;
-        newImgWidth = newImgHeight * ratio;
-      }
-      
-      const x = (pdfWidth - newImgWidth) / 2;
-      const y = 10;
-      
-      pdf.addImage(imgData, 'PNG', x, y, newImgWidth, newImgHeight);
-      pdf.save(`Crestox-Scorecard-${fractal.title.replace(/\s/g, '_')}.pdf`);
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfPageHeight = pdf.internal.pageSize.getHeight();
+
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+
+        const ratio = imgWidth / imgHeight;
+        const pdfImageHeight = pdfWidth / ratio;
+
+        let heightLeft = pdfImageHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfImageHeight);
+        heightLeft -= pdfPageHeight;
+
+        while (heightLeft > 0) {
+            position -= pdfPageHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfImageHeight);
+            heightLeft -= pdfPageHeight;
+        }
+
+        pdf.save(`Crestox-Scorecard-${fractal.title.replace(/\s/g, '_')}.pdf`);
     } catch (error) {
-      console.error("Error generating PDF:", error);
+        console.error("Error generating PDF:", error);
     } finally {
-      setIsDownloading(false);
+        setIsDownloading(false);
     }
   };
 

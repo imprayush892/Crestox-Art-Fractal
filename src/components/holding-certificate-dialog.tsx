@@ -38,10 +38,12 @@ export function HoldingCertificateDialog({ isOpen, onClose, artist, ownedFractal
     setIsDownloading(true);
 
     try {
-      const canvas = await html2canvas(input, {
+       const canvas = await html2canvas(input, {
         scale: 2, // Higher scale for better quality
         backgroundColor: '#FDFCF6', // Match certificate background
+        useCORS: true,
       });
+      
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -50,20 +52,25 @@ export function HoldingCertificateDialog({ isOpen, onClose, artist, ownedFractal
       const canvasWidth = canvas.width;
       const canvasHeight = canvas.height;
       
-      // Maintain aspect ratio
+      // Calculate the image height in the PDF while maintaining aspect ratio
       const ratio = canvasWidth / canvasHeight;
-      let newWidth = pdfWidth;
-      let newHeight = newWidth / ratio;
+      const imgHeightInPdf = pdfWidth / ratio;
 
-      if (newHeight > pdfHeight) {
-        newHeight = pdfHeight;
-        newWidth = newHeight * ratio;
+      let heightLeft = imgHeightInPdf;
+      let position = 0;
+
+      // Add the first page
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdf);
+      heightLeft -= pdfHeight;
+
+      // Add more pages if content is taller than one page
+      while (heightLeft > 0) {
+        position -= pdfHeight; // Move the "view" of the image up
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdf);
+        heightLeft -= pdfHeight;
       }
       
-      const xOffset = (pdfWidth - newWidth) / 2;
-      const yOffset = (pdfHeight - newHeight) / 2;
-      
-      pdf.addImage(imgData, 'PNG', xOffset, yOffset, newWidth, newHeight);
       pdf.save(`Crestox-Certificate-${artist.name.replace(/\s/g, '_')}.pdf`);
     } catch (error) {
       console.error("Error generating PDF:", error);
