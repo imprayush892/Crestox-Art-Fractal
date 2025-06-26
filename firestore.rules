@@ -1,40 +1,59 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1️⃣ User profiles (e.g. collection “users”)
+    // 1. User Profiles
+    // Allows users to create their own profile upon signup.
+    // They can only read and update their own document.
     match /users/{userId} {
-      // A new user may create their own profile doc at /users/$(uid)
-      allow create: if request.auth.uid == userId;
-      // Any visitor can read public profiles, but full details only to the owner
-      allow read: if true; 
-      allow update: if request.auth.uid == userId;
-      allow delete: if false;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false; // Users cannot delete their profiles.
     }
 
-    // 2️⃣ Artist profiles (e.g. collection “artists”)
+    // 2. Artist Profiles
+    // Anyone can view artist profiles.
+    // An artist can update their own profile freely.
+    // A collector can ONLY update the availableEditions field when it's being decreased.
     match /artists/{artistId} {
-      allow create: if request.auth.uid == artistId;
-      allow read:   if true;                          // public listing of all artists
-      allow update: if request.auth.uid == artistId;  // only artist themself
+      allow create: if request.auth != null && request.auth.uid == artistId;
+      allow read: if true;
+      allow update: if (request.auth.uid == artistId) ||
+                     (
+                       request.auth != null &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availableEditions']) &&
+                       request.resource.data.availableEditions < resource.data.availableEditions
+                     );
       allow delete: if false;
     }
 
-    // 3️⃣ Fractals (artwork) collection
+    // 3. Fractals (Artwork)
+    // All artwork is public to browse.
+    // Only an authenticated user can create artwork.
+    // Only the original artist can update or delete their artwork.
     match /fractals/{fractalId} {
-      allow read: if true; // everyone can browse art
-      allow create: if request.auth.uid != null
-                    && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if request.auth.uid == resource.data.ownerId;
+      allow create: if request.auth != null && request.resource.data.artistId == request.auth.uid;
+      allow read: if true;
+      allow update: if request.auth != null && resource.data.artistId == request.auth.uid;
+      allow delete: if false;
+    }
+    
+    // 4. User Holdings (Fractals owned by users)
+    // Users can only access their own holdings subcollection.
+    match /users/{userId}/holdings/{holdingId} {
+        allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // 4️⃣ Resale listings
+    // 5. Resale Listings
+    // The marketplace is public to view.
+    // Only authenticated users can create listings for items they own.
+    // Only the seller can cancel (update) their own listing.
     match /resaleListings/{listingId} {
-      allow read: if true; // public marketplace
-      allow create: if request.auth.uid == request.resource.data.sellerId;
-      allow update, delete:
-        if request.auth.uid == resource.data.sellerId;
+      allow create: if request.auth != null && request.resource.data.resellerId == request.auth.uid;
+      allow read: if true;
+      allow update: if request.auth != null && resource.data.resellerId == request.auth.uid;
+      allow delete: if false;
     }
-
   }
 }
