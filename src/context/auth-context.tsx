@@ -86,12 +86,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   // Stage 1: One-time auth state check and initial profile load
   useEffect(() => {
-    if (!auth || !db) {
-        console.log("Firebase not configured. App will not be able to authenticate.");
+    if (!auth) {
+        console.log("Firebase Auth not configured. App will not be able to authenticate.");
         setIsLoading(false);
         return;
     }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (!db) {
+            console.log("Firebase DB not configured. Cannot fetch user profile.");
+            setIsLoading(false);
+            return;
+        }
         if (firebaseUser) {
             const userRef = doc(db, "users", firebaseUser.uid);
             try {
@@ -241,9 +246,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const addArtwork = async (artworkData: NewArtworkData, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
-    if (!db || !artistProfile) {
-        throw new Error("Database not initialized or artist profile not found.");
-    }
+    if (!db || !artistProfile) throw new Error("Database not initialized or artist profile not found.");
     
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artistProfile.id);
@@ -287,9 +290,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const updateAndReevaluateArtwork = async (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => {
-     if (!db || !artistProfile) {
-        throw new Error("Database not initialized or artist profile not found.");
-     }
+     if (!db || !artistProfile) throw new Error("Database not initialized or artist profile not found.");
       
       const crestoxPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
       const artistPrice = Math.round(((artworkData.minEstimatedValue || 0) + (artworkData.maxEstimatedValue || 0)) / 2);
