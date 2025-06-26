@@ -159,11 +159,11 @@ const EvaluateArtworkOutputSchema = z.object({
     crestoxPriceRange: z.tuple([z.number(), z.number()]),
 });
 
-type EvaluateArtworkOutput = z.infer<typeof EvaluateArtworkOutputSchema>;
+export type EvaluationResult = z.infer<typeof EvaluateArtworkOutputSchema>;
 
 export async function evaluateArtwork(
   input: z.infer<typeof EvaluateArtworkInputSchema>
-): Promise<EvaluateArtworkOutput> {
+): Promise<EvaluationResult> {
   if (!isAiConfigured) {
     console.warn("AI is not configured. Returning mock evaluation data to prevent app crash.");
     // This simulates a successful evaluation when no API key is present.
@@ -256,7 +256,7 @@ const evaluateArtworkFlow = ai.defineFlow(
     inputSchema: EvaluateArtworkInputSchema,
     outputSchema: EvaluateArtworkOutputSchema,
   },
-  async (input): Promise<EvaluateArtworkOutput> => {
+  async (input): Promise<EvaluationResult> => {
     const { output } = await evaluationPrompt(input);
     if (!output || !output.scores || output.minPriceAI === undefined || output.maxPriceAI === undefined) {
       throw new Error("AI analysis failed to return complete data.");

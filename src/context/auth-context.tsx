@@ -6,7 +6,8 @@ import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPa
 import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, EvaluationResult, NewArtworkData, EditArtworkFormValues } from '@/lib/data';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, NewArtworkData, EditArtworkFormValues } from '@/lib/data';
+import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { Loader2 } from 'lucide-react';
 
