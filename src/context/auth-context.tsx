@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -236,7 +236,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
   
   const updateArtistProfile = async (profileData: Partial<ArtistProfile>) => {
-      if (!artistProfile || !db) throw new Error("Artist profile not found.");
+      if (!artistProfile || !db) throw new Error("Artist profile not found or DB not initialized.");
       const artistRef = doc(db, "artists", artistProfile.id);
       try {
           await updateDoc(artistRef, profileData);
@@ -244,7 +244,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const addArtwork = async (artworkData: NewArtworkData, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
-    if (!artistProfile || !db) throw new Error("Artist profile not found.");
+    if (!db || !artistProfile) {
+        throw new Error("Database not initialized or artist profile not found.");
+    }
     
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artistProfile.id);
@@ -266,9 +268,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
             artistMinEstimate: artworkData.minEstimatedValue,
             artistMaxEstimate: artworkData.maxEstimatedValue,
-            width: 600, // Placeholder
-            height: 400, // Placeholder
-            aiHint: 'abstract fractal', // Placeholder
+            width: 600,
+            height: 400,
+            aiHint: 'abstract fractal',
         };
 
         const currentTotalValue = artistFractals.reduce((sum, f) => sum + f.price, 0);
@@ -288,7 +290,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const updateAndReevaluateArtwork = async (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => {
-     if (!artistProfile || !db) throw new Error("Artist profile not found.");
+     if (!db || !artistProfile) {
+        throw new Error("Database not initialized or artist profile not found.");
+     }
       
       const crestoxPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
       const artistPrice = Math.round(((artworkData.minEstimatedValue || 0) + (artworkData.maxEstimatedValue || 0)) / 2);
@@ -330,7 +334,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const reevaluateArtworkForGrading = async (fractal: Fractal) => {
-    if (!db || !fractal.crestoxPriceRange) throw new Error("Missing data for re-evaluation.");
+    if (!db) throw new Error("Database not initialized.");
+    if (!fractal.crestoxPriceRange) throw new Error("Missing data for re-evaluation.");
     const newPrice = Math.round((fractal.crestoxPriceRange[0] + fractal.crestoxPriceRange[1]) / 2);
     
     await runTransaction(db, async (transaction) => {
@@ -343,13 +348,15 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       if (!db) throw new Error("Database not connected.");
       const fractalRef = doc(db, "fractals", artworkId);
       try {
-        await updateDoc(fractalRef, data as any); // Type assertion for simplicity
+        await updateDoc(fractalRef, data as any);
         toast({ title: "Update Successful", description: "Artwork details have been saved." });
       } catch (error) { throw new Error(handleAuthError(error)); }
   };
   
   const collectFromPortfolio = async (artist: Artist, quantity: number) => {
-    if (!user || !db) throw new Error("User not authenticated.");
+    if (!db || !user) {
+        throw new Error("Database not initialized or user not authenticated.");
+    }
     
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artist.id);
@@ -374,7 +381,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             const holdingRef = doc(firestoreCollection(db, `users/${user.uid}/holdings`));
             const newHolding: OwnedFractal = {
                 id: holdingRef.id,
-                fractalId: "portfolio-fractal", // Generic ID for portfolio shares
+                fractalId: "portfolio-fractal",
                 artistId: artist.id,
                 purchaseDate: new Date().toISOString(),
                 purchasePrice: artistData.fractalPrice,
@@ -388,7 +395,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
   
   const listForResale = async (artist: Artist, options: { quantity: number; initialPrice: number; minPrice: number; periodDays: number; }) => {
-      if (!user || !db) throw new Error("User not authenticated.");
+      if (!db || !user) {
+        throw new Error("Database not initialized or user not authenticated.");
+      }
       
       const { quantity, initialPrice, minPrice, periodDays } = options;
       
@@ -425,8 +434,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
   
   const cancelListing = async (listingId: string) => {
-      if (!user || !db) throw new Error("User not authenticated.");
-      // This is a simplified cancellation. A real-world scenario would need to handle partial sales.
+      if (!db || !user) {
+        throw new Error("Database not initialized or user not authenticated.");
+      }
+      
       await runTransaction(db, async (transaction) => {
           const listingRef = doc(db, "resaleListings", listingId);
           const listingSnap = await transaction.get(listingRef);
@@ -454,17 +465,29 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const addToWatchlist = async (artistId: string) => {
-    if (!user || !db) { toast({ variant: "destructive", title: "You must be logged in." }); return; }
-    try { await updateDoc(doc(db, "users", user.uid), { watchlist: arrayUnion(artistId) });
-      toast({ title: "Added to Watchlist" });
-    } catch (error) { toast({ variant: "destructive", title: "Failed to update watchlist." }); }
+    if (!db || !user) {
+        toast({ variant: "destructive", title: "You must be logged in." });
+        return;
+    }
+    try {
+        await updateDoc(doc(db, "users", user.uid), { watchlist: arrayUnion(artistId) });
+        toast({ title: "Added to Watchlist" });
+    } catch (error) {
+        toast({ variant: "destructive", title: "Failed to update watchlist." });
+    }
   };
 
   const removeFromWatchlist = async (artistId: string) => {
-    if (!user || !db) { toast({ variant: "destructive", title: "You must be logged in." }); return; }
-    try { await updateDoc(doc(db, "users", user.uid), { watchlist: arrayRemove(artistId) });
+    if (!db || !user) {
+        toast({ variant: "destructive", title: "You must be logged in." });
+        return;
+    }
+    try {
+       await updateDoc(doc(db, "users", user.uid), { watchlist: arrayRemove(artistId) });
        toast({ title: "Removed from Watchlist" });
-    } catch (error) { toast({ variant: "destructive", title: "Failed to update watchlist." }); }
+    } catch (error) {
+       toast({ variant: "destructive", title: "Failed to update watchlist." });
+    }
   };
 
   const contextValue: AuthContextType = {
