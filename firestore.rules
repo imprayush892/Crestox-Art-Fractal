@@ -1,54 +1,39 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1. User profiles (e.g. collection “users”)
+    // 1️⃣ User profiles (e.g. collection “users”)
     match /users/{userId} {
       // A new user may create their own profile doc at /users/$(uid)
       allow create: if request.auth.uid == userId;
-      // Any visitor can read public profiles
+      // Any visitor can read public profiles, but full details only to the owner
       allow read: if true; 
       allow update: if request.auth.uid == userId;
       allow delete: if false;
     }
 
-    // 2. Artist profiles (e.g. collection “artists”)
+    // 2️⃣ Artist profiles (e.g. collection “artists”)
     match /artists/{artistId} {
-      // An authenticated user can create their own artist profile
-      allow create: if request.auth.uid == request.resource.data.userId;
-      // Public listing of all artists
-      allow read:   if true;
-      // Only the artist themself can update
-      allow update: if request.auth.uid == resource.data.userId;
+      allow create: if request.auth.uid == artistId;
+      allow read:   if true;                          // public listing of all artists
+      allow update: if request.auth.uid == artistId;  // only artist themself
       allow delete: if false;
     }
 
-    // 3. Fractals (artwork) collection
+    // 3️⃣ Fractals (artwork) collection
     match /fractals/{fractalId} {
-      // Everyone can browse art
-      allow read: if true;
-      // An artist can create artwork linked to their artistId
-      allow create: if request.auth != null
-                    && get(/databases/$(database)/documents/artists/$(request.resource.data.artistId)).data.userId == request.auth.uid;
-      // Only the artist can update or delete their artwork
-      allow update, delete: if get(/databases/$(database)/documents/artists/$(resource.data.artistId)).data.userId == request.auth.uid;
+      allow read: if true; // everyone can browse art
+      allow create: if request.auth.uid != null
+                    && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth.uid == resource.data.ownerId;
     }
 
-    // 4. User holdings (a subcollection)
-    match /users/{userId}/holdings/{holdingId} {
-        // The user can read their own holdings
-        allow read: if request.auth.uid == userId;
-        // Internal writes are handled by transactions, but we secure it to the user
-        allow write: if request.auth.uid == userId;
-    }
-
-    // 5. Resale listings
+    // 4️⃣ Resale listings
     match /resaleListings/{listingId} {
-      // Public marketplace
-      allow read: if true; 
-      allow create: if request.auth.uid == request.resource.data.resellerId;
-      allow update, delete: if request.auth.uid == resource.data.resellerId;
+      allow read: if true; // public marketplace
+      allow create: if request.auth.uid == request.resource.data.sellerId;
+      allow update, delete:
+        if request.auth.uid == resource.data.sellerId;
     }
 
   }
