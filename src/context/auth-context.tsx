@@ -70,7 +70,7 @@ const handleAuthError = (error: any): string => {
     case 'permission-denied':
         return 'You do not have permission to perform this action. Check Firebase rules.';
     default:
-      return 'An unexpected error occurred. Please try again.';
+      return error.message || 'An unexpected error occurred. Please try again.';
   }
 };
 
@@ -103,7 +103,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             } catch (e) {
                 const error = e as Error;
                 console.error("Error fetching user document on auth change:", error);
-                toast({ variant: 'destructive', title: 'Login Error', description: error.message });
+                toast({ variant: 'destructive', title: 'Login Error', description: handleAuthError(error) });
                 setUser(null);
             }
         } else {
@@ -241,15 +241,37 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artistProfile.id);
         const artistSnap = await transaction.get(artistRef);
-        if (!artistSnap.exists()) throw new Error("Artist profile not found.");
+        if (!artistSnap.exists()) {
+            throw new Error("Artist profile not found in database.");
+        }
         
         const currentArtistData = artistSnap.data() as Artist;
         const newFractalRef = doc(firestoreCollection(db, 'fractals'));
         
+        const width = 600;
+        const height = 400;
+
+        // Generate placeholder URLs instead of storing large data URIs
+        const placeholderImages = artworkData.images.map(() => `https://placehold.co/${width}x${height}.png`);
+        const heroIndex = artworkData.images.indexOf(artworkData.heroImage);
+        const heroPlaceholder = placeholderImages[heroIndex > -1 ? heroIndex : 0];
+
         const newFractal: Fractal = {
             id: newFractalRef.id,
             artistId: artistProfile.id,
-            ...artworkData,
+            title: artworkData.title,
+            description: artworkData.description,
+            materials: artworkData.materials,
+            artworkSize: artworkData.artworkSize,
+            subjectSignificance: artworkData.subjectSignificance,
+            personalSignificance: artworkData.personalSignificance,
+            timeEffort: artworkData.timeEffort,
+            biographicalContext: artworkData.biographicalContext,
+            commissionPatronage: artworkData.commissionPatronage,
+            
+            images: placeholderImages,
+            heroImage: heroPlaceholder,
+
             price: finalPrice,
             priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
             aiScore: evaluationResult.finalScore,
@@ -258,20 +280,18 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
             artistMinEstimate: artworkData.minEstimatedValue,
             artistMaxEstimate: artworkData.maxEstimatedValue,
-            width: 600,
-            height: 400,
+            width,
+            height,
             aiHint: 'abstract fractal',
         };
-
-        const history = currentArtistData.totalPortfolioValueHistory || [];
-        const lastEntry = history.length > 0 ? history[history.length - 1] : { value: 0 };
-        const currentTotalValue = lastEntry.value;
         
+        transaction.set(newFractalRef, newFractal);
+
+        const currentTotalValue = currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
         const newTotalValue = currentTotalValue + finalPrice;
         const newTotalEditions = currentArtistData.totalEditions + artworkData.editionsToIssue;
         const newFractalPrice = newTotalEditions > 0 ? newTotalValue / newTotalEditions : 0;
         
-        transaction.set(newFractalRef, newFractal);
         transaction.update(artistRef, {
             totalEditions: newTotalEditions,
             availableEditions: currentArtistData.availableEditions + artworkData.editionsToIssue,
