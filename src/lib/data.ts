@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export interface AIScorecardBreakdown {
@@ -88,6 +87,21 @@ export interface ResaleListing {
   listingTimestamp: string; // ISO string
   status: 'active' | 'completed' | 'cancelled';
 }
+
+const EvaluateArtworkOutputSchema = z.object({
+    finalScore: z.number(),
+    grade: z.enum(['AAA', 'AA', 'A+', 'A', 'A-']),
+    breakdown: z.array(z.object({
+        id: z.number(),
+        criterion: z.string(),
+        score: z.number(),
+        weight: z.number(),
+        weightedScore: z.number(),
+    })),
+    crestoxPriceRange: z.tuple([z.number(), z.number()]),
+});
+
+export type EvaluationResult = z.infer<typeof EvaluateArtworkOutputSchema>;
 
 export const editArtworkFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters.").max(100),

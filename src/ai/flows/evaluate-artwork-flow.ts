@@ -8,7 +8,7 @@
 
 import {ai, isAiConfigured} from '@/ai/genkit';
 import {z} from 'genkit';
-import { type AIScorecardBreakdown } from '@/lib/data';
+import { type AIScorecardBreakdown, type EvaluationResult } from '@/lib/data';
 
 const rubric = [
     { id: 1, criterion: 'Artist Reputation/Notability', type: 'AI', weight: 10 },
@@ -144,22 +144,19 @@ const ArtworkAnalysisSchema = z.object({
     maxPriceAI: z.number().describe("The AI's estimated maximum market price for the artwork in INR, based on all available data."),
 });
 
-const AIScorecardBreakdownSchema = z.object({
-    id: z.number(),
-    criterion: z.string(),
-    score: z.number(),
-    weight: z.number(),
-    weightedScore: z.number(),
-});
-
 const EvaluateArtworkOutputSchema = z.object({
     finalScore: z.number(),
     grade: z.enum(['AAA', 'AA', 'A+', 'A', 'A-']),
-    breakdown: z.array(AIScorecardBreakdownSchema),
+    breakdown: z.array(z.object({
+        id: z.number(),
+        criterion: z.string(),
+        score: z.number(),
+        weight: z.number(),
+        weightedScore: z.number(),
+    })),
     crestoxPriceRange: z.tuple([z.number(), z.number()]),
 });
 
-export type EvaluationResult = z.infer<typeof EvaluateArtworkOutputSchema>;
 
 export async function evaluateArtwork(
   input: z.infer<typeof EvaluateArtworkInputSchema>
