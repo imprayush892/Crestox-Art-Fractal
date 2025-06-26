@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export interface AIScorecardBreakdown {
@@ -134,7 +135,7 @@ export type NewArtworkData = {
     commissionPatronage?: string;
 }
 
-
+// RemoveCandy start
 // --- Data Generation ---
 
 const firstNames = ['Aether', 'Lux', 'Helena', 'Julian', 'Orion', 'Celeste', 'Kai', 'Lyra', 'Jasper', 'Seraphina', 'Axel', 'Aurora', 'Ronan', 'Elara', 'Silas', 'Nova', 'Felix', 'Astrid', 'Leo', 'Iris'];
@@ -346,3 +347,4 @@ const finalArtists: Artist[] = tempArtists.map(artist => {
 
 export const artists: Artist[] = finalArtists;
 export const fractals: Fractal[] = tempFractals;
+// RemoveCandy end

@@ -114,22 +114,26 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   // Stage 2: Real-time listeners for all data, dependent on user state
   useEffect(() => {
       if (!db) return;
       const artistsUnsub = onSnapshot(firestoreCollection(db, "artists"), (snapshot) => {
-          const fetchedArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
-          setArtists(fetchedArtists.length > 0 ? fetchedArtists : mockArtists);
+          const liveArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
+          const liveArtistIds = new Set(liveArtists.map(a => a.id));
+          const uniqueMockArtists = mockArtists.filter(a => !liveArtistIds.has(a.id));
+          setArtists([...liveArtists, ...uniqueMockArtists]);
       }, (error) => {
           console.error("Error fetching artists, using mock data.", error);
           setArtists(mockArtists);
       });
 
       const fractalsUnsub = onSnapshot(firestoreCollection(db, "fractals"), (snapshot) => {
-          const fetchedFractals = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Fractal[];
-          setFractals(fetchedFractals.length > 0 ? fetchedFractals : mockFractals);
+          const liveFractals = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Fractal[];
+          const liveFractalIds = new Set(liveFractals.map(f => f.id));
+          const uniqueMockFractals = mockFractals.filter(f => !liveFractalIds.has(f.id));
+          setFractals([...liveFractals, ...uniqueMockFractals]);
       }, (error) => {
           console.error("Error fetching fractals, using mock data.", error);
           setFractals(mockFractals);
@@ -253,8 +257,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         // Generate placeholder URLs instead of storing large data URIs
         const placeholderImages = artworkData.images.map(() => `https://placehold.co/${width}x${height}.png`);
-        const heroIndex = artworkData.images.indexOf(artworkData.heroImage);
-        const heroPlaceholder = placeholderImages[heroIndex > -1 ? heroIndex : 0];
+        const heroPlaceholder = placeholderImages[artworkData.heroImage ? placeholderImages.indexOf(artworkData.heroImage) : 0];
 
         const newFractal: Fractal = {
             id: newFractalRef.id,
@@ -299,6 +302,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             priceHistory: arrayUnion({ date: new Date().toISOString(), price: newFractalPrice }),
             totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: newTotalValue })
         });
+    }).catch(error => {
+      console.error("Add artwork transaction failed: ", error);
+      toast({
+        variant: "destructive",
+        title: "Database Error",
+        description: handleAuthError(error),
+      });
+      throw error; // Re-throw to be caught by the calling function
     });
   };
 
