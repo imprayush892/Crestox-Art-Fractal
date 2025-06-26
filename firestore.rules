@@ -1,41 +1,41 @@
-rules_version = '2';
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Rules for the 'users' collection
+    // Users can create their own profile, and read/update it.
     match /users/{userId} {
-      // Allow a new user to create their own document.
-      // This rule is secure because it checks that the UID in the document data
-      // matches the document ID, preventing users from creating profiles for others.
-      allow create: if request.resource.data.uid == userId;
-      
-      // Allow authenticated users to read and update their own documents.
+      allow create: if request.auth != null && request.auth.uid == userId;
       allow read, update: if request.auth != null && request.auth.uid == userId;
+      
+      // Rules for the 'holdings' subcollection
+      match /holdings/{holdingId} {
+        allow list, read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
-    // Artists can be read by anyone, but only managed by the user they belong to.
+    // Artists profiles are public, but only the artist can edit their own profile.
     match /artists/{artistId} {
-      allow read: if true;
-      allow create, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow get, list: if true;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && get(/databases/$(database)/documents/artists/$(artistId)).data.userId == request.auth.uid;
     }
 
-    // Fractals can be read by anyone, but only managed by the artist who created them.
+    // Fractals are public, but only the artist can manage their own fractals.
     match /fractals/{fractalId} {
-        allow read: if true;
-        allow create, update, delete: if request.auth != null && get(/databases/$(database)/documents/artists/$(resource.data.artistId)).data.userId == request.auth.uid;
+      allow get, list: if true;
+      function isArtistOwner(artistId) {
+        return get(/databases/$(database)/documents/artists/$(artistId)).data.userId == request.auth.uid;
+      }
+      allow create: if request.auth != null && isArtistOwner(request.resource.data.artistId);
+      allow update: if request.auth != null && isArtistOwner(resource.data.artistId);
     }
-
-    // Resale listings can be read by anyone, but only managed by the reseller.
+    
+    // Resale listings are public, but only the owner can create/update.
     match /resaleListings/{listingId} {
-        allow read: if true;
-        allow create: if request.auth != null && request.auth.uid == request.resource.data.resellerId;
-        allow update: if request.auth != null && request.auth.uid == resource.data.resellerId;
-    }
-
-    // Users can manage their own holdings.
-     match /users/{userId}/holdings/{holdingId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow get, list: if true;
+        allow create: if request.auth != null && request.resource.data.resellerId == request.auth.uid;
+        allow update: if request.auth != null && get(/databases/$(database)/documents/resaleListings/$(listingId)).data.resellerId == request.auth.uid;
     }
   }
 }
