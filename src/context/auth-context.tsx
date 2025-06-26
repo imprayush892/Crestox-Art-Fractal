@@ -101,7 +101,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                     console.log("User document not found for new login, will be created by login/signup logic.");
                 }
             } catch (e) {
-                console.error("Error fetching user document on auth change:", e);
+                const error = e as Error;
+                console.error("Error fetching user document on auth change:", error);
+                toast({ variant: 'destructive', title: 'Login Error', description: error.message });
                 setUser(null);
             }
         } else {
@@ -194,7 +196,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const login = async (email: string, pass: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-    } catch (error) { throw new Error(handleAuthError(error)); }
+    } catch (error) { 
+        toast({ variant: 'destructive', title: 'Login Failed', description: handleAuthError(error)});
+    }
   };
 
   const logout = async () => {
@@ -212,8 +216,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         id: user.uid,
         userId: user.uid,
         fractalPrice: 0,
-        priceHistory: [{ date: new Date().toISOString(), price: 0 }],
-        totalPortfolioValueHistory: [{ date: new Date().toISOString(), value: 0 }],
+        priceHistory: [],
+        totalPortfolioValueHistory: [],
         totalEditions: 0,
         availableEditions: 0,
     };
@@ -259,7 +263,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             aiHint: 'abstract fractal',
         };
 
-        const currentTotalValue = currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
+        const history = currentArtistData.totalPortfolioValueHistory || [];
+        const lastEntry = history.length > 0 ? history[history.length - 1] : { value: 0 };
+        const currentTotalValue = lastEntry.value;
+        
         const newTotalValue = currentTotalValue + finalPrice;
         const newTotalEditions = currentArtistData.totalEditions + artworkData.editionsToIssue;
         const newFractalPrice = newTotalEditions > 0 ? newTotalValue / newTotalEditions : 0;
@@ -302,7 +309,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           });
 
           const currentArtistData = artistSnap.data() as Artist;
-          const currentTotalValue = currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
+          const currentTotalValue = (currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0);
 
           const newTotalValue = currentTotalValue - oldFractalPrice + finalPrice;
           const newTotalEditions = currentArtistData.totalEditions + (artworkData.editionsToIssue || 0);

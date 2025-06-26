@@ -99,8 +99,8 @@ export default function CreateArtworkPage() {
       length: 24,
       breadth: 36,
       unit: "in",
-      minEstimatedValue: 100,
-      maxEstimatedValue: 1000,
+      minEstimatedValue: 1,
+      maxEstimatedValue: 100,
       editionsToIssue: 100,
       images: [],
       heroImageIndex: 0,
@@ -208,7 +208,7 @@ export default function CreateArtworkPage() {
       toast({
         variant: "destructive",
         title: "Evaluation Failed",
-        description: "There was a problem with the evaluation service. Please try again.",
+        description: error instanceof Error ? error.message : "There was a problem with the evaluation service. Please try again.",
       });
     } finally {
       setIsEvaluating(false);
@@ -265,7 +265,7 @@ export default function CreateArtworkPage() {
       toast({
         variant: "destructive",
         title: "Uh oh! Something went wrong.",
-        description: "There was a problem adding your artwork. Please try again.",
+        description: error instanceof Error ? error.message : "There was a problem adding your artwork. Please try again.",
       });
       setIsSubmitting(false);
     }
