@@ -6,7 +6,8 @@ import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPa
 import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, NewArtworkData, EditArtworkFormValues, EvaluationResult } from '@/lib/data';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, NewArtworkData, EditArtworkFormValues } from '@/lib/data';
+import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -85,17 +86,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   // Stage 1: One-time auth state check and initial profile load
   useEffect(() => {
-    if (!auth) {
-        console.log("Firebase Auth not configured. App will not be able to authenticate.");
-        setIsLoading(false);
-        return;
-    }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (!db) {
-            console.log("Firebase DB not configured. Cannot fetch user profile.");
-            setIsLoading(false);
-            return;
-        }
         if (firebaseUser) {
             const userRef = doc(db, "users", firebaseUser.uid);
             try {
@@ -121,13 +112,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   // Stage 2: Real-time listeners for all data, dependent on user state
   useEffect(() => {
-      if (!db) {
-          console.log("Firebase not configured. Using mock data.");
-          setArtists(mockArtists);
-          setFractals(mockFractals);
-          return;
-      }
-
       const artistsUnsub = onSnapshot(firestoreCollection(db, "artists"), (snapshot) => {
           const fetchedArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
           setArtists(fetchedArtists.length > 0 ? fetchedArtists : mockArtists);
@@ -191,7 +175,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   }, [user?.uid]);
 
   const signup = async (firstName: string, lastName: string, email: string, pass: string) => {
-    if (!auth || !db) throw new Error("Firebase not configured.");
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const newUser = userCredential.user;
@@ -203,14 +186,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const login = async (email: string, pass: string) => {
-    if (!auth) throw new Error("Firebase not configured.");
     try {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (error) { throw new Error(handleAuthError(error)); }
   };
 
   const logout = async () => {
-    if (!auth) return;
     await signOut(auth);
     setUser(null);
     setArtistProfile(null);
@@ -218,7 +199,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const createArtistProfile = async (profileData: Omit<Artist, 'id' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'>) => {
-    if (!user || !db) throw new Error("User not authenticated or database not initialized.");
+    if (!user) throw new Error("User not authenticated.");
     const artistRef = doc(firestoreCollection(db, 'artists'));
     const newArtist: Artist = {
         ...profileData,
@@ -237,7 +218,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
   
   const updateArtistProfile = async (profileData: Partial<ArtistProfile>) => {
-      if (!artistProfile || !db) throw new Error("Artist profile not found or DB not initialized.");
+      if (!artistProfile) throw new Error("Artist profile not found.");
       const artistRef = doc(db, "artists", artistProfile.id);
       try {
           await updateDoc(artistRef, profileData);
@@ -245,7 +226,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const addArtwork = async (artworkData: NewArtworkData, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
-    if (!db || !artistProfile) throw new Error("Database not initialized or artist profile not found.");
+    if (!artistProfile) throw new Error("Artist profile not found.");
     
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artistProfile.id);
@@ -289,7 +270,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const updateAndReevaluateArtwork = async (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => {
-     if (!db || !artistProfile) throw new Error("Database not initialized or artist profile not found.");
+     if (!artistProfile) throw new Error("Artist profile not found.");
       
       const crestoxPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
       const artistPrice = Math.round(((artworkData.minEstimatedValue || 0) + (artworkData.maxEstimatedValue || 0)) / 2);
@@ -331,7 +312,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const reevaluateArtworkForGrading = async (fractal: Fractal) => {
-    if (!db) throw new Error("Database not initialized.");
     if (!fractal.crestoxPriceRange) throw new Error("Missing data for re-evaluation.");
     const newPrice = Math.round((fractal.crestoxPriceRange[0] + fractal.crestoxPriceRange[1]) / 2);
     
@@ -342,7 +322,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const updateArtworkDetails = async (artworkId: string, data: EditArtworkFormValues) => {
-      if (!db) throw new Error("Database not connected.");
       const fractalRef = doc(db, "fractals", artworkId);
       try {
         await updateDoc(fractalRef, data as any);
@@ -351,7 +330,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
   
   const collectFromPortfolio = async (artist: Artist, quantity: number) => {
-    if (!db || !user) throw new Error("User not authenticated or database not initialized.");
+    if (!user) throw new Error("User not authenticated.");
     
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artist.id);
@@ -390,7 +369,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
   
   const listForResale = async (artist: Artist, options: { quantity: number; initialPrice: number; minPrice: number; periodDays: number; }) => {
-      if (!db || !user) throw new Error("User not authenticated or database not initialized.");
+      if (!user) throw new Error("User not authenticated.");
       
       const { quantity, initialPrice, minPrice, periodDays } = options;
       
@@ -427,7 +406,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
   
   const cancelListing = async (listingId: string) => {
-      if (!db || !user) throw new Error("User not authenticated or database not initialized.");
+      if (!user) throw new Error("User not authenticated.");
       
       await runTransaction(db, async (transaction) => {
           const listingRef = doc(db, "resaleListings", listingId);
@@ -456,7 +435,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const addToWatchlist = async (artistId: string) => {
-    if (!db || !user) {
+    if (!user) {
         toast({ variant: "destructive", title: "You must be logged in." });
         return;
     }
@@ -469,7 +448,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const removeFromWatchlist = async (artistId: string) => {
-    if (!db || !user) {
+    if (!user) {
         toast({ variant: "destructive", title: "You must be logged in." });
         return;
     }

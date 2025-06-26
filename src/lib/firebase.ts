@@ -12,31 +12,24 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp | undefined;
-let auth: Auth | null = null;
-let db: Firestore | null = null;
+// This guarantees that the app will throw a clear error during initialization
+// if the environment variables are not set, instead of failing silently.
+if (!firebaseConfig.projectId) {
+    throw new Error("Firebase config is not set. Please update your .env file.");
+}
 
-if (firebaseConfig.projectId) {
-    try {
-        app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
-        if (typeof window !== 'undefined') {
-            enableIndexedDbPersistence(db).catch((err) => {
-                if (err.code == 'failed-precondition') {
-                    console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-                } else if (err.code == 'unimplemented') {
-                    console.warn('The current browser does not support all of the features required to enable persistence.');
-                }
-            });
+const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
+
+if (typeof window !== 'undefined') {
+    enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code == 'failed-precondition') {
+            console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+        } else if (err.code == 'unimplemented') {
+            console.warn('The current browser does not support all of the features required to enable persistence.');
         }
-    } catch (error) {
-        console.error("Firebase initialization failed:", error);
-        auth = null;
-        db = null;
-    }
-} else {
-    console.log("Firebase configuration variables are missing. App will run with mock data.");
+    });
 }
 
 export { auth, db };
