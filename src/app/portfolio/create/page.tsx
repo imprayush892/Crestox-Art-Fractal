@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState } from 'react';
-import { Loader2, PlusCircle, Trash2, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Loader2, PlusCircle, Trash2, Twitter, Instagram, Linkedin, User } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -34,6 +35,7 @@ const profileFormSchema = z.object({
   }).min(10, {
     message: "Bio must be at least 10 characters.",
   }),
+  avatar: z.any().optional(),
   artistMessage: z.string().max(1000, "Message must be at most 1000 characters.").optional(),
   location: z.string().max(100).optional(),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
@@ -52,6 +54,8 @@ export default function CreateArtistProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -87,6 +91,18 @@ export default function CreateArtistProfilePage() {
     name: "exhibitions"
   });
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setAvatarPreview(reader.result as string);
+            form.setValue('avatar', reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    }
+  };
+
   async function onSubmit(data: ProfileFormValues) {
     if (!createArtistProfile) {
         toast({ variant: 'destructive', title: 'Error', description: 'Creation function not available.'});
@@ -96,6 +112,7 @@ export default function CreateArtistProfilePage() {
     try {
       const profileData = {
           ...data,
+          avatar: avatarPreview || 'https://placehold.co/100x100.png',
           awards: data.awards.map(item => item.value),
           exhibitions: data.exhibitions.map(item => item.value),
       };
@@ -132,6 +149,43 @@ export default function CreateArtistProfilePage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <FormField
+                  control={form.control}
+                  name="avatar"
+                  render={() => (
+                      <FormItem>
+                          <FormLabel>Avatar</FormLabel>
+                          <div className="flex items-center gap-6">
+                              <Avatar className="w-24 h-24">
+                                  <AvatarImage src={avatarPreview ?? undefined} alt="Avatar Preview" data-ai-hint="artist avatar" />
+                                  <AvatarFallback><User className="w-10 h-10" /></AvatarFallback>
+                              </Avatar>
+                              <FormControl>
+                                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                      Upload Image
+                                  </Button>
+                              </FormControl>
+                              <Controller
+                                name="avatar"
+                                control={form.control}
+                                render={() => (
+                                  <Input 
+                                    type="file" 
+                                    className="hidden" 
+                                    ref={fileInputRef} 
+                                    onChange={handleAvatarChange}
+                                    accept="image/png, image/jpeg"
+                                  />
+                                )}
+                              />
+                          </div>
+                          <FormDescription>
+                              Choose a public avatar. Use a square image (PNG/JPG) for best results.
+                          </FormDescription>
+                          <FormMessage />
+                      </FormItem>
+                  )}
+              />
               <FormField
                 control={form.control}
                 name="name"
