@@ -6,7 +6,8 @@ import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPa
 import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, NewArtworkData, EditArtworkFormValues, EvaluationResult, AIScorecardBreakdown } from '@/lib/data';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, NewArtworkData, EditArtworkFormValues, AIScorecardBreakdown } from '@/lib/data';
+import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -46,8 +47,8 @@ interface AuthContextType {
   createArtistProfile: (profileData: Omit<Artist, 'id' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'>) => Promise<void>;
   updateArtistProfile: (profileData: Partial<ArtistProfile>) => Promise<void>;
   addArtwork: (artworkData: NewArtworkData, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
-  updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
+  updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
   reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
 }
 
