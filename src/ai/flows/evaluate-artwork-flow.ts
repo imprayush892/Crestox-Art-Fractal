@@ -8,7 +8,7 @@
 
 import {ai, isAiConfigured} from '@/ai/genkit';
 import {z} from 'genkit';
-import { type AIScorecardBreakdown, type EvaluationResult } from '@/lib/data';
+import { type AIScorecardBreakdown } from '@/lib/data';
 
 const rubric = [
     { id: 1, criterion: 'Artist Reputation/Notability', type: 'AI', weight: 10 },
@@ -156,6 +156,8 @@ const EvaluateArtworkOutputSchema = z.object({
     })),
     crestoxPriceRange: z.tuple([z.number(), z.number()]),
 });
+
+export type EvaluationResult = z.infer<typeof EvaluateArtworkOutputSchema>;
 
 
 export async function evaluateArtwork(
