@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Artist, Fractal } from '@/lib/data';
@@ -10,12 +9,13 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
 import { InvestmentDialog } from './investment-dialog';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -33,6 +33,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
   } = useAuth();
   const router = useRouter();
   const [isCollecting, setIsCollecting] = useState(false);
+  const { toast } = useToast();
 
   const isOwnProfile = artistProfile?.id === artist.id;
   
@@ -70,6 +71,29 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
       removeFromWatchlist(artist.id);
     } else {
       addToWatchlist(artist.id);
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: `Check out ${artist.name} on Crestox`,
+      text: `Discover amazing fractal art by ${artist.name}.`,
+      url: window.location.href,
+    };
+    
+    if (navigator.share && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      // Fallback for browsers that don't support Web Share API
+      navigator.clipboard.writeText(window.location.href);
+      toast({
+        title: "Link Copied!",
+        description: "Artist profile URL copied to clipboard.",
+      });
     }
   };
 
@@ -129,6 +153,10 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                  {artist.twitter && <a href={artist.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Twitter className="w-5 h-5"/></a>}
                  {artist.instagram && <a href={artist.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Instagram className="w-5 h-5"/></a>}
                  {artist.linkedin && <a href={artist.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Linkedin className="w-5 h-5"/></a>}
+                 <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-auto p-0 md:ml-2" onClick={handleShare}>
+                    <Share2 className="w-5 h-5" />
+                    <span className="sr-only">Share Profile</span>
+                 </Button>
               </div>
               <p className="mt-4 max-w-2xl text-lg text-foreground/80">{artist.bio}</p>
             </div>
