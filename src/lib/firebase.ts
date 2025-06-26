@@ -1,6 +1,7 @@
 
-import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, enableIndexedDbPersistence, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,20 +12,28 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+let app;
+let auth;
 let db: Firestore | null = null;
 
-// Only initialize Firebase if the project ID is provided
 if (firebaseConfig.projectId) {
-  try {
-    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-    db = getFirestore(app);
-  } catch (error) {
-    console.error("Firebase initialization failed:", error);
-    // db remains null if initialization fails
-  }
+    try {
+        app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code == 'failed-precondition') {
+                console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+            } else if (err.code == 'unimplemented') {
+                console.warn('The current browser does not support all of the features required to enable persistence.');
+            }
+        });
+    } catch (error) {
+        console.error("Firebase initialization failed:", error);
+        db = null; // Ensure db is null if initialization fails
+    }
 } else {
-  // Log a clear warning once if Firebase is not configured.
-  console.warn("Firebase configuration variables are missing. App will run with mock data. Please check your .env file or environment settings.");
+    console.log("Firebase configuration variables are missing. App will run with mock data.");
 }
 
-export { db };
+export { auth, db };

@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, Wand2, AlertTriangle } from 'lucide-react';
+import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, Wand2, AlertTriangle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { ArtistSettingsForm } from '@/components/artist-settings-form';
 import Image from 'next/image';
@@ -19,23 +19,34 @@ import { ScorecardDialog } from '@/components/scorecard-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function PortfolioPage() {
-  const { isLoggedIn, artistProfile, fractals } = useAuth();
+  const { user, isLoggedIn, artistProfile, fractals, isLoading } = useAuth();
   const router = useRouter();
   const [selectedFractal, setSelectedFractal] = useState<Fractal | null>(null);
 
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoading && !isLoggedIn) {
       router.push('/login?redirect=/portfolio');
     }
-  }, [isLoggedIn, router]);
+  }, [isLoading, isLoggedIn, router]);
   
   const artistFractals = useMemo(() => {
     if (!artistProfile) return [];
     return fractals.filter(f => f.artistId === artistProfile.id);
   }, [fractals, artistProfile]);
 
+  if (isLoading) {
+    return (
+        <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
+            <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-muted-foreground">Loading Your Portfolio...</p>
+            </div>
+        </div>
+    );
+  }
+
   if (!isLoggedIn) {
-    return null; // Or a loading spinner
+    return null; 
   }
 
   if (!artistProfile) {
@@ -59,7 +70,6 @@ export default function PortfolioPage() {
   const fractalsSoldCount = artistProfile.totalEditions - artistProfile.availableEditions;
   const needsArtistMessage = artistFractals.length > 0 && !artistProfile.artistMessage;
   
-  // This is a placeholder for now, as earnings tracking is not yet implemented.
   const totalEarnings = 0;
 
   return (

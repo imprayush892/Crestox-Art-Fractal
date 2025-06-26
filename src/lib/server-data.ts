@@ -10,14 +10,14 @@ import { artists as mockArtists, fractals as mockFractals, type Artist, type Fra
 async function getDataFromCollection<T>(collectionName: string, fallbackData: T[]): Promise<T[]> {
   // If db is null, it means Firebase is not configured or failed to initialize.
   if (!db) {
-    // The warning is now logged once in firebase.ts
+    console.log("Firebase not configured. Using mock data.");
     return fallbackData;
   }
 
   try {
     const snapshot = await getDocs(collection(db, collectionName));
     if (snapshot.empty) {
-      console.warn(`${collectionName} collection is empty in Firestore. Using mock data.`);
+      console.log(`${collectionName} collection is empty in Firestore. Using mock data.`);
       return fallbackData;
     }
     return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as T[];

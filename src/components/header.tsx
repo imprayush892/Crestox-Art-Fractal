@@ -2,7 +2,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, User, X, Wallet } from 'lucide-react';
+import { Menu, User, X, Wallet, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation';
 import { Logo } from './logo';
 
 export function Header() {
-  const { isLoggedIn, logout, artistProfile, user } = useAuth();
+  const { user, isLoggedIn, logout, artistProfile, isLoading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
@@ -37,8 +37,8 @@ export function Header() {
       { href: '/portfolio', label: 'My Portfolio' },
   ];
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     closeMenu();
     router.push('/');
   };
@@ -75,15 +75,15 @@ export function Header() {
             )}
           </nav>
           <div className="flex items-center gap-4">
-            {isLoggedIn ? (
+            {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin"/>
+            ) : isLoggedIn && user ? (
               <>
-                {user && (
-                    <div className="flex items-center gap-2">
-                        <Wallet className="w-5 h-5 text-primary"/>
-                        <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')}</span>
-                        <span className="text-sm text-muted-foreground">CreCoins</span>
-                    </div>
-                )}
+                <div className="flex items-center gap-2">
+                    <Wallet className="w-5 h-5 text-primary"/>
+                    <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')}</span>
+                    <span className="text-sm text-muted-foreground">CreCoins</span>
+                </div>
                 <Button onClick={handleLogout} variant="secondary">Logout</Button>
                 <Avatar>
                   <AvatarImage src={artistProfile?.avatar} alt="User" data-ai-hint="user avatar" />
@@ -150,20 +150,22 @@ export function Header() {
                   )}
                 </nav>
                 <div className="mt-auto border-t p-4">
-                 {isLoggedIn ? (
+                 {isLoading ? (
+                    <div className="flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                    </div>
+                 ) : isLoggedIn && user ? (
                     <div className="flex flex-col gap-4">
-                        {user && (
-                            <div className="flex items-center gap-2 text-lg font-medium">
-                                <Wallet className="w-5 h-5"/>
-                                <span>{user.walletBalance.toLocaleString('en-IN')} CreCoins</span>
-                            </div>
-                        )}
+                        <div className="flex items-center gap-2 text-lg font-medium">
+                            <Wallet className="w-5 h-5"/>
+                            <span>{user.walletBalance.toLocaleString('en-IN')} CreCoins</span>
+                        </div>
                         <div className="flex items-center gap-2 font-medium">
                             <Avatar>
                               <AvatarImage src={artistProfile?.avatar} alt="User" data-ai-hint="user avatar" />
                               <AvatarFallback>U</AvatarFallback>
                             </Avatar>
-                            <span>User Profile</span>
+                            <span>{user.firstName} {user.lastName}</span>
                         </div>
                         <Button onClick={handleLogout} variant="secondary">Logout</Button>
                     </div>
