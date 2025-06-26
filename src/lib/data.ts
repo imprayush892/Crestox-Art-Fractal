@@ -67,6 +67,28 @@ export interface Fractal {
   commissionPatronage?: string;
 }
 
+export interface OwnedFractal {
+  id: string;
+  fractalId: string;
+  artistId: string;
+  purchaseDate: string;
+  purchasePrice: number;
+  serialNumber: string;
+  status: 'owned' | 'listed';
+}
+
+export interface ResaleListing {
+  id: string;
+  artistId: string;
+  resellerId: string;
+  quantity: number;
+  initialPrice: number;
+  minPrice: number;
+  periodSeconds: number;
+  listingTimestamp: string; // ISO string
+  status: 'active' | 'completed' | 'cancelled';
+}
+
 export const editArtworkFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters.").max(100),
   description: z.string().min(10, "Description must be at least 10 characters.").max(1000),
@@ -95,6 +117,23 @@ export const editArtworkFormSchema = z.object({
 });
 
 export type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
+
+export type NewArtworkData = {
+    title: string;
+    description: string;
+    materials: string;
+    artworkSize: ArtworkSize;
+    minEstimatedValue: number;
+    maxEstimatedValue: number;
+    editionsToIssue: number;
+    images: string[];
+    heroImage: string;
+    subjectSignificance?: string;
+    personalSignificance?: string;
+    timeEffort?: string;
+    biographicalContext?: string;
+    commissionPatronage?: string;
+}
 
 
 // --- Data Generation ---

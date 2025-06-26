@@ -1,15 +1,14 @@
 
 'use client';
 
-import { useAuth, type ResaleListing } from '@/context/auth-context';
+import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { ArrowUpRight, BarChart, DollarSign, TrendingUp, Wallet, Eye, Store, Package, Loader2, Download } from 'lucide-react';
-import type { OwnedFractal } from '@/context/auth-context';
-import type { Artist, Fractal } from '@/lib/data';
+import type { OwnedFractal, Artist, Fractal, ResaleListing } from '@/lib/data';
 import { ArtistHoldingsDialog } from './artist-holdings-dialog';
 import { SellDialog } from './sell-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,6 +20,7 @@ import { HoldingCertificateDialog } from './holding-certificate-dialog';
 export function CollectionClient() {
   const { 
     isLoggedIn, 
+    isLoading,
     collection, 
     artists, 
     fractals,
@@ -36,10 +36,10 @@ export function CollectionClient() {
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoading && !isLoggedIn) {
       router.push('/login?redirect=/collection');
     }
-  }, [isLoggedIn, router]);
+  }, [isLoading, isLoggedIn, router]);
 
   const artistMap = useMemo(() => new Map(artists.map(a => [a.id, a])), [artists]);
   const fractalsByArtist = useMemo(() => {
@@ -151,8 +151,19 @@ export function CollectionClient() {
     setIsCancelling(null);
   }
 
+  if (isLoading) {
+    return (
+        <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
+            <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-muted-foreground">Loading Your Collection...</p>
+            </div>
+        </div>
+    );
+  }
+
   if (!isLoggedIn) {
-    return null;
+      return null;
   }
 
   return (

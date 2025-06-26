@@ -2,9 +2,8 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Artist } from '@/lib/data';
+import type { Artist, OwnedFractal } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
-import type { OwnedFractal } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,

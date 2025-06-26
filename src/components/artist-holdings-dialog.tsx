@@ -1,8 +1,7 @@
 
 'use client';
 
-import type { Artist } from '@/lib/data';
-import type { OwnedFractal } from '@/context/auth-context';
+import type { Artist, OwnedFractal } from '@/lib/data';
 import {
   Dialog,
   DialogContent,
