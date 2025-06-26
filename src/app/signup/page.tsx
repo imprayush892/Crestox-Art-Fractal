@@ -1,7 +1,13 @@
-import { Suspense } from 'react';
+
+'use client';
+
+import { Suspense, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { SignupClient } from '@/components/signup-client';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/context/auth-context';
+
 
 function SignupSkeleton() {
     return (
@@ -31,6 +37,23 @@ function SignupSkeleton() {
 }
 
 export default function SignupPage() {
+  const { isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && isLoggedIn) {
+      router.push('/collection');
+    }
+  }, [isLoading, isLoggedIn, router]);
+
+  if (isLoading || isLoggedIn) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-14rem)] py-12">
+        <SignupSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-14rem)] py-12">
         <Suspense fallback={<SignupSkeleton />}>
