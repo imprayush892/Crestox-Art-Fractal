@@ -3,11 +3,10 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, NewArtworkData, EditArtworkFormValues } from '@/lib/data';
-import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, NewArtworkData, EditArtworkFormValues, EvaluationResult } from '@/lib/data';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,6 +35,7 @@ interface AuthContextType {
   fractals: Fractal[];
   collection: OwnedFractal[];
   resaleListings: ResaleListing[];
+  watchlist: string[];
   login: (email: string, pass: string) => Promise<void>;
   signup: (firstName: string, lastName: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -131,26 +131,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   // One-time auth state check and profile loading
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        setIsLoading(true);
         if (firebaseUser) {
             const userRef = doc(db!, "users", firebaseUser.uid);
-            const docSnap = await getDoc(userRef);
-
-            if (docSnap.exists()) {
-                setUser(docSnap.data() as User);
-            } else {
-                // This case handles users who signed up but profile creation failed,
-                // or for auto-creating a profile on first login.
-                const newProfileData: User = {
-                    uid: firebaseUser.uid,
-                    firstName: firebaseUser.displayName?.split(' ')[0] || "New",
-                    lastName: firebaseUser.displayName?.split(' ')[1] || "User",
-                    email: firebaseUser.email,
-                    walletBalance: 50000,
-                    watchlist: [],
-                };
-                await setDoc(userRef, newProfileData);
-                setUser(newProfileData);
-            }
+            onSnapshot(userRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    setUser(docSnap.data() as User);
+                }
+                // If it doesn't exist, the login/signup function should have created it.
+                // We could add a creation fallback here too if needed.
+            });
         } else {
             setUser(null);
             setArtistProfile(null);
@@ -209,8 +199,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
       await setDoc(doc(db, "users", newUser.uid), profileData);
       
-      // Don't call setUser here, onAuthStateChanged will handle it.
-      
       toast({
         title: "Account Created!",
         description: "Welcome to Crestox. You've been credited with 50,000 CreCoins.",
@@ -221,9 +209,23 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
   };
 
   const login = async (email: string, pass: string) => {
+    if (!db) throw new Error("Database not configured.");
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle the rest.
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      const userRef = doc(db, 'users', userCredential.user.uid);
+      const docSnap = await getDoc(userRef);
+
+      if (!docSnap.exists()) {
+        const newProfileData: User = {
+          uid: userCredential.user.uid,
+          firstName: "User",
+          lastName: "",
+          email: userCredential.user.email,
+          walletBalance: 50000,
+          watchlist: [],
+        };
+        await setDoc(doc(db, "users", userCredential.user.uid), newProfileData);
+      }
     } catch (error: any) {
       throw new Error(handleAuthError(error));
     }
@@ -231,9 +233,48 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
 
   const logout = async () => {
     await signOut(auth);
-    // onAuthStateChanged will set user and profile to null.
   };
   
+  const addToWatchlist = async (artistId: string) => {
+    if (!user || !db) {
+      toast({ variant: "destructive", title: "You must be logged in." });
+      return;
+    }
+    const userRef = doc(db, "users", user.uid);
+    try {
+      await updateDoc(userRef, {
+        watchlist: arrayUnion(artistId)
+      });
+      toast({
+        title: "Added to Watchlist",
+        description: "You are now watching this artist.",
+      });
+    } catch (error) {
+      console.error("Error adding to watchlist:", error);
+      toast({ variant: "destructive", title: "Failed to update watchlist." });
+    }
+  };
+
+  const removeFromWatchlist = async (artistId: string) => {
+    if (!user || !db) {
+      toast({ variant: "destructive", title: "You must be logged in." });
+      return;
+    }
+    const userRef = doc(db, "users", user.uid);
+    try {
+      await updateDoc(userRef, {
+        watchlist: arrayRemove(artistId)
+      });
+       toast({
+        title: "Removed from Watchlist",
+        description: "You are no longer watching this artist.",
+      });
+    } catch (error) {
+      console.error("Error removing from watchlist:", error);
+      toast({ variant: "destructive", title: "Failed to update watchlist." });
+    }
+  };
+
   // --- Placeholder Functions ---
   const placeholderPromise = () => Promise.reject(new Error("Functionality not implemented."));
   const placeholderAction = () => { toast({ variant: 'destructive', title: 'Not Implemented' }) };
@@ -247,15 +288,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: Auth
     fractals,
     collection,
     resaleListings,
+    watchlist: user?.watchlist ?? [],
     login,
     signup,
     logout,
+    addToWatchlist,
+    removeFromWatchlist,
     // Placeholders
     collectFromPortfolio: placeholderPromise,
     listForResale: placeholderPromise,
     cancelListing: placeholderPromise,
-    addToWatchlist: placeholderPromise,
-    removeFromWatchlist: placeholderPromise,
     createArtistProfile: placeholderPromise,
     updateArtistProfile: placeholderPromise,
     addArtwork: placeholderPromise,
@@ -278,3 +320,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    
