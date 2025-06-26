@@ -6,7 +6,7 @@ import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPa
 import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, NewArtworkData, EditArtworkFormValues, AIScorecardBreakdown } from '@/lib/data';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, NewArtworkData, EditArtworkFormValues } from '@/lib/data';
 import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
@@ -86,13 +86,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   // Stage 1: One-time auth state check and initial profile load
   useEffect(() => {
-    if (!auth) {
+    if (!auth || !db) {
+        console.log("Firebase not configured. App will not be able to authenticate.");
         setIsLoading(false);
         return;
     }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
-            const userRef = doc(db!, "users", firebaseUser.uid);
+            const userRef = doc(db, "users", firebaseUser.uid);
             try {
                 const docSnap = await getDoc(userRef);
                 if (docSnap.exists()) {
@@ -146,9 +147,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       
       let artistUnsub = () => {};
       let holdingsUnsub = () => {};
+      let userUnsub = () => {};
 
       if (user?.uid) {
-          // User-specific listeners
+          const userRef = doc(db, 'users', user.uid);
+          userUnsub = onSnapshot(userRef, (docSnap) => {
+              if (docSnap.exists()){
+                  setUser(docSnap.data() as User);
+              }
+          });
+
           const artistQuery = query(firestoreCollection(db, 'artists'), where('userId', '==', user.uid));
           artistUnsub = onSnapshot(artistQuery, (snapshot) => {
               if (!snapshot.empty) {
@@ -163,18 +171,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               const userHoldings = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as OwnedFractal[];
               setCollection(userHoldings);
           });
-
-          const userRef = doc(db, 'users', user.uid);
-          const userUnsub = onSnapshot(userRef, (docSnap) => {
-              if (docSnap.exists()){
-                  setUser(docSnap.data() as User);
-              }
-          });
-          
-          return () => {
-              userUnsub();
-          }
-
       } else {
           setArtistProfile(null);
           setCollection([]);
@@ -186,6 +182,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           resaleUnsub();
           artistUnsub();
           holdingsUnsub();
+          userUnsub();
       };
   }, [user?.uid]);
 
@@ -202,7 +199,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const login = async (email: string, pass: string) => {
-    if (!auth || !db) throw new Error("Firebase not configured.");
+    if (!auth) throw new Error("Firebase not configured.");
     try {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (error) { throw new Error(handleAuthError(error)); }
@@ -217,7 +214,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const createArtistProfile = async (profileData: Omit<Artist, 'id' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'>) => {
-    if (!user || !db) throw new Error("User not authenticated.");
+    if (!user || !db) throw new Error("User not authenticated or database not initialized.");
     const artistRef = doc(firestoreCollection(db, 'artists'));
     const newArtist: Artist = {
         ...profileData,
@@ -354,9 +351,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
   
   const collectFromPortfolio = async (artist: Artist, quantity: number) => {
-    if (!db || !user) {
-        throw new Error("Database not initialized or user not authenticated.");
-    }
+    if (!db || !user) throw new Error("User not authenticated or database not initialized.");
     
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artist.id);
@@ -395,9 +390,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
   
   const listForResale = async (artist: Artist, options: { quantity: number; initialPrice: number; minPrice: number; periodDays: number; }) => {
-      if (!db || !user) {
-        throw new Error("Database not initialized or user not authenticated.");
-      }
+      if (!db || !user) throw new Error("User not authenticated or database not initialized.");
       
       const { quantity, initialPrice, minPrice, periodDays } = options;
       
@@ -434,9 +427,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
   
   const cancelListing = async (listingId: string) => {
-      if (!db || !user) {
-        throw new Error("Database not initialized or user not authenticated.");
-      }
+      if (!db || !user) throw new Error("User not authenticated or database not initialized.");
       
       await runTransaction(db, async (transaction) => {
           const listingRef = doc(db, "resaleListings", listingId);
