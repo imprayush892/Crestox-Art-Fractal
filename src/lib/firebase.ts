@@ -1,7 +1,7 @@
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence, Firestore } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,8 +12,8 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app;
-let auth;
+let app: FirebaseApp | undefined;
+let auth: Auth | null = null;
 let db: Firestore | null = null;
 
 if (firebaseConfig.projectId) {
@@ -21,16 +21,19 @@ if (firebaseConfig.projectId) {
         app = getApps().length ? getApp() : initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code == 'failed-precondition') {
-                console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-            } else if (err.code == 'unimplemented') {
-                console.warn('The current browser does not support all of the features required to enable persistence.');
-            }
-        });
+        if (typeof window !== 'undefined') {
+            enableIndexedDbPersistence(db).catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+                } else if (err.code == 'unimplemented') {
+                    console.warn('The current browser does not support all of the features required to enable persistence.');
+                }
+            });
+        }
     } catch (error) {
         console.error("Firebase initialization failed:", error);
-        db = null; // Ensure db is null if initialization fails
+        auth = null;
+        db = null;
     }
 } else {
     console.log("Firebase configuration variables are missing. App will run with mock data.");
