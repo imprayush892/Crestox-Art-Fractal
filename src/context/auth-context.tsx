@@ -68,7 +68,7 @@ const handleAuthError = (error: any): string => {
     case 'auth/invalid-email':
       return 'The email address is not valid.';
     case 'permission-denied':
-        return 'You do not have permission to perform this action. Check Firestore rules.';
+        return 'You do not have permission to perform this action. Check Firebase rules.';
     default:
       return 'An unexpected error occurred. Please try again.';
   }
@@ -206,10 +206,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   const createArtistProfile = async (profileData: Omit<Artist, 'id' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'>) => {
     if (!db || !user) throw new Error("User not authenticated or database not available.");
-    const artistRef = doc(firestoreCollection(db, 'artists'));
+    const artistRef = doc(db, 'artists', user.uid);
     const newArtist: Artist = {
         ...profileData,
-        id: artistRef.id,
+        id: user.uid,
         userId: user.uid,
         fractalPrice: 100,
         priceHistory: [{ date: new Date().toISOString(), price: 100 }],
