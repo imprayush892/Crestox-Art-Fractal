@@ -211,11 +211,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         ...profileData,
         id: user.uid,
         userId: user.uid,
-        fractalPrice: 100,
-        priceHistory: [{ date: new Date().toISOString(), price: 100 }],
+        fractalPrice: 0,
+        priceHistory: [{ date: new Date().toISOString(), price: 0 }],
         totalPortfolioValueHistory: [{ date: new Date().toISOString(), value: 0 }],
-        totalEditions: 10000,
-        availableEditions: 10000,
+        totalEditions: 0,
+        availableEditions: 0,
     };
     try {
         await setDoc(artistRef, newArtist);
@@ -259,8 +259,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             aiHint: 'abstract fractal',
         };
 
-        const artistFractals = fractals.filter(f => f.artistId === artistProfile.id);
-        const currentTotalValue = artistFractals.reduce((sum, f) => sum + f.price, 0);
+        const currentTotalValue = currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
         const newTotalValue = currentTotalValue + finalPrice;
         const newTotalEditions = currentArtistData.totalEditions + artworkData.editionsToIssue;
         const newFractalPrice = newTotalEditions > 0 ? newTotalValue / newTotalEditions : 0;
@@ -303,11 +302,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           });
 
           const currentArtistData = artistSnap.data() as Artist;
-          const allArtistFractals = fractals.filter(f => f.artistId === currentArtistData.id);
-          const currentTotalValue = allArtistFractals.reduce((sum, f) => {
-              // Use the old price for the fractal being updated for the "before" calculation
-              return sum + (f.id === artworkId ? oldFractalPrice : f.price);
-          }, 0);
+          const currentTotalValue = currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
 
           const newTotalValue = currentTotalValue - oldFractalPrice + finalPrice;
           const newTotalEditions = currentArtistData.totalEditions + (artworkData.editionsToIssue || 0);
