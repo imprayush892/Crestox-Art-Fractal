@@ -3,31 +3,42 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can read and write to their own document. A user's document
-    // may also be updated by another user during a purchase transaction.
     match /users/{userId} {
-      allow read, create: if request.auth.uid == userId;
-      allow update: if request.auth.uid != null;
-      allow delete: if request.auth.uid == userId;
+      // A user can read and delete their own document.
+      allow read, delete: if request.auth.uid == userId;
+      // Anyone authenticated can create a user document (for signup).
+      allow create: if request.auth.uid != null;
       
-      // A user can create and delete their own holdings. A holding can also
-      // be deleted by another user during a purchase transaction.
+      // A user can update their own document.
+      // OR, another authenticated user (a buyer) can update ONLY the walletBalance,
+      // and only if it's increasing. This is for sales.
+      allow update: if (request.auth.uid == userId) || 
+                       (request.auth.uid != null && 
+                        request.resource.data.walletBalance > resource.data.walletBalance &&
+                        request.resource.data.diff(resource.data).affectedKeys.hasOnly(['walletBalance']));
+
       match /holdings/{holdingId} {
+        // A user can read and create their own holdings.
         allow read, create: if request.auth.uid == userId;
+        
+        // A holding can be deleted by its owner OR by any other authenticated user (a buyer).
+        // The application's transaction logic must ensure this is only done as part of a valid purchase.
         allow delete: if request.auth.uid != null;
-        allow update: if false; // Holdings should not be updated directly
+        
+        // Holdings should not be updated directly, only created/deleted.
+        allow update: if false;
       }
     }
 
     // Artists can be read by anyone.
-    // An authenticated user can create/update an artist's document.
+    // An authenticated user can update an artist's document (e.g. for a sale).
     match /artists/{artistId} {
       allow read: if true;
       allow create, update: if request.auth.uid != null;
     }
 
     // Fractals can be read by anyone.
-    // An authenticated user can create/update a fractal's document.
+    // An authenticated user can update a fractal's document (e.g. for re-evaluation).
     match /fractals/{fractalId} {
       allow read: if true;
       allow create, update: if request.auth.uid != null;
