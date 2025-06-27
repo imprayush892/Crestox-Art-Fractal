@@ -1,58 +1,57 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // 1. User Profiles
-    // Allows users to create their own profile upon signup.
-    // They can only read and update their own document.
-    match /users/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false; // Users cannot delete their profiles.
-    }
-
-    // 2. Artist Profiles
-    // Anyone can view artist profiles for the gallery.
-    // The artist can update their own profile freely.
-    // A collector's transaction can ONLY decrement the availableEditions.
-    match /artists/{artistId} {
-      allow create: if request.auth != null && request.auth.uid == artistId;
-      allow read: if true;
-      allow update: if (request.auth != null && request.auth.uid == artistId) ||
-                     (
-                       request.auth != null &&
-                       request.resource.data.availableEditions < resource.data.availableEditions &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availableEditions'])
-                     );
-      allow delete: if false;
-    }
-
-    // 3. Fractals (Artwork)
-    // All artwork is public to browse.
-    // Only an authenticated user can create artwork.
-    // Only the original artist can update or delete their artwork.
-    match /fractals/{fractalId} {
-      allow create: if request.auth != null && request.resource.data.artistId == request.auth.uid;
-      allow read: if true;
-      allow update: if request.auth != null && resource.data.artistId == request.auth.uid;
-      allow delete: if false;
+  
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
     
-    // 4. User Holdings (Fractals owned by users)
-    // Users can only access their own holdings subcollection.
-    match /users/{userId}/holdings/{holdingId} {
-        allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+    function isAuth() {
+      return request.auth != null;
     }
 
-    // 5. Resale Listings
-    // The marketplace is public to view.
-    // Only authenticated users can create listings for items they own.
-    // Only the seller can cancel (update) their own listing.
-    match /resaleListings/{listingId} {
-      allow create: if request.auth != null && request.resource.data.resellerId == request.auth.uid;
+    match /users/{userId} {
+      // Users can create their own profile.
+      allow create: if isOwner(userId);
+      // Users can read their own profile.
+      allow read: if isOwner(userId);
+      // Users can update their own wallet balance and watchlist.
+      allow update: if isOwner(userId) && request.resource.data.keys().hasAll(['walletBalance', 'watchlist']);
+      
+      // Allow authenticated users to update another user's wallet balance
+      // (This is required for sellers in a resale transaction)
+      allow update: if isAuth() && request.resource.data.keys().hasAll(['walletBalance']);
+
+      match /holdings/{holdingId} {
+        // Users can manage their own holdings.
+        allow read, create, delete: if isOwner(userId);
+        // A user can update a holding's status (e.g., from 'owned' to 'listed').
+        allow update: if isOwner(userId) && request.resource.data.keys().hasAll(['status']);
+      }
+    }
+    
+    match /artists/{artistId} {
+      // Anyone can view artist profiles.
       allow read: if true;
-      allow update: if request.auth != null && resource.data.resellerId == request.auth.uid;
-      allow delete: if false;
+      // Artists can create and update their own profiles.
+      allow create, update: if isOwner(artistId);
+    }
+    
+    match /fractals/{fractalId} {
+      // Anyone can view artwork.
+      allow read: if true;
+      // Only the artist can create or update their own artwork.
+      allow create, update: if isAuth() && get(/databases/$(database)/documents/artists/$(request.resource.data.artistId)).data.userId == request.auth.uid;
+    }
+    
+    match /resaleListings/{listingId} {
+      // Anyone can view resale listings.
+      allow read: if true;
+      // Authenticated users can create listings.
+      allow create: if isAuth();
+      // Only the lister can cancel it, but any authenticated user can update it (to complete a purchase).
+      allow update: if isAuth();
     }
   }
 }

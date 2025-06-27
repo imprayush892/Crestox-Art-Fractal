@@ -26,7 +26,12 @@ export interface ArtistProfile extends Artist {
   userId: string;
 }
 
-type UpdateArtistProfileData = Partial<Omit<Artist, 'avatar'>> & { avatar?: File | string | null };
+type UpdateArtistProfileData = Partial<Omit<Artist, 'avatar' | 'awards' | 'exhibitions'>> & { 
+    avatar?: File | string | null,
+    awards?: {value: string}[],
+    exhibitions?: {value: string}[]
+};
+
 
 // --- Context Type ---
 interface AuthContextType {
@@ -49,7 +54,7 @@ interface AuthContextType {
   removeFromWatchlist: (artistId: string) => Promise<void>;
   createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
   updateArtistProfile: (profileData: UpdateArtistProfileData) => Promise<void>;
-  addArtwork: (artworkData: ArtworkFormValues, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
+  addArtwork: (artworkData: ArtworkFormValues) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
   reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
@@ -225,7 +230,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     
     if (avatar) {
         try {
-            const avatarRef = ref(storage, `avatars/${user.uid}`);
+            const avatarRef = ref(storage, `avatars/${user.uid}/${avatar.name}`);
             await uploadBytes(avatarRef, avatar);
             avatarUrl = await getDownloadURL(avatarRef);
         } catch (error) {
@@ -236,6 +241,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     const artistRef = doc(db, 'artists', user.uid);
     const newArtistData: Artist = {
         ...restOfProfileData,
+        awards: profileData.awards.map(a => a.value),
+        exhibitions: profileData.exhibitions.map(e => e.value),
         id: user.uid,
         userId: user.uid,
         avatar: avatarUrl,
@@ -257,25 +264,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       const { avatar, ...restOfProfileData } = profileData;
       const dataToUpdate: { [key: string]: any } = {
         ...restOfProfileData,
-        awards: (restOfProfileData.awards || []).map(a => typeof a === 'object' ? a.value : a),
-        exhibitions: (restOfProfileData.exhibitions || []).map(e => typeof e === 'object' ? e.value : e),
+        awards: (profileData.awards || []).map(a => a.value),
+        exhibitions: (profileData.exhibitions || []).map(e => e.value),
       };
 
       if (avatar && avatar instanceof File) {
           try {
-              const avatarRef = ref(storage, `avatars/${artistProfile.id}`);
+              const avatarRef = ref(storage, `avatars/${artistProfile.id}/${avatar.name}`);
               await uploadBytes(avatarRef, avatar);
               dataToUpdate.avatar = await getDownloadURL(avatarRef);
           } catch (error) {
               throw new Error(handleAuthError(error));
-          }
-      } else if (typeof avatar === 'string' && avatar.startsWith('data:')) {
-          try {
-              const avatarRef = ref(storage, `avatars/${artistProfile.id}`);
-              await uploadBytes(avatarRef, await (await fetch(avatar)).blob());
-              dataToUpdate.avatar = await getDownloadURL(avatarRef);
-          } catch(error) {
-            throw new Error(handleAuthError(error));
           }
       }
       
@@ -286,7 +285,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       } catch (error) { throw new Error(handleAuthError(error)); }
   };
 
-  const addArtwork = async (artworkData: ArtworkFormValues, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
+  const addArtwork = async (artworkData: ArtworkFormValues) => {
     if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
     
     const newFractalId = doc(firestoreCollection(db, 'fractals')).id;
@@ -300,6 +299,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     );
 
     const heroImageUrl = imageUrls[artworkData.heroImageIndex > -1 ? artworkData.heroImageIndex : 0];
+
+    // Placeholder until evaluation is hooked up
+    const finalPrice = Math.round((artworkData.minEstimatedValue + artworkData.maxEstimatedValue) / 2);
 
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artistProfile.id);
@@ -321,10 +323,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             heroImage: heroImageUrl,
             price: finalPrice,
             priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
-            aiScore: evaluationResult.finalScore,
-            aiScorecard: evaluationResult.breakdown,
-            crestoxGrade: shouldApplyGrade ? evaluationResult.grade : undefined,
-            crestoxPriceRange: evaluationResult.crestoxPriceRange,
             artistMinEstimate: artworkData.minEstimatedValue,
             artistMaxEstimate: artworkData.maxEstimatedValue,
             width: 600, 
@@ -486,8 +484,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 }
             } else if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
                 const listingSnap = docSnaps.get(`listing_${item.listingId}`);
+                if (!listingSnap?.exists()) throw new Error(`Listing ${item.listingId} not found.`);
+                
                 const sellerSnap = docSnaps.get(`seller_${item.resellerId}`);
-                if (!listingSnap?.exists() || !sellerSnap?.exists()) throw new Error("Seller or listing not found.");
+                if (!sellerSnap?.exists()) throw new Error(`Seller ${item.resellerId} not found.`);
 
                 const listingData = listingSnap.data() as ResaleListing;
                 if (listingData.status !== 'active' || listingData.quantity < item.quantity) {
@@ -496,9 +496,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
                 const holdingsToTransfer = listingData.holdingIds.slice(0, item.quantity);
                 for (const holdingId of holdingsToTransfer) {
-                    // Note: We are not reading the holding doc itself, trusting the listing doc for this transaction
-                    // This is a design trade-off for simplicity and to avoid read-after-read complexity
-                    // A more robust system might pre-verify holdings outside the transaction
                     holdingsToDelete.push(doc(db, `users/${item.resellerId}/holdings/${holdingId}`));
                     holdingsToCreate.push({
                          fractalId: "portfolio-fractal", artistId: listingData.artistId, purchaseDate: new Date().toISOString(),
@@ -560,9 +557,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               where("status", "==", "owned")
           );
           
-          // Note: getDocs cannot be used inside a transaction. We must get a snapshot of the query first.
-          // This is a limitation, but for this use case, we will get the docs outside the transaction.
-          // This means there's a small race condition window, but it's acceptable for this app's logic.
           const holdingsSnap = await getDocs(holdingsQuery);
           
           if (holdingsSnap.docs.length < quantity) throw new Error("Not enough fractals to list.");
