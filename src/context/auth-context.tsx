@@ -4,7 +4,8 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Artist, Fractal, OwnedFractal, ResaleListing, NewArtworkData, EditArtworkFormValues, AIScorecardBreakdown } from '@/lib/data';
 import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
@@ -240,40 +241,40 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   };
 
   const addArtwork = async (artworkData: NewArtworkData, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
-    if (!db || !artistProfile) throw new Error("Artist profile not found or database not available.");
+    if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
+    if (!storage) throw new Error("Storage is not configured.");
     
+    // --- 1. Upload images to Firebase Storage ---
+    const newFractalId = doc(firestoreCollection(db, 'fractals')).id;
+    const imageUrls = await Promise.all(
+        artworkData.images.map(async (dataUrl, index) => {
+            const storageRef = ref(storage, `artworks/${user.uid}/${newFractalId}/${uuidv4()}`);
+            const uploadResult = await uploadString(storageRef, dataUrl, 'data_url');
+            return getDownloadURL(uploadResult.ref);
+        })
+    );
+
+    const heroImageIndex = artworkData.images.indexOf(artworkData.heroImage);
+    const heroImageUrl = imageUrls[heroImageIndex > -1 ? heroImageIndex : 0];
+
+    // --- 2. Run Firestore transaction ---
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artistProfile.id);
         const artistSnap = await transaction.get(artistRef);
-        if (!artistSnap.exists()) {
-            throw new Error("Artist profile not found in database.");
-        }
-        
+        if (!artistSnap.exists()) throw new Error("Artist profile does not exist.");
+
         const currentArtistData = artistSnap.data() as Artist;
-        const newFractalRef = doc(firestoreCollection(db, 'fractals'));
-        
-        const width = 600;
-        const height = 400;
-        const aiHint = 'abstract fractal';
 
-        const imageUrls = Array.from({ length: 3 }, () => `https://source.unsplash.com/featured/${width}x${height}/?${encodeURIComponent(aiHint)}&sig=${Math.random()}`);
-
-        const newFractal: Fractal = {
-            id: newFractalRef.id,
+        // --- 3. Create new fractal document data ---
+        const newFractal: Omit<Fractal, 'id'> & { id: string } = {
+            id: newFractalId,
             artistId: artistProfile.id,
             title: artworkData.title,
             description: artworkData.description,
             materials: artworkData.materials,
             artworkSize: artworkData.artworkSize,
-            subjectSignificance: artworkData.subjectSignificance,
-            personalSignificance: artworkData.personalSignificance,
-            timeEffort: artworkData.timeEffort,
-            biographicalContext: artworkData.biographicalContext,
-            commissionPatronage: artworkData.commissionPatronage,
-            
             images: imageUrls,
-            heroImage: imageUrls[0],
-
+            heroImage: heroImageUrl,
             price: finalPrice,
             priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
             aiScore: evaluationResult.finalScore,
@@ -282,18 +283,26 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
             artistMinEstimate: artworkData.minEstimatedValue,
             artistMaxEstimate: artworkData.maxEstimatedValue,
-            width,
-            height,
-            aiHint,
+            width: 600,
+            height: 400,
+            aiHint: 'custom artwork',
+            subjectSignificance: artworkData.subjectSignificance,
+            personalSignificance: artworkData.personalSignificance,
+            timeEffort: artworkData.timeEffort,
+            biographicalContext: artworkData.biographicalContext,
+            commissionPatronage: artworkData.commissionPatronage,
         };
         
-        transaction.set(newFractalRef, newFractal);
-
+        // --- 4. Calculate new portfolio values ---
         const currentTotalValue = currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
         const newTotalValue = currentTotalValue + finalPrice;
         const newTotalEditions = currentArtistData.totalEditions + artworkData.editionsToIssue;
         const newFractalPrice = newTotalEditions > 0 ? newTotalValue / newTotalEditions : 0;
-        
+
+        // --- 5. Set and Update documents in transaction ---
+        const newFractalRef = doc(db, "fractals", newFractalId);
+        transaction.set(newFractalRef, newFractal);
+
         transaction.update(artistRef, {
             totalEditions: newTotalEditions,
             availableEditions: currentArtistData.availableEditions + artworkData.editionsToIssue,
@@ -308,7 +317,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         title: "Database Error",
         description: handleAuthError(error),
       });
-      throw error; // Re-throw to be caught by the calling function
+      throw error;
     });
   };
 

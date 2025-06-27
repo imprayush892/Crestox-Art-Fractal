@@ -2,6 +2,7 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,6 +22,7 @@ if (!firebaseConfig.projectId) {
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
+const storage: FirebaseStorage = getStorage(app);
 
 if (typeof window !== 'undefined') {
     enableIndexedDbPersistence(db).catch((err) => {
@@ -32,4 +34,4 @@ if (typeof window !== 'undefined') {
     });
 }
 
-export { auth, db };
+export { auth, db, storage };
