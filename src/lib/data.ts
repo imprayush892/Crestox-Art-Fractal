@@ -259,7 +259,7 @@ const tempArtists = (() => {
         return {
             id: `artist-${index + 1}`,
             name,
-            avatar: 'https://placehold.co/100x100.png',
+            avatar: `https://source.unsplash.com/featured/100x100/?portrait&sig=${index}`,
             bio: getRandom(bios),
             artistMessage: getRandom(artistMessages),
             location: getRandom(locations),
@@ -297,8 +297,9 @@ const tempFractals: Fractal[] = (() => {
         else if (aiScore > 40) crestoxGrade = 'A+';
         else if (aiScore > 20) crestoxGrade = 'A';
         
+        const aiHint = getRandom(aiHints);
         const numImages = randomInt(1,3);
-        const images = Array.from({length: numImages}, () => `https://placehold.co/${width}x${height}.png`);
+        const images = Array.from({length: numImages}, (_, i) => `https://source.unsplash.com/featured/${width}x${height}/?${encodeURIComponent(aiHint)}&sig=${index * 3 + i}`);
 
         return {
             id: `fractal-${String(index + 1).padStart(3, '0')}`,
@@ -309,7 +310,7 @@ const tempFractals: Fractal[] = (() => {
             description: getRandom(fractalDescriptions),
             materials: 'Digital Render',
             artworkSize: { length: width, breadth: height, unit: 'px' },
-            aiHint: getRandom(aiHints),
+            aiHint,
             width,
             height,
             price,

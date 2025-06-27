@@ -254,10 +254,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         
         const width = 600;
         const height = 400;
+        const aiHint = 'abstract fractal';
 
-        // Generate placeholder URLs instead of storing large data URIs
-        const placeholderImages = artworkData.images.map(() => `https://placehold.co/${width}x${height}.png`);
-        const heroPlaceholder = placeholderImages[artworkData.heroImage ? placeholderImages.indexOf(artworkData.heroImage) : 0];
+        const imageUrls = Array.from({ length: 3 }, () => `https://source.unsplash.com/featured/${width}x${height}/?${encodeURIComponent(aiHint)}&sig=${Math.random()}`);
 
         const newFractal: Fractal = {
             id: newFractalRef.id,
@@ -272,8 +271,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             biographicalContext: artworkData.biographicalContext,
             commissionPatronage: artworkData.commissionPatronage,
             
-            images: placeholderImages,
-            heroImage: heroPlaceholder,
+            images: imageUrls,
+            heroImage: imageUrls[0],
 
             price: finalPrice,
             priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
@@ -285,7 +284,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             artistMaxEstimate: artworkData.maxEstimatedValue,
             width,
             height,
-            aiHint: 'abstract fractal',
+            aiHint,
         };
         
         transaction.set(newFractalRef, newFractal);
