@@ -4,53 +4,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- User Profile and Wallet ---
+    // --- Users Collection ---
     match /users/{userId} {
-      // ANY authenticated user can READ any user's profile.
-      // This is necessary for the buyer's client to read the seller's data during a transaction.
+      // READ: Any authenticated user can read any other user's public profile.
+      // This is necessary for a buyer's app to read a seller's data during a transaction.
       allow read: if request.auth.uid != null;
       
-      // A user can CREATE and WRITE to their OWN profile (e.g., update watchlist).
-      allow create, write: if request.auth.uid == userId;
+      // CREATE & DELETE: A user can only create or delete their own profile.
+      allow create, delete: if request.auth.uid == userId;
       
-      // A different user can UPDATE a profile, but ONLY to increase the wallet balance.
-      // This allows a buyer to securely pay a seller without having full write access.
-      allow update: if request.auth.uid != null &&
-                     request.resource.data.walletBalance > resource.data.walletBalance &&
-                     request.resource.data.keys().hasOnly(['walletBalance']);
-      
-      // --- User's Private Fractal Holdings ---
+      // UPDATE: A user can update their own profile.
+      // A different user (a buyer) can also update this profile, but ONLY under strict conditions:
+      // 1. They are not the owner of the document.
+      // 2. The walletBalance must be increasing (they are paying the user).
+      // 3. No other fields in the document are being added, removed, or changed.
+      allow update: if (request.auth.uid == userId) || 
+                     (request.auth.uid != userId &&
+                      request.resource.data.walletBalance > resource.data.walletBalance &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
+                      
+      // --- Holdings Subcollection ---
       match /holdings/{holdingId} {
-        // ANY authenticated user can READ holdings.
-        // This lets the buyer's client verify the holding exists before purchase.
+        // READ: Any authenticated user can read any holding document.
+        // This is necessary for a buyer's app to verify the holding exists before purchasing.
         allow read: if request.auth.uid != null;
         
-        // A user can CREATE and UPDATE THEIR OWN holdings.
-        // The UPDATE permission is critical for changing a holding's status to 'listed'.
+        // CREATE & UPDATE: Only the owner of the parent user document can create or update their holdings.
+        // This allows a user to list their own items for sale (updating status).
         allow create, update: if request.auth.uid == userId;
         
-        // ANY authenticated user can DELETE a holding (buyer taking ownership from seller).
-        // This is safe because it's wrapped in a transaction that ensures payment.
+        // DELETE: Any authenticated user can delete a holding document.
+        // This is safe because the application's transaction logic ensures payment happens first.
+        // This rule allows the buyer to "take" the holding from the seller to complete the sale.
         allow delete: if request.auth.uid != null;
       }
     }
 
-    // --- Public Data: Artists, Fractals, Listings ---
-    // These collections can be read by anyone, but only written/updated by authenticated users.
-    // The application logic handles the specifics of who can update what.
+    // --- Artists Collection ---
+    // Anyone can read artist data. Any authenticated user can create or update artist profiles.
     match /artists/{artistId} {
       allow read: if true;
-      allow create, update: if request.auth.uid != null;
+      allow write: if request.auth.uid != null; // write is create, update, delete
     }
 
+    // --- Fractals Collection ---
+    // Anyone can read fractal data. Any authenticated user can create or update fractals.
     match /fractals/{fractalId} {
       allow read: if true;
-      allow create, update: if request.auth.uid != null;
+      allow write: if request.auth.uid != null;
     }
 
+    // --- ResaleListings Collection ---
+    // Anyone can read listing data. Any authenticated user can create or update listings.
     match /resaleListings/{listingId} {
       allow read: if true;
-      allow create, update, delete: if request.auth.uid != null;
+      allow write: if request.auth.uid != null;
     }
   }
 }
