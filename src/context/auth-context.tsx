@@ -216,14 +216,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const createArtistProfile = async (profileData: Omit<Artist, 'id' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'>) => {
     if (!db || !user) throw new Error("User not authenticated or database not available.");
     
-    let avatarUrl = 'https://placehold.co/100x100.png';
-    if (profileData.avatar) {
+    let avatarUrl = ''; // Start with no avatar
+    if (profileData.avatar) { // avatar is a data URI string
         try {
             const avatarRef = ref(storage, `avatars/${user.uid}`);
             const uploadResult = await uploadString(avatarRef, profileData.avatar, 'data_url');
             avatarUrl = await getDownloadURL(uploadResult.ref);
         } catch (error) {
-            console.error("Avatar upload failed, using placeholder.", error);
+            console.error("Avatar upload failed, profile will be created without one.", error);
             toast({ variant: 'destructive', title: "Avatar Upload Failed", description: "Could not upload your profile picture. A default will be used."});
         }
     }
@@ -251,6 +251,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       
       const dataToUpdate: Partial<ArtistProfile> = {...profileData};
 
+      // Check if the avatar is a new upload (data URI)
       if (profileData.avatar && profileData.avatar.startsWith('data:image')) {
           try {
               const avatarRef = ref(storage, `avatars/${artistProfile.id}`);
@@ -275,7 +276,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     
     const newFractalId = doc(firestoreCollection(db, 'fractals')).id;
 
-    // --- 1. Upload images to Firebase Storage and get URLs ---
+    // --- 1. Upload images to Firebase Storage and get their download URLs ---
     const imageUrls = await Promise.all(
         artworkData.images.map(async (dataUrl) => {
             const storageRef = ref(storage, `artworks/${user.uid}/${newFractalId}/${uuidv4()}`);
@@ -295,7 +296,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         const currentArtistData = artistSnap.data() as Artist;
 
-        // --- 3. Create new fractal document data ---
+        // --- 3. Create new fractal document data with the correct URLs ---
         const newFractal: Omit<Fractal, 'id'> & { id: string } = {
             id: newFractalId,
             artistId: artistProfile.id,
@@ -313,7 +314,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
             artistMinEstimate: artworkData.minEstimatedValue,
             artistMaxEstimate: artworkData.maxEstimatedValue,
-            width: 600, 
+            width: 600,
             height: 400,
             aiHint: 'custom artwork',
             subjectSignificance: artworkData.subjectSignificance,
