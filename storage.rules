@@ -3,28 +3,11 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // 1. Artwork Images
-    // Allow artists to upload images to a folder corresponding to their user ID.
-    // This keeps an artist's uploads organized and secure.
+    // Allow artists to upload artwork to a folder corresponding to their user ID.
+    // They can read, write, and delete files within their own folder.
     match /artworks/{userId}/{allPaths=**} {
+      allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow public read access to all artwork images so they can be displayed in the app.
-    match /artworks/{allPaths=**} {
-      allow read: if true;
-    }
-
-    // 2. Avatar Images
-    // Allow any authenticated user to upload their own avatar.
-    match /avatars/{userId}/{allPaths=**} {
-        allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Allow public read for all avatars.
-     match /avatars/{allPaths=**} {
-      allow read: if true;
     }
   }
 }

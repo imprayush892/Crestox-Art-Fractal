@@ -21,10 +21,12 @@ if (!firebaseConfig.projectId) {
 
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth: Auth = getAuth(app);
-const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
+let db: Firestore;
 
-if (typeof window !== 'undefined') {
+try {
+  db = getFirestore(app);
+  if (typeof window !== 'undefined') {
     enableIndexedDbPersistence(db).catch((err) => {
         if (err.code == 'failed-precondition') {
             console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
@@ -32,6 +34,12 @@ if (typeof window !== 'undefined') {
             console.warn('The current browser does not support all of the features required to enable persistence.');
         }
     });
+  }
+} catch (e) {
+  console.error("Firestore could not be initialized:", e);
+  // @ts-ignore
+  db = null;
 }
+
 
 export { auth, db, storage };
