@@ -57,7 +57,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
       const availableFromArtist = currentArtist.availableEditions;
       const totalAvailable = availableFromResale + availableFromArtist;
 
-      const currentUserHoldings = collection.filter(f => f.artistId === currentArtist.id && f.status === 'owned').length;
+      const currentUserHoldings = collection.filter(f => f.artistId === currentArtist.id).length;
       const holdingLimit = currentArtist.totalEditions > 0 ? Math.floor(currentArtist.totalEditions * 0.1) : 0;
       const purchaseLimit = Math.max(0, holdingLimit - currentUserHoldings);
 
