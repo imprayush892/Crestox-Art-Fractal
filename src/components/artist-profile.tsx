@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Artist, Fractal } from '@/lib/data';
@@ -153,10 +154,6 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                  {artist.twitter && <a href={artist.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Twitter className="w-5 h-5"/></a>}
                  {artist.instagram && <a href={artist.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Instagram className="w-5 h-5"/></a>}
                  {artist.linkedin && <a href={artist.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Linkedin className="w-5 h-5"/></a>}
-                 <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-auto p-0 md:ml-2" onClick={handleShare}>
-                    <Share2 className="w-5 h-5" />
-                    <span className="sr-only">Share Profile</span>
-                 </Button>
               </div>
               <p className="mt-4 max-w-2xl text-lg text-foreground/80">{artist.bio}</p>
             </div>
@@ -165,9 +162,15 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
         <div className="lg:col-span-2">
            {isOwnProfile ? (
              <Card className="sticky top-24">
-                <CardHeader>
-                    <CardTitle className="font-headline text-2xl">Your Public Profile</CardTitle>
-                    <CardDescription>This is how collectors see your portfolio. Manage your artworks and settings from your dashboard.</CardDescription>
+                <CardHeader className="flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="font-headline text-2xl">Your Public Profile</CardTitle>
+                      <CardDescription>This is how collectors see your profile.</CardDescription>
+                    </div>
+                    <Button variant="outline" size="icon" className="text-primary border-primary hover:bg-primary/10 hover:text-primary" onClick={handleShare}>
+                        <Share2 className="w-5 h-5" />
+                        <span className="sr-only">Share Profile</span>
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     <Button size="lg" className="w-full" asChild>
@@ -180,9 +183,15 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
             </Card>
            ) : (
             <Card className="sticky top-24">
-                  <CardHeader>
-                      <CardTitle className="font-headline text-2xl">Collect Fractals</CardTitle>
-                      <CardDescription>Purchase a "fractal" to own a piece of this artist's collection.</CardDescription>
+                  <CardHeader className="flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="font-headline text-2xl">Collect Fractals</CardTitle>
+                        <CardDescription>Purchase fractals from the collection.</CardDescription>
+                      </div>
+                      <Button variant="outline" size="icon" className="text-primary border-primary hover:bg-primary/10 hover:text-primary" onClick={handleShare}>
+                          <Share2 className="w-5 h-5" />
+                          <span className="sr-only">Share Profile</span>
+                      </Button>
                   </CardHeader>
                   <CardContent>
                       <div className="flex justify-between items-center mb-4">
