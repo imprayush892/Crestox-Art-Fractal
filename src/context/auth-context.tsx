@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 export interface User {
   uid: string;
   firstName: string;
-  lastName: string;
+  lastName:string;
   email: string | null;
   walletBalance: number;
   watchlist: string[];
@@ -215,11 +215,25 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   const createArtistProfile = async (profileData: Omit<Artist, 'id' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'>) => {
     if (!db || !user) throw new Error("User not authenticated or database not available.");
+    
+    let avatarUrl = 'https://placehold.co/100x100.png';
+    if (profileData.avatar) {
+        try {
+            const avatarRef = ref(storage, `avatars/${user.uid}`);
+            const uploadResult = await uploadString(avatarRef, profileData.avatar, 'data_url');
+            avatarUrl = await getDownloadURL(uploadResult.ref);
+        } catch (error) {
+            console.error("Avatar upload failed, using placeholder.", error);
+            toast({ variant: 'destructive', title: "Avatar Upload Failed", description: "Could not upload your profile picture. A default will be used."});
+        }
+    }
+    
     const artistRef = doc(db, 'artists', user.uid);
     const newArtist: Artist = {
         ...profileData,
         id: user.uid,
         userId: user.uid,
+        avatar: avatarUrl,
         fractalPrice: 0,
         priceHistory: [],
         totalPortfolioValueHistory: [],
@@ -234,9 +248,24 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   
   const updateArtistProfile = async (profileData: Partial<ArtistProfile>) => {
       if (!db || !artistProfile) throw new Error("Artist profile not found or database not available.");
+      
+      const dataToUpdate: Partial<ArtistProfile> = {...profileData};
+
+      if (profileData.avatar && profileData.avatar.startsWith('data:image')) {
+          try {
+              const avatarRef = ref(storage, `avatars/${artistProfile.id}`);
+              const uploadResult = await uploadString(avatarRef, profileData.avatar, 'data_url');
+              dataToUpdate.avatar = await getDownloadURL(uploadResult.ref);
+          } catch (error) {
+              console.error("Avatar update failed.", error);
+              toast({ variant: 'destructive', title: "Avatar Upload Failed", description: "Could not update your profile picture."});
+              delete dataToUpdate.avatar; // Don't update avatar if upload fails
+          }
+      }
+
       const artistRef = doc(db, "artists", artistProfile.id);
       try {
-          await updateDoc(artistRef, profileData);
+          await updateDoc(artistRef, dataToUpdate);
       } catch (error) { throw new Error(handleAuthError(error)); }
   };
 
@@ -244,10 +273,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
     if (!storage) throw new Error("Storage is not configured.");
     
-    // --- 1. Upload images to Firebase Storage ---
     const newFractalId = doc(firestoreCollection(db, 'fractals')).id;
+
+    // --- 1. Upload images to Firebase Storage and get URLs ---
     const imageUrls = await Promise.all(
-        artworkData.images.map(async (dataUrl, index) => {
+        artworkData.images.map(async (dataUrl) => {
             const storageRef = ref(storage, `artworks/${user.uid}/${newFractalId}/${uuidv4()}`);
             const uploadResult = await uploadString(storageRef, dataUrl, 'data_url');
             return getDownloadURL(uploadResult.ref);
@@ -283,7 +313,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
             artistMinEstimate: artworkData.minEstimatedValue,
             artistMaxEstimate: artworkData.maxEstimatedValue,
-            width: 600,
+            width: 600, 
             height: 400,
             aiHint: 'custom artwork',
             subjectSignificance: artworkData.subjectSignificance,
@@ -419,6 +449,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             };
             transaction.set(holdingRef, newHolding);
         }
+    }).catch((error) => {
+      throw new Error(handleAuthError(error));
     });
     toast({ title: "Collection Successful!", description: `You have collected ${quantity} fractal(s) from ${artist.name}.` });
   };

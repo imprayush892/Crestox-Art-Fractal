@@ -50,7 +50,7 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function CreateArtistProfilePage() {
-  const { isLoggedIn, createArtistProfile } = useAuth();
+  const { user, isLoggedIn, createArtistProfile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,7 +66,7 @@ export default function CreateArtistProfilePage() {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: "",
+      name: user ? `${user.firstName} ${user.lastName}` : "",
       bio: "",
       artistMessage: "",
       location: "",
@@ -94,6 +94,10 @@ export default function CreateArtistProfilePage() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            toast({ variant: 'destructive', title: 'Image too large', description: 'Please upload an image smaller than 2MB.'});
+            return;
+        }
         const reader = new FileReader();
         reader.onloadend = () => {
             setAvatarPreview(reader.result as string);
@@ -112,7 +116,7 @@ export default function CreateArtistProfilePage() {
     try {
       const profileData = {
           ...data,
-          avatar: avatarPreview || 'https://placehold.co/100x100.png',
+          avatar: avatarPreview || '', // Pass the data URI or an empty string
           awards: data.awards.map(item => item.value),
           exhibitions: data.exhibitions.map(item => item.value),
       };
@@ -123,10 +127,11 @@ export default function CreateArtistProfilePage() {
       });
       router.push('/portfolio');
     } catch (error) {
+      const typedError = error as Error;
       toast({
         variant: "destructive",
         title: "Uh oh! Something went wrong.",
-        description: "There was a problem with your request. Please try again.",
+        description: typedError.message || "There was a problem with your request. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -180,7 +185,7 @@ export default function CreateArtistProfilePage() {
                               />
                           </div>
                           <FormDescription>
-                              Choose a public avatar. Use a square image (PNG/JPG) for best results.
+                              Choose a public avatar. Use a square image (PNG/JPG, max 2MB) for best results.
                           </FormDescription>
                           <FormMessage />
                       </FormItem>

@@ -95,10 +95,14 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
+          if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            toast({ variant: 'destructive', title: 'Image too large', description: 'Please upload an image smaller than 2MB.'});
+            return;
+          }
           const reader = new FileReader();
           reader.onloadend = () => {
               setAvatarPreview(reader.result as string);
-              form.setValue('avatar', reader.result as string);
+              form.setValue('avatar', reader.result as string, { shouldDirty: true });
           };
           reader.readAsDataURL(file);
       }
@@ -113,7 +117,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
     try {
       await updateArtistProfile({
         ...data,
-        avatar: (data.avatar as string) || 'https://placehold.co/100x100.png',
+        avatar: data.avatar || '',
         awards: data.awards.map(item => item.value),
         exhibitions: data.exhibitions.map(item => item.value),
       });
@@ -121,11 +125,13 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
         title: "Profile Updated!",
         description: "Your changes have been saved successfully.",
       });
+      form.reset(form.getValues()); // Resets the dirty state
     } catch (error) {
+      const typedError = error as Error;
       toast({
         variant: "destructive",
         title: "Uh oh! Something went wrong.",
-        description: "There was a problem with your request. Please try again.",
+        description: typedError.message || "There was a problem with your request. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -167,7 +173,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
                         />
                     </div>
                     <FormDescription>
-                        Update your public avatar. Use a square image (PNG/JPG) for best results.
+                        Update your public avatar. Use a square image (PNG/JPG, max 2MB) for best results.
                     </FormDescription>
                     <FormMessage />
                 </FormItem>
@@ -333,7 +339,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
           )}
         />
 
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || !form.formState.isDirty}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Save Changes
         </Button>
