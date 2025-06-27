@@ -2,25 +2,52 @@
 import Image from 'next/image';
 import { Wordmark } from '@/components/wordmark';
 import { Separator } from '@/components/ui/separator';
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import { storage } from '@/lib/firebase';
 
-const founders = [
+const foundersData = [
   {
     name: 'Prayush Shah',
-    imageSrc: '/founder_prayush.jpg',
+    imagePath: 'founders/founder_prayush.jpg', // Path in Firebase Storage
     description: "A CEPT alum with a tech-savvy, entrepreneurial spirit, Prayush drives Crestox’s product vision. From crafting seamless user journeys to building robust digital tools, he’s the brains behind our platform’s innovation. With a deep passion for Indian art and its future, Prayush ensures every feature empowers artists and collectors alike.",
     contact: '9978902743',
     aiHint: 'man portrait',
   },
   {
     name: 'Udit Shah',
-    imageSrc: '/founder_udit.jpg',
+    imagePath: 'founders/founder_udit.jpg', // Path in Firebase Storage
     description: "A CEPT graduate, Udit brings a strong business pedigree rooted in his family’s ventures. He excels at forging partnerships, growing networks, and overseeing logistics. Udit’s knack for Indian art and culture fuels Crestox’s community building—connecting creators, collectors, and collaborators across the country.",
     contact: '98796 08470',
     aiHint: 'man portrait',
   }
 ];
 
-export default function DonatePage() {
+// Helper to fetch URL with fallback
+const getFounderImageURL = async (path: string): Promise<string> => {
+    // If storage isn't configured (e.g. in a test environment or during a build without keys),
+    // immediately return a placeholder to prevent crashes.
+    if (!storage) {
+        console.warn("Firebase Storage is not configured. Falling back to placeholder image for", path);
+        return 'https://placehold.co/400x400.png';
+    }
+    try {
+        const imageRef = ref(storage, path);
+        const url = await getDownloadURL(imageRef);
+        return url;
+    } catch (error) {
+        console.error(`Failed to fetch founder image from Firebase Storage at path: ${path}. Check if the file exists. Falling back to placeholder.`);
+        return 'https://placehold.co/400x400.png'; // Fallback
+    }
+};
+
+export default async function DonatePage() {
+  const founders = await Promise.all(
+      foundersData.map(async (founder) => ({
+          ...founder,
+          imageSrc: await getFounderImageURL(founder.imagePath)
+      }))
+  );
+
   return (
     <div className="container mx-auto max-w-4xl py-12 md:py-20">
       <div className="text-center mb-12">
