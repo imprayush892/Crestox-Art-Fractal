@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import { Wordmark } from '@/components/wordmark';
 import { Separator } from '@/components/ui/separator';
