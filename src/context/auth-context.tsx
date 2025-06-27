@@ -26,6 +26,9 @@ export interface ArtistProfile extends Artist {
   userId: string;
 }
 
+type CreateArtistProfileData = Omit<Artist, 'id' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'> & { avatar: File | null };
+type UpdateArtistProfileData = Partial<Omit<ArtistProfile, 'avatar'>> & { avatar?: File | string | null };
+
 // --- Context Type ---
 interface AuthContextType {
   user: User | null;
@@ -45,8 +48,8 @@ interface AuthContextType {
   cancelListing: (listingId: string) => Promise<void>;
   addToWatchlist: (artistId: string) => Promise<void>;
   removeFromWatchlist: (artistId: string) => Promise<void>;
-  createArtistProfile: (profileData: Omit<Artist, 'id' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'> & { avatar: File | string }) => Promise<void>;
-  updateArtistProfile: (profileData: Partial<ArtistProfile> & { avatar?: File | string }) => Promise<void>;
+  createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
+  updateArtistProfile: (profileData: UpdateArtistProfileData) => Promise<void>;
   addArtwork: (artworkData: ArtworkFormValues, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
@@ -215,11 +218,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     setCollection([]);
   };
 
-  const createArtistProfile = async (profileData: Omit<Artist, 'id' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'> & { avatar: File | string }) => {
+  const createArtistProfile = async (profileData: CreateArtistProfileData) => {
     if (!db || !user) throw new Error("User not authenticated or database not available.");
     
     let avatarUrl = '';
-    if (profileData.avatar && profileData.avatar instanceof File) {
+    if (profileData.avatar) {
         try {
             const avatarRef = ref(storage, `avatars/${user.uid}`);
             await uploadBytes(avatarRef, profileData.avatar);
@@ -230,7 +233,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     }
     
     const artistRef = doc(db, 'artists', user.uid);
-    const newArtist: Artist = {
+    const newArtistData: Artist = {
         ...profileData,
         id: user.uid,
         userId: user.uid,
@@ -242,12 +245,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         availableEditions: 0,
     };
     try {
-        await setDoc(artistRef, newArtist);
-        setArtistProfile({ ...newArtist, userId: user.uid });
+        await setDoc(artistRef, newArtistData);
+        setArtistProfile({ ...newArtistData, userId: user.uid });
     } catch (error) { throw new Error(handleAuthError(error)); }
   };
   
-  const updateArtistProfile = async (profileData: Partial<ArtistProfile> & { avatar?: File | string }) => {
+  const updateArtistProfile = async (profileData: UpdateArtistProfileData) => {
       if (!db || !artistProfile) throw new Error("Artist profile not found or database not available.");
       
       const dataToUpdate: Partial<ArtistProfile> = {...profileData};
@@ -260,17 +263,20 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           } catch (error) {
               throw new Error(handleAuthError(error));
           }
+      } else {
+        // Ensure we don't try to save a File object to Firestore
+        delete dataToUpdate.avatar;
       }
 
       const artistRef = doc(db, "artists", artistProfile.id);
       try {
           await updateDoc(artistRef, dataToUpdate as any);
+          toast({title: "Profile Updated", description: "Your changes have been saved."});
       } catch (error) { throw new Error(handleAuthError(error)); }
   };
 
   const addArtwork = async (artworkData: ArtworkFormValues, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
     if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
-    if (!storage) throw new Error("Storage is not configured.");
     
     const newFractalId = doc(firestoreCollection(db, 'fractals')).id;
 
@@ -297,8 +303,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         const artworkSize = { length, breadth, unit, ...(height && { height }) };
 
         // --- 3. Create new fractal document data with the correct URLs ---
-        const newFractal: Omit<Fractal, 'id'> & { id: string } = {
-            id: newFractalId,
+        const newFractalData: Omit<Fractal, 'id'> = {
             artistId: artistProfile.id,
             title: artworkData.title,
             description: artworkData.description,
@@ -314,7 +319,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
             artistMinEstimate: artworkData.minEstimatedValue,
             artistMaxEstimate: artworkData.maxEstimatedValue,
-            width: 600, // You might want to get actual image dimensions
+            width: 600, 
             height: 400,
             aiHint: 'custom artwork',
             subjectSignificance: artworkData.subjectSignificance,
@@ -332,7 +337,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         // --- 5. Set and Update documents in transaction ---
         const newFractalRef = doc(db, "fractals", newFractalId);
-        transaction.set(newFractalRef, newFractal);
+        transaction.set(newFractalRef, newFractalData);
 
         transaction.update(artistRef, {
             totalEditions: newTotalEditions,
@@ -584,3 +589,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    

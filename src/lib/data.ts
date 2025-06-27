@@ -103,12 +103,12 @@ export const artworkFormSchema = z.object({
   minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least ₹1."),
   maxEstimatedValue: z.coerce.number(),
   editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
-  images: z.array(z.any())
+  images: z.array(z.instanceof(File))
     .min(1, "At least one image is required.")
     .max(3, "You can upload a maximum of 3 images.")
-    .refine((files) => files.every((file) => file?.size <= MAX_FILE_SIZE), `Max file size is 5MB.`)
+    .refine((files) => files.every((file) => file.size <= MAX_FILE_SIZE), `Max file size is 5MB.`)
     .refine(
-      (files) => files.every((file) => ACCEPTED_IMAGE_TYPES.includes(file?.type)),
+      (files) => files.every((file) => ACCEPTED_IMAGE_TYPES.includes(file.type)),
       ".jpg, .jpeg, .png and .webp files are accepted."
     ),
   heroImageIndex: z.coerce.number().min(0).max(2).default(0),
@@ -162,8 +162,8 @@ export type NewArtworkData = {
     minEstimatedValue: number;
     maxEstimatedValue: number;
     editionsToIssue: number;
-    images: (File | string)[]; // Can be File objects on create, strings on edit
-    heroImageIndex: number; // Index to determine which image is the hero
+    images: (File | string)[]; 
+    heroImageIndex: number; 
     subjectSignificance?: string;
     personalSignificance?: string;
     timeEffort?: string;
@@ -386,3 +386,5 @@ export const artists: Artist[] = finalArtists;
 export const fractals: Fractal[] = tempFractals;
 // RemoveCandy end
 
+
+    

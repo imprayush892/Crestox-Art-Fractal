@@ -27,7 +27,7 @@ import { evaluateArtwork, type EvaluationResult } from '@/ai/flows/evaluate-artw
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArtworkSize, artworkFormSchema, type ArtworkFormValues } from '@/lib/data';
+import { artworkFormSchema, type ArtworkFormValues } from '@/lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
@@ -186,7 +186,7 @@ export default function CreateArtworkPage() {
   const finalizeArtworkSubmission = async (submissionData: ArtworkSubmissionData, wasSkipped: boolean) => {
     if (!addArtwork || !artistProfile) return;
     setIsSubmitting(true);
-    setArtworkSubmissionData(null); // Clear the temporary data
+    setArtworkSubmissionData(null); 
 
     const { evaluationResult, finalPrice, shouldApplyGrade } = submissionData;
     const formData = form.getValues();
@@ -370,7 +370,6 @@ export default function CreateArtworkPage() {
                                     onValueChange={(value) => form.setValue("heroImageIndex", parseInt(value))}
                                     className="flex flex-wrap justify-center gap-4"
                                     onClick={(e) => {
-                                      // Stop the click from propagating to the parent div which triggers file upload.
                                       e.stopPropagation();
                                     }}
                                 >
@@ -527,7 +526,7 @@ export default function CreateArtworkPage() {
                           <FormItem>
                             <FormLabel>Minimum Estimated Value (₹)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="100" {...field} />
+                              <Input type="number" placeholder="1" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -540,7 +539,7 @@ export default function CreateArtworkPage() {
                           <FormItem>
                             <FormLabel>Maximum Estimated Value (₹)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="1000" {...field} />
+                              <Input type="number" placeholder="100" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -665,3 +664,5 @@ export default function CreateArtworkPage() {
     </>
   );
 }
+
+    

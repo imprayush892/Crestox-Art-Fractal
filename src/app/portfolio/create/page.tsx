@@ -55,6 +55,7 @@ export default function CreateArtistProfilePage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -98,10 +99,10 @@ export default function CreateArtistProfilePage() {
             toast({ variant: 'destructive', title: 'Image too large', description: 'Please upload an image smaller than 2MB.'});
             return;
         }
+        setAvatarFile(file);
         const reader = new FileReader();
         reader.onloadend = () => {
             setAvatarPreview(reader.result as string);
-            form.setValue('avatar', reader.result as string);
         };
         reader.readAsDataURL(file);
     }
@@ -116,7 +117,7 @@ export default function CreateArtistProfilePage() {
     try {
       const profileData = {
           ...data,
-          avatar: avatarPreview || '', // Pass the data URI or an empty string
+          avatar: avatarFile, // Pass the File object
           awards: data.awards.map(item => item.value),
           exhibitions: data.exhibitions.map(item => item.value),
       };
@@ -170,18 +171,12 @@ export default function CreateArtistProfilePage() {
                                       Upload Image
                                   </Button>
                               </FormControl>
-                              <Controller
-                                name="avatar"
-                                control={form.control}
-                                render={() => (
-                                  <Input 
-                                    type="file" 
-                                    className="hidden" 
-                                    ref={fileInputRef} 
-                                    onChange={handleAvatarChange}
-                                    accept="image/png, image/jpeg"
-                                  />
-                                )}
+                              <Input 
+                                type="file" 
+                                className="hidden" 
+                                ref={fileInputRef} 
+                                onChange={handleAvatarChange}
+                                accept="image/png, image/jpeg"
                               />
                           </div>
                           <FormDescription>
@@ -399,3 +394,5 @@ export default function CreateArtistProfilePage() {
     </div>
   );
 }
+
+    
