@@ -5,7 +5,6 @@ import { useAuth } from '@/context/auth-context';
 import type { Artist, Fractal, OwnedFractal } from '@/lib/data';
 import { Wordmark } from './wordmark';
 import { format } from 'date-fns';
-import Image from 'next/image';
 import { useMemo } from 'react';
 
 interface HoldingCertificateProps {
@@ -47,13 +46,12 @@ export function HoldingCertificate({ artist, ownedFractals, allArtistFractals }:
         <div className="columns-2 sm:columns-3 md:columns-4 gap-4 space-y-4 mb-8">
             {allArtistFractals.map((fractal) => (
                 <div key={fractal.id} className="break-inside-avoid">
-                    <Image
+                    <img
                         src={fractal.heroImage}
                         alt={fractal.title}
-                        width={fractal.width}
-                        height={fractal.height}
                         className="object-cover w-full h-auto"
                         data-ai-hint={fractal.aiHint}
+                        crossOrigin="anonymous"
                     />
                 </div>
             ))}
