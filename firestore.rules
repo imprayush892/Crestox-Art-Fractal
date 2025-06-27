@@ -3,60 +3,55 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Users Collection ---
+    // User profile data
     match /users/{userId} {
-      // A user can read and create their own document.
-      allow read, create: if request.auth.uid == userId;
-
-      // A user can update their OWN document (e.g. for their own wallet changes or watchlist).
-      // ANOTHER user can update this document ONLY IF they are increasing the walletBalance.
-      // This is the key rule that allows a buyer to pay a seller securely.
-      allow update: if (request.auth.uid == userId) ||
-                       (request.auth.uid != null && request.resource.data.walletBalance > resource.data.walletBalance);
-
-      // --- Holdings Sub-collection ---
+      // ANY authenticated user can READ any user's profile.
+      // This is necessary for the buyer's client to read the seller's data during a transaction.
+      allow read: if request.auth.uid != null;
+      
+      // A user can CREATE their own profile and WRITE to it (update, delete).
+      allow create, write: if request.auth.uid == userId;
+      
+      // A different user can UPDATE a profile, but ONLY to increase the wallet balance.
+      // This allows a buyer to pay a seller without having full write access.
+      allow update: if request.auth.uid != userId &&
+                     request.resource.data.walletBalance > resource.data.walletBalance;
+      
+      // User's private collection of fractals
       match /holdings/{holdingId} {
-        // A user can read and create their own holdings.
-        allow read, create: if request.auth.uid == userId;
-
-        // A user can delete their own holding.
-        // ANOTHER authenticated user can also delete a holding. This is required for the
-        // buyer to take ownership from the seller in a transaction. It is secured by the
-        // atomic transaction logic and the wallet update rule above.
+        // ANY authenticated user can READ holdings.
+        // This lets the buyer's client verify the holding exists before purchase.
+        allow read: if request.auth.uid != null;
+        
+        // A user can CREATE holdings for themselves.
+        allow create: if request.auth.uid == userId;
+        
+        // ANY authenticated user can DELETE a holding.
+        // This is safe because the transaction logic ensures payment happens first.
+        // This rule allows the buyer to "take" the holding from the seller.
         allow delete: if request.auth.uid != null;
-
-        // Holdings cannot be updated, only created or deleted.
+        
+        // Holdings are never updated, only created/deleted.
         allow update: if false;
       }
     }
 
-    // --- Artists Collection ---
+    // Artists can be read by anyone. Writes require authentication.
     match /artists/{artistId} {
-      // Anyone can read artist info.
       allow read: if true;
-      // Any authenticated user can create or update an artist profile.
       allow create, update: if request.auth.uid != null;
     }
 
-    // --- Fractals Collection ---
+    // Fractals can be read by anyone. Writes require authentication.
     match /fractals/{fractalId} {
-      // Anyone can read fractal info.
       allow read: if true;
-      // Any authenticated user can create or update a fractal.
       allow create, update: if request.auth.uid != null;
     }
 
-    // --- Resale Listings Collection ---
+    // Resale listings can be read by anyone. Writes require authentication.
     match /resaleListings/{listingId} {
-      // Anyone can read listings.
       allow read: if true;
-
-      // A user can create a listing only if they are the designated seller.
-      allow create: if request.auth.uid == request.resource.data.resellerId;
-
-      // The listing can be updated by any authenticated user. This is necessary
-      // for the buyer to decrement the quantity of the listing during a purchase.
-      allow update: if request.auth.uid != null;
+      allow create, update: if request.auth.uid != null;
     }
   }
 }
