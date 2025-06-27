@@ -307,7 +307,7 @@ const tempArtists = (() => {
         return {
             id: `artist-${index + 1}`,
             name,
-            avatar: `https://source.unsplash.com/featured/100x100/?portrait&sig=${index}`,
+            avatar: `https://placehold.co/100x100.png`,
             bio: getRandom(bios),
             artistMessage: getRandom(artistMessages),
             location: getRandom(locations),
@@ -347,7 +347,7 @@ const tempFractals: Fractal[] = (() => {
         
         const aiHint = getRandom(aiHints);
         const numImages = randomInt(1,3);
-        const images = Array.from({length: numImages}, (_, i) => `https://source.unsplash.com/featured/${width}x${height}/?${encodeURIComponent(aiHint)}&sig=${index * 3 + i}`);
+        const images = Array.from({length: numImages}, (_, i) => `https://placehold.co/${width}x${height}.png`);
 
         return {
             id: `fractal-${String(index + 1).padStart(3, '0')}`,
@@ -399,4 +399,5 @@ export const fractals: Fractal[] = tempFractals;
 // RemoveCandy end
 
 
+    
     
