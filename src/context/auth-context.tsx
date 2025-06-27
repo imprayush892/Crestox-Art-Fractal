@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -258,10 +258,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       };
 
       if (profileData.awards) {
-        dataToUpdate.awards = profileData.awards.map(item => item.value);
+        dataToUpdate.awards = profileData.awards;
       }
       if (profileData.exhibitions) {
-        dataToUpdate.exhibitions = profileData.exhibitions.map(item => item.value);
+        dataToUpdate.exhibitions = profileData.exhibitions;
       }
 
       if (avatar && avatar instanceof File) {
@@ -478,7 +478,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 if (listingData.status !== 'active' || listingData.quantity < item.quantity) {
                     throw new Error("Listing is not active or has insufficient quantity.");
                 }
-                if (!listingData.holdingIds || listingData.holdingIds.length < item.quantity) {
+                if (!listingData.holdingIds || !Array.isArray(listingData.holdingIds) || listingData.holdingIds.length < item.quantity) {
                     throw new Error(`Listing ${item.listingId} has insufficient holdings for this sale.`);
                 }
 
@@ -493,8 +493,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         
         // Read all required holding documents
         if (holdingRefsToRead.length > 0) {
-            await transaction.getAll(...holdingRefsToRead);
+            const holdingSnaps = await transaction.getAll(...holdingRefsToRead);
+            holdingSnaps.forEach(snap => {
+                if (!snap.exists()) {
+                    throw new Error(`A holding document (${snap.ref.path}) required for the sale does not exist.`);
+                }
+            });
         }
+
 
         // --- PHASE 3: PREPARE AND EXECUTE WRITES ---
         transaction.update(docRefs.get('buyer')!, { walletBalance: (buyerSnap.data() as User).walletBalance - totalCost });
@@ -559,12 +565,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       
       await runTransaction(db, async (transaction) => {
           const holdingsQuery = query(
-              collection(db, `users/${user.uid}/holdings`),
+              firestoreCollection(db, `users/${user.uid}/holdings`),
               where("artistId", "==", artist.id),
               where("status", "==", "owned")
           );
           
-          const holdingsSnap = await transaction.get(holdingsQuery);
+          const holdingsSnap = await getDocs(holdingsQuery);
           
           if (holdingsSnap.docs.length < quantity) {
               throw new Error("Not enough fractals to list.");
@@ -577,7 +583,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               transaction.update(docSnap.ref, { status: "listed" });
           }
           
-          const listingRef = doc(collection(db, 'resaleListings'));
+          const listingRef = doc(firestoreCollection(db, 'resaleListings'));
           const newListing: ResaleListing = {
               id: listingRef.id,
               artistId: artist.id,
@@ -681,5 +687,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
