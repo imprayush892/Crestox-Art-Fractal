@@ -87,7 +87,17 @@ export interface ResaleListing {
   periodSeconds: number;
   listingTimestamp: string; // ISO string
   status: 'active' | 'completed' | 'cancelled';
+  holdingIds: string[];
 }
+
+export interface OrderBreakdownItem {
+  price: number;
+  quantity: number;
+  source: 'ARTIST' | 'RESELLER';
+  listingId?: string;
+  resellerId?: string;
+}
+
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -153,6 +163,8 @@ export const editArtworkFormSchema = z.object({
 });
 
 export type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
+
+export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'> & { avatar: File | null };
 
 export type NewArtworkData = {
     title: string;

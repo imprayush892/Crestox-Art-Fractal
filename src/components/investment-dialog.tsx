@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Artist } from '@/lib/data';
+import type { Artist, OrderBreakdownItem } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -26,20 +26,14 @@ interface InvestmentDialogProps {
   onClose: () => void;
 }
 
-interface OrderBreakdown {
-    price: number;
-    quantity: number;
-    source: string;
-}
-
 export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogProps) {
   const [quantity, setQuantity] = useState(1);
-  const [breakdown, setBreakdown] = useState<OrderBreakdown[]>([]);
+  const [breakdown, setBreakdown] = useState<OrderBreakdownItem[]>([]);
   const [totalCost, setTotalCost] = useState(0);
   const [maxAvailable, setMaxAvailable] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { user, collectFromPortfolio, resaleListings, artists, collection } = useAuth();
+  const { user, executeFractalPurchase, resaleListings, artists, collection } = useAuth();
   const { toast } = useToast();
 
   const currentArtist = useMemo(() => {
@@ -73,7 +67,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
   useEffect(() => {
     if (!isOpen || !currentArtist) return;
     
-    let orderBook: { price: number; quantity: number; source: string; isResold: boolean }[] = [];
+    let orderBook: { price: number; quantity: number; source: 'ARTIST' | 'RESELLER'; listingId?: string; resellerId?: string; }[] = [];
 
     const activeResaleListings = resaleListings.filter(l => l.artistId === currentArtist.id && l.status === 'active');
     activeResaleListings.forEach(listing => {
@@ -82,8 +76,9 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
         orderBook.push({
             price: Math.round(price * 100) / 100,
             quantity: listing.quantity,
-            source: `Reseller`,
-            isResold: true
+            source: 'RESELLER',
+            listingId: listing.id,
+            resellerId: listing.resellerId,
         });
     });
 
@@ -91,19 +86,19 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
         orderBook.push({
             price: currentArtist.fractalPrice,
             quantity: currentArtist.availableEditions,
-            source: 'Artist Portfolio',
-            isResold: false
+            source: 'ARTIST',
         });
     }
 
     orderBook.sort((a, b) => {
         if (a.price !== b.price) return a.price - b.price;
-        return a.isResold ? -1 : 1;
+        // Prioritize reseller if prices are equal
+        return a.source === 'RESELLER' ? -1 : 1;
     });
 
     let remainingQty = quantity;
     let cost = 0;
-    const newBreakdown: OrderBreakdown[] = [];
+    const newBreakdown: OrderBreakdownItem[] = [];
 
     for (const order of orderBook) {
         if (remainingQty <= 0) break;
@@ -113,7 +108,9 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
         newBreakdown.push({
             price: order.price,
             quantity: qtyToTake,
-            source: order.source
+            source: order.source,
+            listingId: order.listingId,
+            resellerId: order.resellerId
         });
 
         remainingQty -= qtyToTake;
@@ -131,10 +128,10 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
   };
 
   const handleConfirm = async () => {
-    if (!currentArtist) return;
+    if (!currentArtist || breakdown.length === 0 || quantity === 0) return;
     setIsLoading(true);
     try {
-        await collectFromPortfolio(currentArtist, quantity);
+        await executeFractalPurchase(currentArtist.id, breakdown, totalCost);
         onClose();
         setQuantity(1); // Reset for next time
     } catch (error: any) {
@@ -190,7 +187,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
                     {breakdown.length > 0 ? breakdown.map((item, index) => (
                         <div key={index} className="flex justify-between">
                             <span className="text-muted-foreground">{item.quantity} x @ {item.price.toFixed(2)} CreCoins</span>
-                            <span>from {item.source}</span>
+                            <span>from {item.source === 'ARTIST' ? 'Artist' : 'Reseller'}</span>
                         </div>
                     )) : (
                         <p className="text-xs text-muted-foreground">Enter a quantity to see the breakdown.</p>
