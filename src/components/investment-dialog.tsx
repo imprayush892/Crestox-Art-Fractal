@@ -26,6 +26,15 @@ interface InvestmentDialogProps {
   onClose: () => void;
 }
 
+const isValidListing = (listing: any) => {
+    return (
+        listing.status === 'active' &&
+        listing.quantity > 0 &&
+        Array.isArray(listing.holdingIds) &&
+        listing.holdingIds.length >= listing.quantity
+    );
+};
+
 export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogProps) {
   const [quantity, setQuantity] = useState(1);
   const [breakdown, setBreakdown] = useState<OrderBreakdownItem[]>([]);
@@ -43,7 +52,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
 
   useEffect(() => {
     if (isOpen && currentArtist) {
-      const activeResaleListings = resaleListings.filter(l => l.artistId === currentArtist.id && l.status === 'active');
+      const activeResaleListings = resaleListings.filter(l => l.artistId === currentArtist.id && isValidListing(l));
       const availableFromResale = activeResaleListings.reduce((sum, l) => sum + l.quantity, 0);
       const availableFromArtist = currentArtist.availableEditions;
       const totalAvailable = availableFromResale + availableFromArtist;
@@ -69,7 +78,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
     
     let orderBook: { price: number; quantity: number; source: 'ARTIST' | 'RESELLER'; listingId?: string; resellerId?: string; }[] = [];
 
-    const activeResaleListings = resaleListings.filter(l => l.artistId === currentArtist.id && l.status === 'active');
+    const activeResaleListings = resaleListings.filter(l => l.artistId === currentArtist.id && isValidListing(l));
     activeResaleListings.forEach(listing => {
         const t = (Date.now() - new Date(listing.listingTimestamp).getTime()) / 1000;
         const price = Math.max(listing.minPrice, listing.initialPrice - ((listing.initialPrice - listing.minPrice) * t / listing.periodSeconds));
