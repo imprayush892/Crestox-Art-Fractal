@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import { Wordmark } from '@/components/wordmark';
 import { Separator } from '@/components/ui/separator';
+import { Card } from '@/components/ui/card';
 
 const foundersData = [
   {
@@ -15,7 +16,7 @@ const foundersData = [
     name: 'Udit Shah',
     imagePath: 'founders/founder_udit.jpeg',
     description: "A CEPT graduate, Udit brings a strong business pedigree rooted in his family’s ventures. He excels at forging partnerships, growing networks, and overseeing logistics. Udit’s knack for Indian art and culture fuels Crestox’s community building—connecting creators, collectors, and collaborators across the country.",
-    contact: '98796 08470',
+    contact: '9879608470',
     aiHint: 'man portrait',
   }
 ];
@@ -24,7 +25,7 @@ const getPublicUrl = (path: string) => {
     const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
     if (!storageBucket) {
         console.warn("Firebase Storage Bucket is not configured in environment variables. Falling back to placeholder.");
-        return 'https://placehold.co/400x400.png';
+        return 'https://placehold.co/160x160.png';
     }
     // Manually construct the public URL. This only works for publicly readable files.
     return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
@@ -37,37 +38,37 @@ export default function DonatePage() {
   }));
 
   return (
-    <div className="container mx-auto max-w-4xl py-12 md:py-20">
+    <div className="container mx-auto max-w-5xl py-12 md:py-20">
       <div className="text-center mb-12">
         <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight">Meet the Founders</h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-          The team dedicated to democratizing art.
+          The team behind Crestox, dedicated to revolutionizing the art market.
         </p>
       </div>
 
-      <div className="space-y-16">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
         {founders.map((founder) => (
-          <div key={founder.name} className="grid md:grid-cols-3 gap-8 items-center">
-            <div className="md:col-span-1">
-              <Image
-                src={founder.imageSrc}
-                alt={`Portrait of ${founder.name}`}
-                width={400}
-                height={400}
-                className="rounded-lg shadow-lg object-cover aspect-square"
-                data-ai-hint={founder.aiHint}
-              />
+          <Card key={founder.name} className="p-8">
+            <div className="flex justify-center mb-6">
+                <Image
+                    src={founder.imageSrc}
+                    alt={`Portrait of ${founder.name}`}
+                    width={160}
+                    height={160}
+                    className="rounded-full object-cover aspect-square shadow-md border"
+                    data-ai-hint={founder.aiHint}
+                />
             </div>
-            <div className="md:col-span-2 text-left">
-              <h2 className="font-headline text-3xl font-bold">{founder.name}</h2>
-              <p className="mt-4 text-base md:text-lg text-foreground/80 leading-relaxed">
+            <h2 className="text-center font-headline text-2xl font-bold">{founder.name}</h2>
+            <div className="mt-4 text-left">
+              <p className="text-base text-foreground/80 leading-relaxed">
                 {founder.description}
               </p>
               <p className="mt-4 font-semibold text-primary">
                 Contact: {founder.contact}
               </p>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 
