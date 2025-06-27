@@ -3,38 +3,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Users can read and write to their own document. A user's document
+    // may also be updated by another user during a purchase transaction.
     match /users/{userId} {
-      // A user can read their own document, and other users' public profiles.
-      allow read: if request.auth != null;
-      // A user can create their own document on signup.
-      allow create: if request.auth.uid == userId;
-      // Allow any authenticated user to update any user document.
-      // This is required for a buyer to credit a seller's wallet during a transaction.
-      // The transaction logic itself provides the safety checks (e.g., verifying balances).
-      allow update: if request.auth != null;
-      // A user can only delete their own account.
+      allow read, create: if request.auth.uid == userId;
+      allow update: if request.auth.uid != null;
       allow delete: if request.auth.uid == userId;
-
+      
+      // A user can create and delete their own holdings. A holding can also
+      // be deleted by another user during a purchase transaction.
       match /holdings/{holdingId} {
-        // A user can read and create their own holdings.
         allow read, create: if request.auth.uid == userId;
-        // Allow any authenticated user to delete any holding.
-        // This is required for a buyer to take ownership from a seller during a transaction.
-        allow delete: if request.auth != null;
-        // Holdings should not be updated directly, only created or deleted.
-        allow update: if false;
+        allow delete: if request.auth.uid != null;
+        allow update: if false; // Holdings should not be updated directly
       }
     }
 
     // Artists can be read by anyone.
-    // An authenticated user can update an artist's document (e.g. for a sale).
+    // An authenticated user can create/update an artist's document.
     match /artists/{artistId} {
       allow read: if true;
       allow create, update: if request.auth.uid != null;
     }
 
     // Fractals can be read by anyone.
-    // An authenticated user can update a fractal's document (e.g. for re-evaluation).
+    // An authenticated user can create/update a fractal's document.
     match /fractals/{fractalId} {
       allow read: if true;
       allow create, update: if request.auth.uid != null;

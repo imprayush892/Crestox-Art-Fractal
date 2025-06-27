@@ -53,8 +53,8 @@ interface AuthContextType {
   addToWatchlist: (artistId: string) => Promise<void>;
   removeFromWatchlist: (artistId: string) => Promise<void>;
   createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
-  updateArtistProfile: (profileData: UpdateArtistProfileData) => Promise<void>;
-  addArtwork: (artworkData: ArtworkFormValues) => Promise<void>;
+  updateArtistProfile: (profileData: Partial<CreateArtistProfileData>) => Promise<void>;
+  addArtwork: (artworkData: ArtworkFormValues, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
   reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
@@ -225,13 +225,13 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const createArtistProfile = async (profileData: CreateArtistProfileData) => {
     if (!db || !user) throw new Error("User not authenticated or database not available.");
     
-    const { avatar, ...restOfProfileData } = profileData;
+    const { avatar: avatarFile, ...restOfProfileData } = profileData;
     let avatarUrl = '';
     
-    if (avatar) {
+    if (avatarFile) {
         try {
-            const avatarRef = ref(storage, `avatars/${user.uid}/${avatar.name}`);
-            await uploadBytes(avatarRef, avatar);
+            const avatarRef = ref(storage, `avatars/${user.uid}/${avatarFile.name}`);
+            await uploadBytes(avatarRef, avatarFile);
             avatarUrl = await getDownloadURL(avatarRef);
         } catch (error) {
             throw new Error(handleAuthError(error));
@@ -241,8 +241,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     const artistRef = doc(db, 'artists', user.uid);
     const newArtistData: Artist = {
         ...restOfProfileData,
-        awards: profileData.awards.map(a => a.value),
-        exhibitions: profileData.exhibitions.map(e => e.value),
         id: user.uid,
         userId: user.uid,
         avatar: avatarUrl,
@@ -258,14 +256,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     } catch (error) { throw new Error(handleAuthError(error)); }
   };
   
-  const updateArtistProfile = async (profileData: UpdateArtistProfileData) => {
+  const updateArtistProfile = async (profileData: Partial<CreateArtistProfileData>) => {
       if (!db || !artistProfile) throw new Error("Artist profile not found or database not available.");
       
       const { avatar, ...restOfProfileData } = profileData;
       const dataToUpdate: { [key: string]: any } = {
         ...restOfProfileData,
-        awards: (profileData.awards || []).map(a => a.value),
-        exhibitions: (profileData.exhibitions || []).map(e => e.value),
+        awards: (profileData.awards || []),
+        exhibitions: (profileData.exhibitions || []),
       };
 
       if (avatar && avatar instanceof File) {
@@ -276,6 +274,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           } catch (error) {
               throw new Error(handleAuthError(error));
           }
+      } else if (typeof avatar === 'string') {
+        dataToUpdate.avatar = avatar;
       }
       
       const artistRef = doc(db, "artists", artistProfile.id);
@@ -285,7 +285,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       } catch (error) { throw new Error(handleAuthError(error)); }
   };
 
-  const addArtwork = async (artworkData: ArtworkFormValues) => {
+  const addArtwork = async (artworkData: ArtworkFormValues, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
     if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
     
     const newFractalId = doc(firestoreCollection(db, 'fractals')).id;
@@ -299,9 +299,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     );
 
     const heroImageUrl = imageUrls[artworkData.heroImageIndex > -1 ? artworkData.heroImageIndex : 0];
-
-    // Placeholder until evaluation is hooked up
-    const finalPrice = Math.round((artworkData.minEstimatedValue + artworkData.maxEstimatedValue) / 2);
 
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artistProfile.id);
@@ -328,11 +325,15 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             width: 600, 
             height: 400,
             aiHint: 'custom artwork',
-            subjectSignificance: artworkData.subjectSignificance,
-            personalSignificance: artworkData.personalSignificance,
-            timeEffort: artworkData.timeEffort,
-            biographicalContext: artworkData.biographicalContext,
-            commissionPatronage: artworkData.commissionPatronage,
+            subjectSignificance: artworkData.subjectSignificance || "",
+            personalSignificance: artworkData.personalSignificance || "",
+            timeEffort: artworkData.timeEffort || "",
+            biographicalContext: artworkData.biographicalContext || "",
+            commissionPatronage: artworkData.commissionPatronage || "",
+            aiScore: evaluationResult.finalScore,
+            aiScorecard: evaluationResult.breakdown,
+            crestoxGrade: shouldApplyGrade ? evaluationResult.grade : undefined,
+            crestoxPriceRange: evaluationResult.crestoxPriceRange,
         };
         
         const currentTotalValue = currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
@@ -432,7 +433,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     }
     
     await runTransaction(db, async (transaction) => {
-        // --- PHASE 1: READ ALL DOCUMENTS ---
         const docRefs = new Map<string, DocumentReference>();
         docRefs.set('buyer', doc(db, "users", user.uid));
 
@@ -448,6 +448,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 if (!docRefs.has(`listing_${item.listingId}`)) {
                     docRefs.set(`listing_${item.listingId}`, doc(db, "resaleListings", item.listingId));
                 }
+                 const listingData = (await transaction.get(docRefs.get(`listing_${item.listingId}`)!)).data() as ResaleListing;
+                if (!listingData.holdingIds) throw new Error(`Listing ${item.listingId} has no holdings.`);
+                for(const holdingId of listingData.holdingIds) {
+                    docRefs.set(`holding_${holdingId}`, doc(db, `users/${item.resellerId}/holdings/${holdingId}`));
+                }
             }
         }
         
@@ -461,7 +466,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             docSnaps.set(key, snapshots[i++]);
         }
         
-        // --- PHASE 2: VALIDATION ---
         const buyerSnap = docSnaps.get('buyer');
         if (!buyerSnap?.exists() || (buyerSnap.data() as User).walletBalance < totalCost) {
             throw new Error("Insufficient funds or user not found.");
@@ -493,6 +497,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 if (listingData.status !== 'active' || listingData.quantity < item.quantity) {
                     throw new Error("Listing is not active or has insufficient quantity.");
                 }
+                if (!listingData.holdingIds) {
+                    throw new Error("Corrupted listing data: missing holding IDs.");
+                }
 
                 const holdingsToTransfer = listingData.holdingIds.slice(0, item.quantity);
                 for (const holdingId of holdingsToTransfer) {
@@ -504,8 +511,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 }
             }
         }
-
-        // --- PHASE 3: WRITE ALL CHANGES ---
+        
         transaction.update(docRefs.get('buyer')!, { walletBalance: (buyerSnap.data() as User).walletBalance - totalCost });
 
         for (const item of orderBreakdown) {
@@ -521,6 +527,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 const listingRef = docRefs.get(`listing_${item.listingId}`)!;
                 const listingData = docSnaps.get(`listing_${item.listingId}`)!.data() as ResaleListing;
                 const newQuantity = listingData.quantity - item.quantity;
+                if (!listingData.holdingIds) throw new Error("Corrupted listing data: missing holding IDs.");
+                
                 transaction.update(listingRef, {
                     quantity: newQuantity,
                     holdingIds: listingData.holdingIds.slice(item.quantity),
@@ -598,6 +606,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           
           const listingData = listingSnap.data() as ResaleListing;
           if (listingData.status !== 'active') throw new Error("This listing cannot be cancelled.");
+          if (!listingData.holdingIds) throw new Error("Corrupted listing data: missing holding IDs.");
 
           for (const holdingId of listingData.holdingIds) {
               const holdingRef = doc(db, `users/${user.uid}/holdings/${holdingId}`);
