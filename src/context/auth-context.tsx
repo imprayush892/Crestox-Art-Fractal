@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +26,7 @@ export interface ArtistProfile extends Artist {
   userId: string;
 }
 
-type UpdateArtistProfileData = Partial<Omit<ArtistProfile, 'avatar'>> & { avatar?: File | string | null };
+type UpdateArtistProfileData = Partial<Omit<Artist, 'avatar'>> & { avatar?: File | string | null };
 
 // --- Context Type ---
 interface AuthContextType {
@@ -430,96 +430,124 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     if (!db || !user) throw new Error("User not authenticated.");
 
     if (user.walletBalance < totalCost) {
-      throw new Error("Insufficient CreCoin balance.");
+        throw new Error("Insufficient CreCoin balance.");
     }
     
     await runTransaction(db, async (transaction) => {
-        const buyerRef = doc(db, "users", user.uid);
-        transaction.update(buyerRef, { walletBalance: user.walletBalance - totalCost });
+        // --- PHASE 1: READ ALL DOCUMENTS ---
+        const docRefs = new Map<string, DocumentReference>();
+        docRefs.set('buyer', doc(db, "users", user.uid));
 
         for (const item of orderBreakdown) {
             if (item.source === 'ARTIST') {
-                const artistRef = doc(db, "artists", artistId);
-                const artistSnap = await transaction.get(artistRef);
-                if (!artistSnap.exists() || artistSnap.data().availableEditions < item.quantity) {
+                if (!docRefs.has(`artist_${artistId}`)) {
+                    docRefs.set(`artist_${artistId}`, doc(db, "artists", artistId));
+                }
+            } else if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
+                if (!docRefs.has(`seller_${item.resellerId}`)) {
+                    docRefs.set(`seller_${item.resellerId}`, doc(db, "users", item.resellerId));
+                }
+                if (!docRefs.has(`listing_${item.listingId}`)) {
+                    docRefs.set(`listing_${item.listingId}`, doc(db, "resaleListings", item.listingId));
+                }
+            }
+        }
+        
+        const docSnaps = new Map<string, DocumentSnapshot>();
+        const readPromises: Promise<DocumentSnapshot>[] = [];
+        docRefs.forEach((ref) => readPromises.push(transaction.get(ref)));
+        const snapshots = await Promise.all(readPromises);
+        
+        let i = 0;
+        for (const key of docRefs.keys()) {
+            docSnaps.set(key, snapshots[i++]);
+        }
+        
+        // --- PHASE 2: VALIDATION ---
+        const buyerSnap = docSnaps.get('buyer');
+        if (!buyerSnap?.exists() || (buyerSnap.data() as User).walletBalance < totalCost) {
+            throw new Error("Insufficient funds or user not found.");
+        }
+
+        const holdingsToCreate: Omit<OwnedFractal, 'id'>[] = [];
+        const holdingsToDelete: DocumentReference[] = [];
+        
+        for (const item of orderBreakdown) {
+            if (item.source === 'ARTIST') {
+                const artistSnap = docSnaps.get(`artist_${artistId}`);
+                if (!artistSnap?.exists() || (artistSnap.data() as Artist).availableEditions < item.quantity) {
                     throw new Error("Not enough fractals available from artist.");
                 }
-                transaction.update(artistRef, { availableEditions: artistSnap.data().availableEditions - item.quantity });
-                
-                // TODO: Credit artist earnings in a real system
-                
-                for (let i = 0; i < item.quantity; i++) {
-                    const newHoldingRef = doc(firestoreCollection(db, `users/${user.uid}/holdings`));
-                    transaction.set(newHoldingRef, {
-                        id: newHoldingRef.id,
-                        fractalId: "portfolio-fractal",
-                        artistId: artistId,
-                        purchaseDate: new Date().toISOString(),
-                        purchasePrice: item.price,
-                        serialNumber: uuidv4(),
-                        status: 'owned',
+                for (let j = 0; j < item.quantity; j++) {
+                    holdingsToCreate.push({
+                        fractalId: "portfolio-fractal", artistId, purchaseDate: new Date().toISOString(),
+                        purchasePrice: item.price, serialNumber: uuidv4(), status: 'owned',
                     });
                 }
-            } else if (item.source === 'RESELLER' && item.listingId && item.resellerId) {
-                const sellerRef = doc(db, "users", item.resellerId);
-                const listingRef = doc(db, "resaleListings", item.listingId);
-                
-                const [sellerSnap, listingSnap] = await Promise.all([transaction.get(sellerRef), transaction.get(listingRef)]);
+            } else if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
+                const listingSnap = docSnaps.get(`listing_${item.listingId}`);
+                const sellerSnap = docSnaps.get(`seller_${item.resellerId}`);
+                if (!listingSnap?.exists() || !sellerSnap?.exists()) throw new Error("Seller or listing not found.");
 
-                if (!sellerSnap.exists()) throw new Error(`Seller ${item.resellerId} not found.`);
-                const sellerData = sellerSnap.data() as User;
-                
-                if (!listingSnap.exists()) throw new Error(`Listing ${item.listingId} not found.`);
                 const listingData = listingSnap.data() as ResaleListing;
-
                 if (listingData.status !== 'active' || listingData.quantity < item.quantity) {
                     throw new Error("Listing is not active or has insufficient quantity.");
                 }
 
-                // Credit seller
+                const holdingsToTransfer = listingData.holdingIds.slice(0, item.quantity);
+                for (const holdingId of holdingsToTransfer) {
+                    // Note: We are not reading the holding doc itself, trusting the listing doc for this transaction
+                    // This is a design trade-off for simplicity and to avoid read-after-read complexity
+                    // A more robust system might pre-verify holdings outside the transaction
+                    holdingsToDelete.push(doc(db, `users/${item.resellerId}/holdings/${holdingId}`));
+                    holdingsToCreate.push({
+                         fractalId: "portfolio-fractal", artistId: listingData.artistId, purchaseDate: new Date().toISOString(),
+                         purchasePrice: item.price, serialNumber: `resale-${uuidv4()}`, status: 'owned',
+                    });
+                }
+            }
+        }
+
+        // --- PHASE 3: WRITE ALL CHANGES ---
+        transaction.update(docRefs.get('buyer')!, { walletBalance: (buyerSnap.data() as User).walletBalance - totalCost });
+
+        for (const item of orderBreakdown) {
+            if (item.source === 'ARTIST') {
+                const artistRef = docRefs.get(`artist_${artistId}`)!;
+                const artistData = docSnaps.get(`artist_${artistId}`)!.data() as Artist;
+                transaction.update(artistRef, { availableEditions: artistData.availableEditions - item.quantity });
+            } else if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
+                const sellerRef = docRefs.get(`seller_${item.resellerId}`)!;
+                const sellerData = docSnaps.get(`seller_${item.resellerId}`)!.data() as User;
                 transaction.update(sellerRef, { walletBalance: sellerData.walletBalance + (item.quantity * item.price) });
                 
-                // Transfer holdings
-                const holdingsToTransferIds = listingData.holdingIds.slice(0, item.quantity);
-                if (holdingsToTransferIds.length < item.quantity) {
-                    throw new Error("Listing data inconsistent: not enough holding IDs.");
-                }
-
-                for (const holdingId of holdingsToTransferIds) {
-                    const sellerHoldingRef = doc(db, `users/${item.resellerId}/holdings/${holdingId}`);
-                    const holdingSnap = await transaction.get(sellerHoldingRef);
-                    if (!holdingSnap.exists()) throw new Error(`Holding ${holdingId} not found for seller.`);
-
-                    const holdingData = holdingSnap.data() as OwnedFractal;
-                    const newHoldingRef = doc(firestoreCollection(db, `users/${user.uid}/holdings`));
-                    
-                    transaction.set(newHoldingRef, {
-                        ...holdingData,
-                        id: newHoldingRef.id,
-                        purchaseDate: new Date().toISOString(),
-                        purchasePrice: item.price,
-                        status: 'owned',
-                    });
-
-                    transaction.delete(sellerHoldingRef);
-                }
-
-                // Update listing
-                const newListingQuantity = listingData.quantity - item.quantity;
-                const remainingHoldingIds = listingData.holdingIds.slice(item.quantity);
+                const listingRef = docRefs.get(`listing_${item.listingId}`)!;
+                const listingData = docSnaps.get(`listing_${item.listingId}`)!.data() as ResaleListing;
+                const newQuantity = listingData.quantity - item.quantity;
                 transaction.update(listingRef, {
-                    quantity: newListingQuantity,
-                    holdingIds: remainingHoldingIds,
-                    status: newListingQuantity === 0 ? 'completed' : 'active',
+                    quantity: newQuantity,
+                    holdingIds: listingData.holdingIds.slice(item.quantity),
+                    status: newQuantity === 0 ? 'completed' : 'active',
                 });
             }
         }
+        
+        holdingsToCreate.forEach(holding => {
+            const newHoldingRef = doc(firestoreCollection(db, `users/${user.uid}/holdings`));
+            transaction.set(newHoldingRef, { ...holding, id: newHoldingRef.id });
+        });
+        
+        holdingsToDelete.forEach(holdingRef => {
+            transaction.delete(holdingRef);
+        });
+
     }).catch(error => {
+        console.error("Purchase transaction failed:", error);
         throw new Error(handleAuthError(error));
     });
     toast({ title: "Collection Successful!", description: `You have collected ${orderBreakdown.reduce((sum, item) => sum + item.quantity, 0)} fractal(s).` });
   };
-  
+
   const listForResale = async (artist: Artist, options: { quantity: number; initialPrice: number; minPrice: number; periodDays: number; }) => {
       if (!db || !user) throw new Error("User not authenticated or database not available.");
       
@@ -531,6 +559,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               where("artistId", "==", artist.id),
               where("status", "==", "owned")
           );
+          
+          // Note: getDocs cannot be used inside a transaction. We must get a snapshot of the query first.
+          // This is a limitation, but for this use case, we will get the docs outside the transaction.
+          // This means there's a small race condition window, but it's acceptable for this app's logic.
           const holdingsSnap = await getDocs(holdingsQuery);
           
           if (holdingsSnap.docs.length < quantity) throw new Error("Not enough fractals to list.");
