@@ -3,7 +3,6 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -28,45 +27,10 @@ import { evaluateArtwork, type EvaluationResult } from '@/ai/flows/evaluate-artw
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArtworkSize } from '@/lib/data';
+import { ArtworkSize, artworkFormSchema, type ArtworkFormValues } from '@/lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-
-const artworkFormSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters.").max(100),
-  description: z.string().min(10, "Description must be at least 10 characters.").max(1000),
-  materials: z.string().min(3, "Please specify the materials used."),
-  length: z.coerce.number().min(0.1, "Length is required."),
-  breadth: z.coerce.number().min(0.1, "Breadth is required."),
-  height: z.coerce.number().optional(),
-  unit: z.enum(['in', 'cm', 'ft', 'px']),
-  minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least ₹1."),
-  maxEstimatedValue: z.coerce.number(),
-  editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
-  images: z.array(z.any())
-    .min(1, "At least one image is required.")
-    .max(3, "You can upload a maximum of 3 images.")
-    .refine((files) => files.every((file) => file?.size <= MAX_FILE_SIZE), `Max file size is 5MB.`)
-    .refine(
-      (files) => files.every((file) => ACCEPTED_IMAGE_TYPES.includes(file?.type)),
-      ".jpg, .jpeg, .png and .webp files are accepted."
-    ),
-  heroImageIndex: z.coerce.number().min(0).max(2).default(0),
-  subjectSignificance: z.string().max(500).optional(),
-  personalSignificance: z.string().max(500).optional(),
-  timeEffort: z.string().max(500).optional(),
-  biographicalContext: z.string().max(500).optional(),
-  commissionPatronage: z.string().max(500).optional(),
-}).refine(data => data.maxEstimatedValue >= data.minEstimatedValue, {
-  message: "Maximum value must be greater than or equal to minimum value.",
-  path: ["maxEstimatedValue"],
-});
-
-type ArtworkFormValues = z.infer<typeof artworkFormSchema>;
 
 type ArtworkSubmissionData = {
     evaluationResult: EvaluationResult;
@@ -174,7 +138,11 @@ export default function CreateArtworkPage() {
     };
 
     try {
-      const heroImageDataUri = await fileToDataUrl(data.images[data.heroImageIndex]);
+      const heroImageFile = data.images[data.heroImageIndex];
+      if (!heroImageFile) {
+        throw new Error("Hero image not found.");
+      }
+      const heroImageDataUri = await fileToDataUrl(heroImageFile);
 
       let artworkSizeString = `${data.length} x ${data.breadth}`;
       if (data.height) {
@@ -224,27 +192,7 @@ export default function CreateArtworkPage() {
     const formData = form.getValues();
 
     try {
-      const artworkSize: ArtworkSize = { length: formData.length, breadth: formData.breadth, unit: formData.unit };
-      if (formData.height) artworkSize.height = formData.height;
-
-      const newArtworkData = {
-        title: formData.title,
-        description: formData.description,
-        materials: formData.materials,
-        artworkSize,
-        minEstimatedValue: formData.minEstimatedValue,
-        maxEstimatedValue: formData.maxEstimatedValue,
-        editionsToIssue: formData.editionsToIssue,
-        images: imagePreviews,
-        heroImage: imagePreviews[formData.heroImageIndex],
-        subjectSignificance: formData.subjectSignificance,
-        personalSignificance: formData.personalSignificance,
-        timeEffort: formData.timeEffort,
-        biographicalContext: formData.biographicalContext,
-        commissionPatronage: formData.commissionPatronage,
-      };
-
-      await addArtwork(newArtworkData, evaluationResult, finalPrice, shouldApplyGrade);
+      await addArtwork(formData, evaluationResult, finalPrice, shouldApplyGrade);
       
       toast({
         title: "Artwork Added!",
@@ -267,6 +215,7 @@ export default function CreateArtworkPage() {
         title: "Uh oh! Something went wrong.",
         description: error instanceof Error ? error.message : "There was a problem adding your artwork. Please try again.",
       });
+    } finally {
       setIsSubmitting(false);
     }
   };

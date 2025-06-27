@@ -89,6 +89,42 @@ export interface ResaleListing {
   status: 'active' | 'completed' | 'cancelled';
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+export const artworkFormSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters.").max(100),
+  description: z.string().min(10, "Description must be at least 10 characters.").max(1000),
+  materials: z.string().min(3, "Please specify the materials used."),
+  length: z.coerce.number().min(0.1, "Length is required."),
+  breadth: z.coerce.number().min(0.1, "Breadth is required."),
+  height: z.coerce.number().optional(),
+  unit: z.enum(['in', 'cm', 'ft', 'px']),
+  minEstimatedValue: z.coerce.number().min(1, "Minimum value must be at least ₹1."),
+  maxEstimatedValue: z.coerce.number(),
+  editionsToIssue: z.coerce.number().int().min(0, "Cannot issue negative editions.").default(0),
+  images: z.array(z.any())
+    .min(1, "At least one image is required.")
+    .max(3, "You can upload a maximum of 3 images.")
+    .refine((files) => files.every((file) => file?.size <= MAX_FILE_SIZE), `Max file size is 5MB.`)
+    .refine(
+      (files) => files.every((file) => ACCEPTED_IMAGE_TYPES.includes(file?.type)),
+      ".jpg, .jpeg, .png and .webp files are accepted."
+    ),
+  heroImageIndex: z.coerce.number().min(0).max(2).default(0),
+  subjectSignificance: z.string().max(500).optional(),
+  personalSignificance: z.string().max(500).optional(),
+  timeEffort: z.string().max(500).optional(),
+  biographicalContext: z.string().max(500).optional(),
+  commissionPatronage: z.string().max(500).optional(),
+}).refine(data => data.maxEstimatedValue >= data.minEstimatedValue, {
+  message: "Maximum value must be greater than or equal to minimum value.",
+  path: ["maxEstimatedValue"],
+});
+
+export type ArtworkFormValues = z.infer<typeof artworkFormSchema>;
+
+
 export const editArtworkFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters.").max(100),
   description: z.string().min(10, "Description must be at least 10 characters.").max(1000),
@@ -126,8 +162,8 @@ export type NewArtworkData = {
     minEstimatedValue: number;
     maxEstimatedValue: number;
     editionsToIssue: number;
-    images: string[];
-    heroImage: string;
+    images: (File | string)[]; // Can be File objects on create, strings on edit
+    heroImageIndex: number; // Index to determine which image is the hero
     subjectSignificance?: string;
     personalSignificance?: string;
     timeEffort?: string;
@@ -349,3 +385,4 @@ const finalArtists: Artist[] = tempArtists.map(artist => {
 export const artists: Artist[] = finalArtists;
 export const fractals: Fractal[] = tempFractals;
 // RemoveCandy end
+
