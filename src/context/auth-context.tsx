@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem } from '@/lib/data';
@@ -218,16 +218,26 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const createArtistProfile = async (profileData: CreateArtistProfileData) => {
     if (!db || !user) throw new Error("User not authenticated or database not available.");
     
-    const { avatar: avatarFile, ...restOfProfileData } = profileData;
+    const { avatar: avatarData, ...restOfProfileData } = profileData;
     let avatarUrl = '';
     
-    if (avatarFile) {
-        try {
-            const avatarRef = ref(storage, `avatars/${user.uid}/${avatarFile.name}`);
-            await uploadBytes(avatarRef, avatarFile);
-            avatarUrl = await getDownloadURL(avatarRef);
-        } catch (error) {
-            throw new Error(handleAuthError(error));
+    if (avatarData) {
+        if (avatarData instanceof File) {
+            try {
+                const avatarRef = ref(storage, `avatars/${user.uid}/${avatarData.name}`);
+                await uploadBytes(avatarRef, avatarData);
+                avatarUrl = await getDownloadURL(avatarRef);
+            } catch (error) {
+                throw new Error(handleAuthError(error));
+            }
+        } else if (typeof avatarData === 'string' && avatarData.startsWith('data:image')) {
+            try {
+                const avatarRef = ref(storage, `avatars/${user.uid}/profile.jpg`);
+                await uploadString(avatarRef, avatarData, 'data_url');
+                avatarUrl = await getDownloadURL(avatarRef);
+            } catch (error) {
+                throw new Error(handleAuthError(error));
+            }
         }
     }
     
@@ -273,10 +283,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               throw new Error(handleAuthError(error));
           }
       } else if (typeof avatar === 'string' && avatar.startsWith('data:image')) {
-        // Handle base64 string upload if needed, though File object is preferred
          try {
             const avatarRef = ref(storage, `avatars/${artistProfile.id}/profile.jpg`);
-            await uploadBytes(avatarRef, avatar, 'data_url');
+            await uploadString(avatarRef, avatar, 'data_url');
             dataToUpdate.avatar = await getDownloadURL(avatarRef);
         } catch (error) {
             throw new Error(handleAuthError(error));

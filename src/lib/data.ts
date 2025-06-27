@@ -164,7 +164,7 @@ export const editArtworkFormSchema = z.object({
 
 export type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
 
-export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'> & { avatar: File | null };
+export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'> & { avatar: File | string | null };
 
 export type NewArtworkData = {
     title: string;
