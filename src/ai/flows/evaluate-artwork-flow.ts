@@ -10,7 +10,13 @@ import {ai, isAiConfigured} from '@/ai/genkit';
 import {z} from 'genkit';
 import { type AIScorecardBreakdown } from '@/lib/data';
 
-const rubric = [
+/**
+ * ArtScoreChecklist
+ * This constant contains the full 100-point evaluation rubric for artworks.
+ * It is a critical part of the platform's evaluation system and should not be
+ * modified without explicit instruction.
+ */
+const ArtScoreChecklist = [
     { id: 1, criterion: 'Artist Reputation/Notability', type: 'AI', weight: 10 },
     { id: 2, criterion: 'Awards & Exhibitions', type: 'AI', weight: 4 },
     { id: 3, criterion: 'Subject/Cultural Significance', type: 'AI', weight: 3 },
@@ -56,17 +62,17 @@ const rubric = [
     { id: 43, criterion: 'Blending Quality', type: 'AI', weight: 1 },
     { id: 44, criterion: 'Medium Identification', type: 'AI', weight: 1 },
     { id: 45, criterion: 'Brush vs Pen Stroke Identification', type: 'AI', weight: 1 },
-    { id: 46, criterion: 'Substrate/Support Type', type: 'AI', weight: 1 },
+    { id: 46, criterion: 'Substrate/Support Type', type: 'AI', weight: 0.5 },
     { id: 47, criterion: 'Canvas Weave Clarity', type: 'AI', weight: 0.5 },
     { id: 48, criterion: 'Wood Grain Visibility', type: 'AI', weight: 0.5 },
     { id: 49, criterion: 'Frame Presence & Quality', type: 'AI', weight: 0.5 },
     { id: 50, criterion: 'Frame Condition', type: 'AI', weight: 0.5 },
     { id: 51, criterion: 'Patina/Finish Consistency (Metal)', type: 'AI', weight: 0.5 },
     { id: 52, criterion: 'Pigment Granularity', type: 'AI', weight: 0.5 },
-    { id: 53, criterion: 'Adhesive/Joints (Collage/Sculpture)', type: 'AI', weight: 0.5 },
-    { id: 54, criterion: 'Foundry/Casting Marks', type: 'AI', weight: 1 },
-    { id: 55, criterion: 'Joint Seams (Sculptures)', type: 'AI', weight: 0.5 },
-    { id: 56, criterion: 'Signature Presence', type: 'AI', weight: 2 },
+    { id: 53, criterion: 'Adhesive/Joints (Collage/Sculpture)', type: 'AI', weight: 1 },
+    { id: 54, criterion: 'Foundry/Casting Marks', type: 'AI', weight: 0.5 },
+    { id: 55, criterion: 'Joint Seams (Sculptures)', type: 'AI', weight: 2 },
+    { id: 56, criterion: 'Signature Presence', type: 'AI', weight: 1 },
     { id: 57, criterion: 'Signature Style Match', type: 'AI', weight: 1 },
     { id: 58, criterion: 'Date/Inscription Consistency', type: 'AI', weight: 1 },
     { id: 59, criterion: 'Certificate Authenticity', type: 'AI', weight: 1 },
@@ -81,19 +87,19 @@ const rubric = [
     { id: 68, criterion: 'Inventory/Accession Number', type: 'AI', weight: 1 },
     { id: 69, criterion: 'Digital/QR Authentication', type: 'AI', weight: 1 },
     { id: 70, criterion: 'Craquelure (Fine Cracks)', type: 'AI', weight: 1 },
-    { id: 71, criterion: 'Large Splits/Cracks', type: 'AI', weight: 1 },
-    { id: 72, criterion: 'Paint Loss / Bare Areas', type: 'AI', weight: 1 },
+    { id: 71, criterion: 'Large Splits/Cracks', type: 'AI', weight: 0.5 },
+    { id: 72, criterion: 'Paint Loss / Bare Areas', type: 'AI', weight: 0.5 },
     { id: 73, criterion: 'Paint Flaking', type: 'AI', weight: 0.5 },
     { id: 74, criterion: 'Fading / Color Discoloration', type: 'AI', weight: 0.5 },
-    { id: 75, criterion: 'Stains / Dirt Spots', type: 'AI', weight: 0.5 },
-    { id: 76, criterion: 'Tears / Holes', type: 'AI', weight: 1 },
+    { id: 75, criterion: 'Stains / Dirt Spots', type: 'AI', weight: 1 },
+    { id: 76, criterion: 'Tears / Holes', type: 'AI', weight: 0.5 },
     { id: 77, criterion: 'Edge/Corner Damage', type: 'AI', weight: 0.5 },
-    { id: 78, criterion: 'Surface Grime or Yellowed Varnish', type: 'AI', weight: 0.5 },
+    { id: 78, criterion: 'Surface Grime or Yellowed Varnish', type: 'AI', weight: 1 },
     { id: 79, criterion: 'Warping / Bulging', type: 'AI', weight: 1 },
     { id: 80, criterion: 'Missing Sculpture Parts', type: 'AI', weight: 1 },
     { id: 81, criterion: 'Rust / Metal Corrosion', type: 'AI', weight: 1 },
-    { id: 82, criterion: 'Mold / Mildew', type: 'AI', weight: 1 },
-    { id: 83, criterion: 'Water Damage / Blistering', type: 'AI', weight: 1 },
+    { id: 82, criterion: 'Mold / Mildew', type: 'AI', weight: 0.5 },
+    { id: 83, criterion: 'Water Damage / Blistering', type: 'AI', weight: 0.5 },
     { id: 84, criterion: 'Varnish Cracking', type: 'AI', weight: 0.5 },
     { id: 85, criterion: 'Over-Cleaning Damage', type: 'AI', weight: 0.5 },
     { id: 86, criterion: 'Foxing / Age Spots', type: 'AI', weight: 0.5 },
@@ -112,6 +118,7 @@ const rubric = [
     { id: 99, criterion: 'Pigment Blooming', type: 'AI', weight: 0.5 },
     { id: 100, criterion: 'Residue / Tape Marks', type: 'AI', weight: 0.5 },
 ];
+
 
 const EvaluateArtworkInputSchema = z.object({
   photoDataUri: z.string().describe(
@@ -139,23 +146,36 @@ const AiCriterionScoreSchema = z.object({
 });
 
 const ArtworkAnalysisSchema = z.object({
-    scores: z.array(AiCriterionScoreSchema).describe('An array of scores for each AI-evaluated criterion.'),
-    minPriceAI: z.number().describe("The AI's estimated minimum market price for the artwork in INR, based on all available data."),
-    maxPriceAI: z.number().describe("The AI's estimated maximum market price for the artwork in INR, based on all available data."),
+    isAuthentic: z.boolean().describe('Whether the artwork is believed to be authentic and not AI-generated or plagiarized.'),
+    authenticityConcern: z.string().optional().describe('If not authentic, a brief explanation of the concern (e.g., "Potential AI-generated content detected", "High similarity to existing artwork").'),
+    scores: z.array(AiCriterionScoreSchema).optional().describe('An array of scores for each AI-evaluated criterion. This is only populated if isAuthentic is true.'),
+    minPriceAI: z.number().optional().describe("The AI's estimated minimum market price for the artwork in INR, based on all available data. Only populated if isAuthentic is true."),
+    maxPriceAI: z.number().optional().describe("The AI's estimated maximum market price for the artwork in INR, based on all available data. Only populated if isAuthentic is true."),
 });
 
-const EvaluateArtworkOutputSchema = z.object({
-    finalScore: z.number(),
-    grade: z.enum(['AAA', 'AA', 'A+', 'A', 'A-']),
-    breakdown: z.array(z.object({
-        id: z.number(),
-        criterion: z.string(),
-        score: z.number(),
-        weight: z.number(),
-        weightedScore: z.number(),
-    })),
-    crestoxPriceRange: z.tuple([z.number(), z.number()]),
+const SuccessfulEvaluationSchema = z.object({
+    status: z.literal('success'),
+    evaluation: z.object({
+        finalScore: z.number(),
+        grade: z.enum(['AAA', 'AA', 'A+', 'A', 'A-']),
+        breakdown: z.array(z.object({
+            id: z.number(),
+            criterion: z.string(),
+            score: z.number(),
+            weight: z.number(),
+            weightedScore: z.number(),
+        })),
+        crestoxPriceRange: z.tuple([z.number(), z.number()]),
+    })
 });
+
+const ManualReviewSchema = z.object({
+    status: z.literal('manual_review_required'),
+    concern: z.string(),
+    analysisForEmail: z.string().describe("A detailed breakdown of the evaluation analysis to be included in the manual review email."),
+});
+
+const EvaluateArtworkOutputSchema = z.union([SuccessfulEvaluationSchema, ManualReviewSchema]);
 
 export type EvaluationResult = z.infer<typeof EvaluateArtworkOutputSchema>;
 
@@ -164,9 +184,18 @@ export async function evaluateArtwork(
   input: z.infer<typeof EvaluateArtworkInputSchema>
 ): Promise<EvaluationResult> {
   if (!isAiConfigured) {
-    console.warn("AI is not configured. Returning mock evaluation data to prevent app crash.");
-    // This simulates a successful evaluation when no API key is present.
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+    console.warn("AI is not configured. Bypassing real evaluation.");
+    // Simulate a successful evaluation when no API key is present.
+    await new Promise(resolve => setTimeout(resolve, 2000)); 
+
+    // Randomly decide if we should simulate a failure for testing the UI
+    if (Math.random() < 0.1) { // 10% chance to fail
+        return {
+            status: 'manual_review_required',
+            concern: "Suspected AI-Generated Content (Mock Failure)",
+            analysisForEmail: `Artwork '${input.title}' was flagged for manual review. AI detection systems indicated a high probability of synthetic origin. No scoring was performed.`
+        };
+    }
 
     const mockScore = Math.floor(Math.random() * (75 - 45 + 1)) + 45; // Random score between 45 and 75
     const mockMinPrice = Math.round(input.minEstimatedValue * 1.1);
@@ -180,21 +209,24 @@ export async function evaluateArtwork(
     else grade = 'A-';
 
     return {
-      finalScore: mockScore,
-      grade: grade,
-      breakdown: rubric
-        .filter(item => item.type === 'AI')
-        .map(item => {
-            const score = Math.floor(Math.random() * 4) + 5; // Score between 5-8
-            return {
-                id: item.id,
-                criterion: item.criterion,
-                score: score,
-                weight: item.weight,
-                weightedScore: (score / 10) * item.weight
-            }
-        }),
-      crestoxPriceRange: [mockMinPrice, mockMaxPrice],
+      status: 'success',
+      evaluation: {
+        finalScore: mockScore,
+        grade: grade,
+        breakdown: ArtScoreChecklist
+          .filter(item => item.type === 'AI')
+          .map(item => {
+              const score = Math.floor(Math.random() * 4) + 5; // Score between 5-8
+              return {
+                  id: item.id,
+                  criterion: item.criterion,
+                  score: score,
+                  weight: item.weight,
+                  weightedScore: (score / 10) * item.weight
+              }
+          }),
+        crestoxPriceRange: [mockMinPrice, mockMaxPrice],
+      }
     };
   }
   return evaluateArtworkFlow(input);
@@ -204,23 +236,22 @@ const evaluationPrompt = ai.definePrompt({
   name: 'evaluateArtworkPrompt',
   input: {schema: EvaluateArtworkInputSchema},
   output: {schema: ArtworkAnalysisSchema},
-  prompt: `You are an expert art appraiser. Your task is to analyze the provided artwork image and associated context, then score it based on a comprehensive rubric and provide a market valuation.
+  prompt: `You are an expert art appraiser and digital forensics analyst. Your task is a two-step process:
+1.  **Authenticity Check:** First, analyze the artwork image for signs of being AI-generated or plagiarized. Use forensic techniques to check for spectral artifacts, texture inconsistencies, and perform a conceptual similarity search against known art. If you have high confidence it is not authentic, set 'isAuthentic' to false and provide a reason in 'authenticityConcern'. Do not proceed to step 2.
+2.  **Full Evaluation:** If the artwork passes the authenticity check, set 'isAuthentic' to true and conduct a full evaluation. Score it based on the comprehensive 100-point rubric provided below and provide a market valuation in INR.
 
-**Evaluation Instructions:**
-1.  **Image-Based Criteria:** For criteria related to composition, color, texture, technique, condition, and material, your primary source is the artwork image.
-2.  **Context-Based Criteria:** For criteria related to the artist and the artwork's narrative, evaluate the provided text. Score based on the quality, credibility, and relevance of the information. For example, a high score for "Artist's Intent" requires a compelling statement that is clearly reflected in the visual work.
-3.  **Inferred Criteria:** For "Artist Reputation" and "Uniqueness", synthesize information from the artist's bio, awards, and the artwork itself.
-4.  **Market Valuation:** Based on your complete analysis, provide an estimated minimum and maximum market price for this artwork in INR.
+**Evaluation Instructions for Step 2:**
+-   **Image-Based Criteria:** For criteria on composition, color, texture, technique, condition, and material, your primary source is the artwork image.
+-   **Context-Based Criteria:** For criteria on the artist and narrative, evaluate the provided text. Score based on quality, credibility, and relevance.
+-   **Inferred Criteria:** For "Artist Reputation" and "Uniqueness", synthesize information from the artist's bio, awards, and the artwork itself.
+-   **Market Valuation:** Provide an estimated minimum and maximum market price in INR.
+-   **Scoring:** You must provide a score from 0 to 10 for EVERY criterion in the rubric.
 
-You must provide a score from 0 to 10 for every single criterion marked with type "AI" in the rubric below.
-
-**Evaluation Rubric:**
-(You will score ALL items with Type='AI')
-${rubric.map(item => `| ${item.id} | ${item.criterion} | ${item.type} | ${item.weight}% |`).join('\n')}
+**ArtScoreChecklist Rubric:**
+${ArtScoreChecklist.map(item => `| ${item.id} | ${item.criterion} | ${item.weight}% |`).join('\n')}
 
 ---
 **CONTEXT FOR EVALUATION**
-
 **Artwork Information:**
 - Title: {{{title}}}
 - Description (Artist's Intent/Theme): {{{description}}}
@@ -231,7 +262,6 @@ ${rubric.map(item => `| ${item.id} | ${item.criterion} | ${item.type} | ${item.w
 - Time Spent / Effort Statement: {{{timeEffort}}}
 - Biographical/Contextual Relevance Statement: {{{biographicalContext}}}
 - Commission/Patronage Statement: {{{commissionPatronage}}}
-
 **Artist Information:**
 - Artist Bio: {{{artistBio}}}
 - Artist Awards: {{{artistAwards}}}
@@ -242,7 +272,7 @@ ${rubric.map(item => `| ${item.id} | ${item.criterion} | ${item.type} | ${item.w
 {{media url=photoDataUri}}
 
 ---
-Please analyze the artwork and context, then return your scores for all AI criteria and your estimated price range.
+Begin your analysis. First, determine authenticity. If authentic, proceed to the full scoring and valuation.
 `,
   config: {
     temperature: 0.1,
@@ -257,32 +287,49 @@ const evaluateArtworkFlow = ai.defineFlow(
   },
   async (input): Promise<EvaluationResult> => {
     const { output } = await evaluationPrompt(input);
-    if (!output || !output.scores || output.minPriceAI === undefined || output.maxPriceAI === undefined) {
-      throw new Error("AI analysis failed to return complete data.");
+    
+    if (!output) {
+      throw new Error("AI analysis did not return any output.");
     }
     
-    // --- 1. Calculate Quality Score (Q) ---
+    if (!output.isAuthentic) {
+        let analysisDetail = `Artwork ('${input.title}') was flagged for manual review.\n`;
+        analysisDetail += `Reason: ${output.authenticityConcern || 'No specific reason provided.'}\n\n`;
+        analysisDetail += `--- Provided Artwork Details ---\n`;
+        analysisDetail += `Title: ${input.title}\n`;
+        analysisDetail += `Description: ${input.description}\n`;
+        analysisDetail += `Artist Bio: ${input.artistBio}\n`;
+        
+        return {
+            status: 'manual_review_required',
+            concern: output.authenticityConcern || "The AI has flagged this artwork for potential authenticity issues (e.g., AI-generated or plagiarism).",
+            analysisForEmail: analysisDetail,
+        };
+    }
+
+    if (!output.scores || output.minPriceAI === undefined || output.maxPriceAI === undefined) {
+      throw new Error("AI analysis passed authenticity check but failed to return complete scoring data.");
+    }
+    
     const breakdown: AIScorecardBreakdown[] = [];
     let totalWeightedScore = 0;
     let totalPossibleWeight = 0;
 
     const aiScores = new Map(output.scores.map(item => [item.id, item.score]));
 
-    rubric.forEach(item => {
-        if (item.type === 'AI') {
-            const score = aiScores.get(item.id);
-            totalPossibleWeight += item.weight;
-            if (score !== undefined) {
-                const weightedScore = (score / 10) * item.weight;
-                totalWeightedScore += weightedScore;
-                breakdown.push({
-                    id: item.id,
-                    criterion: item.criterion,
-                    score: score,
-                    weight: item.weight,
-                    weightedScore: weightedScore
-                });
-            }
+    ArtScoreChecklist.forEach(item => {
+        const score = aiScores.get(item.id);
+        totalPossibleWeight += item.weight;
+        if (score !== undefined) {
+            const weightedScore = (score / 10) * item.weight;
+            totalWeightedScore += weightedScore;
+            breakdown.push({
+                id: item.id,
+                criterion: item.criterion,
+                score: score,
+                weight: item.weight,
+                weightedScore: weightedScore
+            });
         }
     });
 
@@ -294,25 +341,17 @@ const evaluateArtworkFlow = ai.defineFlow(
     else if (finalScore > 40) grade = 'A+';
     else if (finalScore > 20) grade = 'A';
     else grade = 'A-';
-
-    // --- 2. Calculate Price Estimations ---
-    const Q = finalScore;
-
-    // Model 1: Linear Mapping (User Prices)
-    const P_user = input.minEstimatedValue + (input.maxEstimatedValue - input.minEstimatedValue) * (Q / 100);
     
-    // Model 2: Linear Mapping (AI Prices)
-    const P_ai_linear = output.minPriceAI + (output.maxPriceAI - output.minPriceAI) * (Q / 100);
+    const P_user = input.minEstimatedValue + (input.maxEstimatedValue - input.minEstimatedValue) * (finalScore / 100);
+    const P_ai_linear = output.minPriceAI + (output.maxPriceAI - output.minPriceAI) * (finalScore / 100);
+    const P_regression = Math.exp(6.2 + 0.015 * finalScore);
 
-    // Model 3: Regression Mapping
-    const a = 6.2;
-    const b = 0.015;
-    const P_regression = Math.exp(a + b * Q);
-
-    // --- 3. Final Averaged Price and Range ---
     const P_avg = (P_user + P_ai_linear + P_regression) / 3;
     const crestoxPriceRange: [number, number] = [Math.round(P_avg * 0.9), Math.round(P_avg * 1.1)];
     
-    return { finalScore, grade, breakdown, crestoxPriceRange };
+    return { 
+        status: 'success',
+        evaluation: { finalScore, grade, breakdown, crestoxPriceRange }
+    };
   }
 );

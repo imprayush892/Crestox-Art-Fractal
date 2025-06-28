@@ -21,7 +21,7 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Loader2, UploadCloud, X, Wand2, ArrowRight, Star, Info } from 'lucide-react';
+import { Loader2, UploadCloud, X, Wand2, ArrowRight, Star, Info, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import { evaluateArtwork, type EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
 import { Progress } from '@/components/ui/progress';
@@ -31,9 +31,12 @@ import { artworkFormSchema, type ArtworkFormValues } from '@/lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+import type { SuccessfulEvaluationSchema } from '@/ai/flows/evaluate-artwork-flow';
+
+type SuccessfulEvaluation = z.infer<typeof SuccessfulEvaluationSchema>['evaluation'];
 
 type ArtworkSubmissionData = {
-    evaluationResult: EvaluationResult;
+    evaluationResult: SuccessfulEvaluation;
     finalPrice: number;
     shouldApplyGrade: boolean;
 };
@@ -46,10 +49,12 @@ export default function CreateArtworkPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
-  const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
+  const [evaluationResult, setEvaluationResult] = useState<SuccessfulEvaluation | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [isManualReviewDialogOpen, setIsManualReviewDialogOpen] = useState(false);
+  const [manualReviewDetails, setManualReviewDetails] = useState({ concern: '', analysisForEmail: '' });
   const [newMessage, setNewMessage] = useState("");
   const [artworkSubmissionData, setArtworkSubmissionData] = useState<ArtworkSubmissionData | null>(null);
   
@@ -127,6 +132,7 @@ export default function CreateArtworkPage() {
   const onFormSubmit = async (data: ArtworkFormValues) => {
     if (!artistProfile) return;
     setIsEvaluating(true);
+    setEvaluationResult(null);
 
     const fileToDataUrl = (file: File): Promise<string> => {
       return new Promise((resolve, reject) => {
@@ -139,15 +145,12 @@ export default function CreateArtworkPage() {
 
     try {
       const heroImageFile = data.images[data.heroImageIndex];
-      if (!heroImageFile) {
-        throw new Error("Hero image not found.");
-      }
+      if (!heroImageFile) throw new Error("Hero image not found.");
+      
       const heroImageDataUri = await fileToDataUrl(heroImageFile);
 
       let artworkSizeString = `${data.length} x ${data.breadth}`;
-      if (data.height) {
-        artworkSizeString += ` x ${data.height}`;
-      }
+      if (data.height) artworkSizeString += ` x ${data.height}`;
       artworkSizeString += ` ${data.unit}`;
 
       const evaluationInput = {
@@ -170,7 +173,14 @@ export default function CreateArtworkPage() {
       
       const result = await evaluateArtwork(evaluationInput);
       setProgress(100);
-      setEvaluationResult(result);
+
+      if (result.status === 'success') {
+          setEvaluationResult(result.evaluation);
+      } else {
+          setManualReviewDetails({ concern: result.concern, analysisForEmail: result.analysisForEmail });
+          setIsManualReviewDialogOpen(true);
+      }
+
     } catch (error) {
       console.error("Error during artwork evaluation:", error);
       toast({
@@ -254,6 +264,29 @@ export default function CreateArtworkPage() {
     setIsMessageDialogOpen(false);
     await finalizeArtworkSubmission(artworkSubmissionData, true);
   };
+
+  const handleSendForManualCheck = () => {
+    const subject = encodeURIComponent("Query for manual checking");
+    const body = encodeURIComponent(manualReviewDetails.analysisForEmail);
+    window.location.href = `mailto:Crestox@crestox.com?subject=${subject}&body=${body}`;
+    
+    setIsManualReviewDialogOpen(false);
+    toast({
+        title: "Manual Review Submitted",
+        description: "Your email client has been opened. Please send the email to complete the submission.",
+        duration: 8000
+    });
+    router.push('/portfolio');
+  };
+
+  const handleCancelManualCheck = () => {
+    setIsManualReviewDialogOpen(false);
+    // Optional: add a toast to inform the user.
+    toast({
+        title: "Upload Cancelled",
+        description: "The artwork was not uploaded. You can make changes and try again.",
+    });
+  }
   
   if (!isLoggedIn || !artistProfile) {
     return null;
@@ -286,6 +319,28 @@ export default function CreateArtworkPage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isManualReviewDialogOpen} onOpenChange={setIsManualReviewDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle className="font-headline text-2xl flex items-center gap-2"><AlertTriangle className="text-destructive"/> Manual Review Required</DialogTitle>
+                  <DialogDescription>
+                      Our AI has flagged this artwork for potential authenticity issues.
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="font-semibold">Reason:</p>
+                <p className="text-muted-foreground">{manualReviewDetails.concern}</p>
+                <p className="mt-4">You can submit this artwork for manual review by our team, or cancel the upload.</p>
+              </div>
+              <DialogFooter>
+                  <Button variant="outline" onClick={handleCancelManualCheck}>Cancel Upload</Button>
+                  <Button onClick={handleSendForManualCheck}>Send for Manual Check</Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+
+
       <div className="container py-12 flex justify-center">
         <Card className="w-full max-w-3xl">
           <CardHeader>
@@ -664,5 +719,3 @@ export default function CreateArtworkPage() {
     </>
   );
 }
-
-    

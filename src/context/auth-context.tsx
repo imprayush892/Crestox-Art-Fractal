@@ -9,8 +9,11 @@ import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem } from '@/lib/data';
 import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
+import type { SuccessfulEvaluationSchema } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
+
+type SuccessfulEvaluation = z.infer<typeof SuccessfulEvaluationSchema>['evaluation'];
 
 // --- Interfaces ---
 export interface User {
@@ -47,7 +50,7 @@ interface AuthContextType {
   removeFromWatchlist: (artistId: string) => Promise<void>;
   createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
   updateArtistProfile: (profileData: Partial<CreateArtistProfileData>) => Promise<void>;
-  addArtwork: (artworkData: ArtworkFormValues, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
+  addArtwork: (artworkData: ArtworkFormValues, evaluationResult: SuccessfulEvaluation, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
   reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
@@ -299,7 +302,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       } catch (error) { throw new Error(handleAuthError(error)); }
   };
 
-  const addArtwork = async (artworkData: ArtworkFormValues, evaluationResult: EvaluationResult, finalPrice: number, shouldApplyGrade: boolean) => {
+  const addArtwork = async (artworkData: ArtworkFormValues, evaluationResult: SuccessfulEvaluation, finalPrice: number, shouldApplyGrade: boolean) => {
     if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
     
     const newFractalId = doc(firestoreCollection(db, 'fractals')).id;
@@ -378,8 +381,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   const updateAndReevaluateArtwork = async (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => {
      if (!db || !artistProfile) throw new Error("Artist profile not found or database not available.");
+     
+     if (evaluationResult.status === 'manual_review_required') {
+        throw new Error("Cannot update artwork that requires manual review.");
+     }
+
+      const { evaluation } = evaluationResult;
       
-      const crestoxPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
+      const crestoxPrice = Math.round((evaluation.crestoxPriceRange[0] + evaluation.crestoxPriceRange[1]) / 2);
       const artistPrice = Math.round(((artworkData.minEstimatedValue || 0) + (artworkData.maxEstimatedValue || 0)) / 2);
       const finalPrice = useCrestoxPrice ? crestoxPrice : artistPrice;
       const shouldApplyGrade = useCrestoxPrice || artistPrice <= crestoxPrice;
@@ -397,9 +406,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               ...artworkData,
               price: finalPrice,
               priceHistory: arrayUnion({ date: new Date().toISOString(), price: finalPrice }),
-              aiScore: evaluationResult.finalScore,
-              aiScorecard: evaluationResult.breakdown,
-              crestoxGrade: shouldApplyGrade ? evaluationResult.grade : fractalSnap.data().crestoxGrade,
+              aiScore: evaluation.finalScore,
+              aiScorecard: evaluation.breakdown,
+              crestoxGrade: shouldApplyGrade ? evaluation.grade : fractalSnap.data().crestoxGrade,
           });
 
           const currentArtistData = artistSnap.data() as Artist;
