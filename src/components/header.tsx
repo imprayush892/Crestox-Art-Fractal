@@ -16,7 +16,16 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { Logo } from './logo';
+import Image from 'next/image';
+
+const getPublicUrl = (path: string) => {
+    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    if (!storageBucket) {
+        return 'https://placehold.co/56x56.png';
+    }
+    return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
+}
+const monogramUrl = getPublicUrl('public/assets/crestox-monogram.png');
 
 export function Header() {
   const { user, isLoggedIn, logout, artistProfile, isLoading } = useAuth();
@@ -49,7 +58,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <Link href="/" className="mr-6 flex items-center gap-2">
-          <Logo className="h-14 w-14" />
+          <Image src={monogramUrl} alt="Crestox Logo" width={56} height={56} className="h-14 w-14" data-ai-hint="logo monogram" />
           <span className="font-bold text-lg font-headline">Crestox</span>
         </Link>
         <div className="hidden md:flex flex-1 items-center justify-between">
@@ -118,7 +127,7 @@ export function Header() {
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between border-b p-4">
                     <Link href="/" onClick={closeMenu} className="flex items-center gap-2">
-                      <Logo className="h-14 w-14" />
+                      <Image src={monogramUrl} alt="Crestox Logo" width={56} height={56} className="h-14 w-14" data-ai-hint="logo monogram" />
                       <span className="font-bold font-headline">Crestox</span>
                     </Link>
                     <SheetClose asChild>
