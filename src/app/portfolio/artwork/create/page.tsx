@@ -31,6 +31,7 @@ import { artworkFormSchema, type ArtworkFormValues } from '@/lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+import type { z } from 'zod';
 import type { SuccessfulEvaluationSchema } from '@/ai/flows/evaluate-artwork-flow';
 
 type SuccessfulEvaluation = z.infer<typeof SuccessfulEvaluationSchema>['evaluation'];
@@ -719,3 +720,5 @@ export default function CreateArtworkPage() {
     </>
   );
 }
+
+    

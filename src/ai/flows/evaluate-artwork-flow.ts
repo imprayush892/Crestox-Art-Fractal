@@ -343,25 +343,31 @@ const evaluateArtworkFlow = ai.defineFlow(
         }
     });
 
-    const finalScore = totalPossibleWeight > 0 ? Math.round((totalWeightedScore / totalPossibleWeight) * 100) : 0;
+    const finalScore = totalPossibleWeight > 0 ? (totalWeightedScore / totalPossibleWeight) * 100 : 0;
+    const Q = finalScore;
 
     let grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
-    if (finalScore > 80) grade = 'AAA';
-    else if (finalScore > 60) grade = 'AA';
-    else if (finalScore > 40) grade = 'A+';
-    else if (finalScore > 20) grade = 'A';
+    if (Q > 80) grade = 'AAA';
+    else if (Q > 60) grade = 'AA';
+    else if (Q > 40) grade = 'A+';
+    else if (Q > 20) grade = 'A';
     else grade = 'A-';
     
-    const P_user = input.minEstimatedValue + (input.maxEstimatedValue - input.minEstimatedValue) * (finalScore / 100);
-    const P_ai_linear = output.minPriceAI + (output.maxPriceAI - output.minPriceAI) * (finalScore / 100);
-    const P_regression = Math.exp(6.2 + 0.015 * finalScore);
+    // ArtValueEst
+    const Pmin_calc = Math.min(input.minEstimatedValue, output.minPriceAI);
+    const Pmax_calc = Math.min(input.maxEstimatedValue, output.maxPriceAI);
+    
+    const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
+    const P_regression = Math.exp(6.2 + 0.015 * Q);
 
-    const P_avg = (P_user + P_ai_linear + P_regression) / 3;
+    const P_avg = (P_linear + P_regression) / 2;
     const crestoxPriceRange: [number, number] = [Math.round(P_avg * 0.9), Math.round(P_avg * 1.1)];
     
     return { 
         status: 'success',
-        evaluation: { finalScore, grade, breakdown, crestoxPriceRange }
+        evaluation: { finalScore: Math.round(finalScore), grade, breakdown, crestoxPriceRange }
     };
   }
 );
+
+    

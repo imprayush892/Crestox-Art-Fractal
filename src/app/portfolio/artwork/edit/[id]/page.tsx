@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
+import type { z } from 'zod';
 import type { SuccessfulEvaluationSchema } from '@/ai/flows/evaluate-artwork-flow';
 
 type SuccessfulEvaluation = z.infer<typeof SuccessfulEvaluationSchema>['evaluation'];
@@ -588,3 +589,5 @@ export default function EditArtworkPage() {
     </>
   );
 }
+
+    
