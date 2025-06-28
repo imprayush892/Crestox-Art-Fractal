@@ -189,11 +189,11 @@ export async function evaluateArtwork(
     await new Promise(resolve => setTimeout(resolve, 2000)); 
 
     // Randomly decide if we should simulate a failure for testing the UI
-    if (Math.random() < 0.1) { // 10% chance to fail
+    if (Math.random() < 0.2) { // 20% chance to fail
         return {
             status: 'manual_review_required',
-            concern: "Suspected AI-Generated Content (Mock Failure)",
-            analysisForEmail: `Artwork '${input.title}' was flagged for manual review. AI detection systems indicated a high probability of synthetic origin. No scoring was performed.`
+            concern: "This work appears to be a direct copy of a well-known painting. (Mock Failure)",
+            analysisForEmail: `Artwork '${input.title}' was flagged for manual review. AI detection systems indicated a high probability of plagiarism. No scoring was performed.`
         };
     }
 
@@ -236,9 +236,19 @@ const evaluationPrompt = ai.definePrompt({
   name: 'evaluateArtworkPrompt',
   input: {schema: EvaluateArtworkInputSchema},
   output: {schema: ArtworkAnalysisSchema},
-  prompt: `You are an expert art appraiser and digital forensics analyst. Your task is a two-step process:
-1.  **Authenticity Check:** First, analyze the artwork image for signs of being AI-generated or plagiarized. Use forensic techniques to check for spectral artifacts, texture inconsistencies, and perform a conceptual similarity search against known art. If you have high confidence it is not authentic, set 'isAuthentic' to false and provide a reason in 'authenticityConcern'. Do not proceed to step 2.
-2.  **Full Evaluation:** If the artwork passes the authenticity check, set 'isAuthentic' to true and conduct a full evaluation. Score it based on the comprehensive 100-point rubric provided below and provide a market valuation in INR.
+  prompt: `You are a world-class art authentication expert and a digital forensics specialist. Your primary and most critical responsibility is to determine the authenticity of an artwork before any evaluation is performed. Your reputation depends on catching forgeries, plagiarized works, and AI-generated images.
+
+**Step 1: MANDATORY Authenticity and Plagiarism Check**
+This is the most important step. Do not proceed to evaluation if you have any doubts.
+- **Plagiarism Check:** Analyze the image and compare it against your vast knowledge of art history and existing famous artworks. Is this a direct copy or a very close imitation of a well-known piece by a famous artist (e.g., Van Gogh's 'The Starry Night', Leonardo da Vinci's 'Mona Lisa')? If so, you MUST flag it.
+- **AI-Generated Image Check:** Scrutinize the image for tell-tale signs of AI generation. Look for inconsistencies in textures, lighting, fine details (like hands or text), spectral artifacts, or a 'too perfect' digital feel.
+- **Decision:** If you have high confidence that the image is either plagiarized OR AI-generated, you MUST set 'isAuthentic' to \`false\` and provide a clear, specific reason in the 'authenticityConcern' field (e.g., "This work is a direct copy of Vincent van Gogh's 'The Starry Night'.", or "Image shows common artifacts of AI generation in the background texture."). **You will not perform any scoring if the work is not authentic.**
+
+**Step 2: Full Evaluation (ONLY if Authenticity is confirmed)**
+If, and only if, the artwork passes the rigorous authenticity check in Step 1, you will then proceed to the full evaluation.
+- Set 'isAuthentic' to \`true\`.
+- Conduct a full evaluation based on the comprehensive 100-point rubric provided below.
+- Provide a market valuation in INR.
 
 **Evaluation Instructions for Step 2:**
 -   **Image-Based Criteria:** For criteria on composition, color, texture, technique, condition, and material, your primary source is the artwork image.
