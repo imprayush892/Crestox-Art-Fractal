@@ -469,7 +469,7 @@ export default function CreateArtworkPage() {
                               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <UploadCloud className="w-10 h-10 mb-3 text-muted-foreground" />
                                 <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p className="text-xs text-muted-foreground">PNG, JPG, or WEBP (MAX. 5MB each)</p>
+                                <p className="text-xs text-muted-foreground">PNG, JPG, or WEBP (MAX. 10MB each)</p>
                               </div>
                             )}
                             <input

@@ -99,7 +99,7 @@ export interface OrderBreakdownItem {
 }
 
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 export const artworkFormSchema = z.object({
@@ -116,7 +116,7 @@ export const artworkFormSchema = z.object({
   images: z.array(z.instanceof(File))
     .min(1, "At least one image is required.")
     .max(3, "You can upload a maximum of 3 images.")
-    .refine((files) => files.every((file) => file.size <= MAX_FILE_SIZE), `Max file size is 5MB.`)
+    .refine((files) => files.every((file) => file.size <= MAX_FILE_SIZE), `Max file size is 10MB.`)
     .refine(
       (files) => files.every((file) => ACCEPTED_IMAGE_TYPES.includes(file.type)),
       ".jpg, .jpeg, .png and .webp files are accepted."
