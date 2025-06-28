@@ -254,8 +254,8 @@ If, and only if, the artwork passes the rigorous authenticity check in Step 1, y
 -   **Image-Based Criteria:** For criteria on composition, color, texture, technique, condition, and material, your primary source is the artwork image.
 -   **Context-Based Criteria:** For criteria on the artist and narrative, evaluate the provided text. Score based on quality, credibility, and relevance.
 -   **Inferred Criteria:** For "Artist Reputation" and "Uniqueness", synthesize information from the artist's bio, awards, and the artwork itself.
--   **Market Valuation:** Provide an estimated minimum and maximum market price in INR.
 -   **Scoring:** You must provide a score from 0 to 10 for EVERY criterion in the rubric.
+-   **Market Valuation (INR):** Provide a REALISTIC and TIGHT estimated market price range (minPriceAI and maxPriceAI) in INR. Your valuation should be grounded in the context provided (artist bio, artwork details) and your analysis. USE THE ARTIST'S ESTIMATE AS A STRONG REFERENCE but adjust based on your comprehensive evaluation. For example, if the artist estimates ₹10,000-₹15,000 but your analysis suggests lower quality, your range might be ₹8,000-₹12,000. DO NOT provide an excessively wide range like ₹100 - ₹1,20,000; this is unhelpful. The range should be justifiable for a real-world sale.
 
 **ArtScoreChecklist Rubric:**
 ${ArtScoreChecklist.map(item => `| ${item.id} | ${item.criterion} | ${item.weight}% |`).join('\n')}
@@ -374,3 +374,4 @@ const evaluateArtworkFlow = ai.defineFlow(
     
 
     
+
