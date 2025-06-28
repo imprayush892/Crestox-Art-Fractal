@@ -80,12 +80,18 @@ const handleAuthError = (error: any): string => {
   }
 };
 
+const sanitizeArtist = (artist: Artist): Artist => ({
+  ...artist,
+  totalEditions: Number(artist.totalEditions || 0),
+  availableEditions: Number(artist.availableEditions || 0),
+});
+
 export function AuthProvider({ children, initialArtists, initialFractals }: { children: ReactNode, initialArtists: Artist[], initialFractals: Fractal[] }) {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [artists, setArtists] = useState<Artist[]>(initialArtists);
+  const [artists, setArtists] = useState<Artist[]>(initialArtists.map(sanitizeArtist));
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
   const [resaleListings, setResaleListings] = useState<ResaleListing[]>([]);
@@ -129,10 +135,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const liveArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
           const liveArtistIds = new Set(liveArtists.map(a => a.id));
           const uniqueMockArtists = mockArtists.filter(a => !liveArtistIds.has(a.id));
-          setArtists([...liveArtists, ...uniqueMockArtists]);
+          setArtists([...liveArtists, ...uniqueMockArtists].map(sanitizeArtist));
       }, (error) => {
           console.error("Error fetching artists, using mock data.", error);
-          setArtists(mockArtists);
+          setArtists(mockArtists.map(sanitizeArtist));
       });
 
       const fractalsUnsub = onSnapshot(firestoreCollection(db, "fractals"), (snapshot) => {
@@ -353,9 +359,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
         };
         
-        const currentTotalValue = currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
+        const currentTotalValue = Number(currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0);
         const newTotalValue = currentTotalValue + finalPrice;
-        const newTotalEditions = currentArtistData.totalEditions + artworkData.editionsToIssue;
+        
+        const newTotalEditions = Number(currentArtistData.totalEditions || 0) + Number(artworkData.editionsToIssue);
+        const newAvailableEditions = Number(currentArtistData.availableEditions || 0) + Number(artworkData.editionsToIssue);
         const newFractalPrice = newTotalEditions > 0 ? newTotalValue / newTotalEditions : 0;
 
         const newFractalRef = doc(db, "fractals", newFractalId);
@@ -363,7 +371,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         transaction.update(artistRef, {
             totalEditions: newTotalEditions,
-            availableEditions: currentArtistData.availableEditions + artworkData.editionsToIssue,
+            availableEditions: newAvailableEditions,
             fractalPrice: newFractalPrice,
             priceHistory: arrayUnion({ date: new Date().toISOString(), price: newFractalPrice }),
             totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: newTotalValue })
@@ -412,15 +420,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           });
 
           const currentArtistData = artistSnap.data() as Artist;
-          const currentTotalValue = (currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0);
+          const currentTotalValue = Number(currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0);
 
           const newTotalValue = currentTotalValue - oldFractalPrice + finalPrice;
-          const newTotalEditions = currentArtistData.totalEditions + (artworkData.editionsToIssue || 0);
+          
+          const newTotalEditions = Number(currentArtistData.totalEditions || 0) + Number(artworkData.editionsToIssue || 0);
+          const newAvailableEditions = Number(currentArtistData.availableEditions || 0) + Number(artworkData.editionsToIssue || 0);
           const newFractalPrice = newTotalEditions > 0 ? newTotalValue / newTotalEditions : 0;
           
           transaction.update(artistRef, {
               totalEditions: newTotalEditions,
-              availableEditions: currentArtistData.availableEditions + (artworkData.editionsToIssue || 0),
+              availableEditions: newAvailableEditions,
               fractalPrice: newFractalPrice,
               priceHistory: arrayUnion({ date: new Date().toISOString(), price: newFractalPrice }),
               totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: newTotalValue })

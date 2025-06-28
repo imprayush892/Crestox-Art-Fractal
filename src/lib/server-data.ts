@@ -6,31 +6,58 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { artists as mockArtists, fractals as mockFractals, type Artist, type Fractal } from '@/lib/data';
 
-// Helper function to safely get data from a collection.
-async function getDataFromCollection<T>(collectionName: string, fallbackData: T[]): Promise<T[]> {
-  // If db is null, it means Firebase is not configured or failed to initialize.
+function sanitizeArtist(artist: Artist): Artist {
+  return {
+    ...artist,
+    totalEditions: Number(artist.totalEditions || 0),
+    availableEditions: Number(artist.availableEditions || 0),
+  };
+}
+
+// Helper function to safely get data from a collection. It returns an empty array on failure.
+async function getDataFromCollection<T>(collectionName: string): Promise<T[]> {
   if (!db) {
-    console.log("Firebase not configured. Using mock data.");
-    return fallbackData;
+    console.warn(`Firebase not configured. Cannot fetch ${collectionName}.`);
+    return [];
   }
 
   try {
     const snapshot = await getDocs(collection(db, collectionName));
-    if (snapshot.empty) {
-      console.log(`${collectionName} collection is empty in Firestore. Using mock data.`);
-      return fallbackData;
-    }
     return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as T[];
   } catch (error) {
-    console.error(`Error fetching ${collectionName} from Firestore. Falling back to mock data.`, error);
-    return fallbackData;
+    console.error(`Error fetching ${collectionName} from Firestore. Returning empty array.`, error);
+    return [];
   }
 }
 
 export async function getInitialArtists(): Promise<Artist[]> {
-  return getDataFromCollection<Artist>('artists', mockArtists);
+  const artistsFromDb = await getDataFromCollection<Artist>('artists');
+  
+  const combined = [...artistsFromDb];
+  const existingIds = new Set(artistsFromDb.map(a => a.id));
+
+  // Merge with mock data, avoiding duplicates
+  for (const mockArtist of mockArtists) {
+    if (!existingIds.has(mockArtist.id)) {
+      combined.push(mockArtist);
+    }
+  }
+
+  return combined.map(sanitizeArtist);
 }
 
 export async function getInitialFractals(): Promise<Fractal[]> {
-  return getDataFromCollection<Fractal>('fractals', mockFractals);
+  const fractalsFromDb = await getDataFromCollection<Fractal>('fractals');
+  
+  const combined = [...fractalsFromDb];
+  const existingIds = new Set(fractalsFromDb.map(f => f.id));
+
+  // Merge with mock data, avoiding duplicates
+  for (const mockFractal of mockFractals) {
+    if (!existingIds.has(mockFractal.id)) {
+      combined.push(mockFractal);
+    }
+  }
+
+  return combined;
 }
