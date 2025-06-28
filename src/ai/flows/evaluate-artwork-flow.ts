@@ -62,17 +62,17 @@ const ArtScoreChecklist = [
     { id: 43, criterion: 'Blending Quality', type: 'AI', weight: 1 },
     { id: 44, criterion: 'Medium Identification', type: 'AI', weight: 1 },
     { id: 45, criterion: 'Brush vs Pen Stroke Identification', type: 'AI', weight: 1 },
-    { id: 46, criterion: 'Substrate/Support Type', type: 'AI', weight: 0.5 },
+    { id: 46, criterion: 'Substrate/Support Type', type: 'AI', weight: 1 },
     { id: 47, criterion: 'Canvas Weave Clarity', type: 'AI', weight: 0.5 },
     { id: 48, criterion: 'Wood Grain Visibility', type: 'AI', weight: 0.5 },
     { id: 49, criterion: 'Frame Presence & Quality', type: 'AI', weight: 0.5 },
     { id: 50, criterion: 'Frame Condition', type: 'AI', weight: 0.5 },
     { id: 51, criterion: 'Patina/Finish Consistency (Metal)', type: 'AI', weight: 0.5 },
     { id: 52, criterion: 'Pigment Granularity', type: 'AI', weight: 0.5 },
-    { id: 53, criterion: 'Adhesive/Joints (Collage/Sculpture)', type: 'AI', weight: 1 },
-    { id: 54, criterion: 'Foundry/Casting Marks', type: 'AI', weight: 0.5 },
-    { id: 55, criterion: 'Joint Seams (Sculptures)', type: 'AI', weight: 2 },
-    { id: 56, criterion: 'Signature Presence', type: 'AI', weight: 1 },
+    { id: 53, criterion: 'Adhesive/Joints (Collage/Sculpture)', type: 'AI', weight: 0.5 },
+    { id: 54, criterion: 'Foundry/Casting Marks', type: 'AI', weight: 1 },
+    { id: 55, criterion: 'Joint Seams (Sculptures)', type: 'AI', weight: 0.5 },
+    { id: 56, criterion: 'Signature Presence', type: 'AI', weight: 2 },
     { id: 57, criterion: 'Signature Style Match', type: 'AI', weight: 1 },
     { id: 58, criterion: 'Date/Inscription Consistency', type: 'AI', weight: 1 },
     { id: 59, criterion: 'Certificate Authenticity', type: 'AI', weight: 1 },
@@ -87,19 +87,19 @@ const ArtScoreChecklist = [
     { id: 68, criterion: 'Inventory/Accession Number', type: 'AI', weight: 1 },
     { id: 69, criterion: 'Digital/QR Authentication', type: 'AI', weight: 1 },
     { id: 70, criterion: 'Craquelure (Fine Cracks)', type: 'AI', weight: 1 },
-    { id: 71, criterion: 'Large Splits/Cracks', type: 'AI', weight: 0.5 },
-    { id: 72, criterion: 'Paint Loss / Bare Areas', type: 'AI', weight: 0.5 },
+    { id: 71, criterion: 'Large Splits/Cracks', type: 'AI', weight: 1 },
+    { id: 72, criterion: 'Paint Loss / Bare Areas', type: 'AI', weight: 1 },
     { id: 73, criterion: 'Paint Flaking', type: 'AI', weight: 0.5 },
     { id: 74, criterion: 'Fading / Color Discoloration', type: 'AI', weight: 0.5 },
-    { id: 75, criterion: 'Stains / Dirt Spots', type: 'AI', weight: 1 },
-    { id: 76, criterion: 'Tears / Holes', type: 'AI', weight: 0.5 },
+    { id: 75, criterion: 'Stains / Dirt Spots', type: 'AI', weight: 0.5 },
+    { id: 76, criterion: 'Tears / Holes', type: 'AI', weight: 1 },
     { id: 77, criterion: 'Edge/Corner Damage', type: 'AI', weight: 0.5 },
-    { id: 78, criterion: 'Surface Grime or Yellowed Varnish', type: 'AI', weight: 1 },
+    { id: 78, criterion: 'Surface Grime or Yellowed Varnish', type: 'AI', weight: 0.5 },
     { id: 79, criterion: 'Warping / Bulging', type: 'AI', weight: 1 },
     { id: 80, criterion: 'Missing Sculpture Parts', type: 'AI', weight: 1 },
     { id: 81, criterion: 'Rust / Metal Corrosion', type: 'AI', weight: 1 },
-    { id: 82, criterion: 'Mold / Mildew', type: 'AI', weight: 0.5 },
-    { id: 83, criterion: 'Water Damage / Blistering', type: 'AI', weight: 0.5 },
+    { id: 82, criterion: 'Mold / Mildew', type: 'AI', weight: 1 },
+    { id: 83, criterion: 'Water Damage / Blistering', type: 'AI', weight: 1 },
     { id: 84, criterion: 'Varnish Cracking', type: 'AI', weight: 0.5 },
     { id: 85, criterion: 'Over-Cleaning Damage', type: 'AI', weight: 0.5 },
     { id: 86, criterion: 'Foxing / Age Spots', type: 'AI', weight: 0.5 },
@@ -358,7 +358,8 @@ const evaluateArtworkFlow = ai.defineFlow(
     const Pmax_calc = Math.min(input.maxEstimatedValue, output.maxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
-    const P_regression = Math.exp(6.2 + 0.015 * Q);
+    // Corrected regression constant from 6.2 to 8.0 to produce more realistic values
+    const P_regression = Math.exp(8.0 + 0.015 * Q);
 
     const P_avg = (P_linear + P_regression) / 2;
     const crestoxPriceRange: [number, number] = [Math.round(P_avg * 0.9), Math.round(P_avg * 1.1)];
@@ -369,5 +370,7 @@ const evaluateArtworkFlow = ai.defineFlow(
     };
   }
 );
+
+    
 
     
