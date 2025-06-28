@@ -1,6 +1,5 @@
 
 import Image from 'next/image';
-import { Wordmark } from '@/components/wordmark';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 
@@ -79,7 +78,14 @@ export default function DonatePage() {
           G.S.T. Number: 24ATTPS1287M1ZT
         </p>
         <div className="flex justify-center">
-            <Wordmark className="h-20 w-auto" />
+            <Image
+                src={getPublicUrl('public/assets/crestox-wordmark.png')}
+                alt="Crestox Wordmark"
+                width={564}
+                height={370}
+                className="h-20 w-auto"
+                data-ai-hint="company logo"
+            />
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@
 
 import { useAuth } from '@/context/auth-context';
 import type { Artist, Fractal, OwnedFractal } from '@/lib/data';
-import { Wordmark } from './wordmark';
+import Image from 'next/image';
 import { format } from 'date-fns';
 import { useMemo } from 'react';
 
@@ -12,6 +12,15 @@ interface HoldingCertificateProps {
   ownedFractals: OwnedFractal[];
   allArtistFractals: Fractal[];
 }
+
+const getPublicUrl = (path: string) => {
+    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    if (!storageBucket) {
+        return 'https://placehold.co/564x370.png';
+    }
+    return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
+}
+const wordmarkUrl = getPublicUrl('public/assets/crestox-wordmark.png');
 
 export function HoldingCertificate({ artist, ownedFractals, allArtistFractals }: HoldingCertificateProps) {
   const { user } = useAuth();
@@ -80,7 +89,15 @@ export function HoldingCertificate({ artist, ownedFractals, allArtistFractals }:
 
             <div className="flex flex-col items-start pt-8">
                  <p className="text-muted-foreground mb-2">With appreciation,</p>
-                 <Wordmark className="h-16 w-auto" />
+                 <Image
+                    src={wordmarkUrl}
+                    alt="Crestox Wordmark"
+                    width={564}
+                    height={370}
+                    className="h-16 w-auto"
+                    data-ai-hint="company logo"
+                    crossOrigin="anonymous"
+                 />
             </div>
         </div>
     </div>
