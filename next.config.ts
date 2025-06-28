@@ -1,31 +1,6 @@
-import type { NextConfig } from 'next';
-
-const nextConfig: NextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'source.unsplash.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-        port: '',
-        pathname: '/**',
-      }
-    ],
-  },
-  serverActions: {
-    bodySizeLimit: '20mb',
-  },
-};
-
-export default nextConfig;
+/**
+ * @type {import('next').NextConfig}
+ *
+ * To avoid configuration conflicts, all Next.js configuration has been
+ * moved to `next.config.js`. This file is intentionally left empty.
+ */
