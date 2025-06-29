@@ -9,6 +9,7 @@ import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem } from '@/lib/data';
 import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
+import type { z } from 'zod';
 import type { SuccessfulEvaluationSchema } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
@@ -410,13 +411,20 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           
           const oldFractalPrice = fractalSnap.data().price;
           
+          const { length, breadth, height, unit, ...restOfArtworkData } = artworkData;
+          const artworkSize = { length, breadth, unit, ...(height && { height }) };
+          
           transaction.update(fractalRef, {
-              ...artworkData,
+              ...restOfArtworkData,
+              artworkSize,
               price: finalPrice,
               priceHistory: arrayUnion({ date: new Date().toISOString(), price: finalPrice }),
               aiScore: evaluation.finalScore,
               aiScorecard: evaluation.breakdown,
               crestoxGrade: shouldApplyGrade ? evaluation.grade : fractalSnap.data().crestoxGrade,
+              artistMinEstimate: artworkData.minEstimatedValue,
+              artistMaxEstimate: artworkData.maxEstimatedValue,
+              crestoxPriceRange: evaluation.crestoxPriceRange,
           });
 
           const currentArtistData = artistSnap.data() as Artist;
