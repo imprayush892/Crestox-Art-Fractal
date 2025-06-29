@@ -245,18 +245,9 @@ export async function evaluateArtwork(
     else if (Q > 20) grade = 'A';
     else grade = 'A-';
     
-    // ArtValueEst
-    const userAvgMock = (input.minEstimatedValue + input.maxEstimatedValue) / 2;
-    const aiAvgMock = (mockAiOutput.minPriceAI + mockAiOutput.maxPriceAI) / 2;
-
-    let Pmin_calc, Pmax_calc;
-    if (userAvgMock < aiAvgMock) {
-        Pmin_calc = input.minEstimatedValue;
-        Pmax_calc = input.maxEstimatedValue;
-    } else {
-        Pmin_calc = mockAiOutput.minPriceAI;
-        Pmax_calc = mockAiOutput.maxPriceAI;
-    }
+    // ArtValueEst - Use the lower bound of user's and AI's min estimate, and the lower bound of their max estimate.
+    const Pmin_calc = Math.min(input.minEstimatedValue, mockAiOutput.minPriceAI);
+    const Pmax_calc = Math.min(input.maxEstimatedValue, mockAiOutput.maxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
     const P_regression = Math.exp(6.907755 + 0.015 * Q);
@@ -422,19 +413,9 @@ const evaluateArtworkFlow = ai.defineFlow(
     else if (Q > 20) grade = 'A';
     else grade = 'A-';
     
-    // ArtValueEst
-    const userAvg = (input.minEstimatedValue + input.maxEstimatedValue) / 2;
-    const aiAvg = (output.minPriceAI + output.maxPriceAI) / 2;
-
-    let Pmin_calc, Pmax_calc;
-
-    if (userAvg < aiAvg) {
-        Pmin_calc = input.minEstimatedValue;
-        Pmax_calc = input.maxEstimatedValue;
-    } else {
-        Pmin_calc = output.minPriceAI;
-        Pmax_calc = output.maxPriceAI;
-    }
+    // ArtValueEst - Use the lower bound of user's and AI's min estimate, and the lower bound of their max estimate.
+    const Pmin_calc = Math.min(input.minEstimatedValue, output.minPriceAI);
+    const Pmax_calc = Math.min(input.maxEstimatedValue, output.maxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
     const P_regression = Math.exp(6.907755 + 0.015 * Q);
