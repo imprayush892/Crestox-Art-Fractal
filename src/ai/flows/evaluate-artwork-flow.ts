@@ -200,12 +200,13 @@ export async function evaluateArtwork(
         };
     }
     
-    // 1. Simulate the AI's output
+    // 1. Simulate the AI's output. The AI's valuation is INDEPENDENT of the user's estimate.
+    const mockMinPriceAI = Math.round((Math.random() * 15000) + 2000); // Random price between 2,000 and 17,000
+    const mockMaxPriceAI = mockMinPriceAI + Math.round(Math.random() * 10000); // Add a random spread
     const mockAiOutput = {
         isAuthentic: true,
-        // Create a realistic mock AI price range based on user input
-        minPriceAI: Math.round(input.minEstimatedValue * (0.9 + Math.random() * 0.2)), // Between 90% and 110% of user min
-        maxPriceAI: Math.round(input.maxEstimatedValue * (0.95 + Math.random() * 0.2)), // Between 95% and 115% of user max
+        minPriceAI: mockMinPriceAI,
+        maxPriceAI: mockMaxPriceAI,
         scores: ArtScoreChecklist.map(item => ({
             id: item.id,
             score: Math.floor(Math.random() * 6) + 4 // Random score between 4 and 9
@@ -245,9 +246,9 @@ export async function evaluateArtwork(
     else if (Q > 20) grade = 'A';
     else grade = 'A-';
     
-    // ArtValueEst - Use the lower bound of user's and AI's min estimate, and the lower bound of their max estimate.
+    // ArtValueEst - Per user spec: use the lower of the mins, and the HIGHER of the maxes.
     const Pmin_calc = Math.min(input.minEstimatedValue, mockAiOutput.minPriceAI);
-    const Pmax_calc = Math.min(input.maxEstimatedValue, mockAiOutput.maxPriceAI);
+    const Pmax_calc = Math.max(input.maxEstimatedValue, mockAiOutput.maxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
     const P_regression = Math.exp(6.907755 + 0.015 * Q);
@@ -309,7 +310,7 @@ If, and only if, the artwork passes the rigorous authenticity check in Step 1, y
 -   **Context-Based Criteria:** For criteria on the artist and narrative, evaluate the provided text. Score based on quality, credibility, and relevance.
 -   **Inferred Criteria:** For "Artist Reputation" and "Uniqueness", synthesize information from the artist's bio, awards, and the artwork itself.
 -   **Scoring:** You must provide a score from 0 to 10 for EVERY criterion in the rubric.
--   **Market Valuation (INR):** Provide a REALISTIC and TIGHT estimated market price range (minPriceAI and maxPriceAI) in INR. Your valuation should be grounded in the context provided (artist bio, artwork details) and your analysis. USE THE ARTIST'S ESTIMATE AS A STRONG REFERENCE but adjust based on your comprehensive evaluation. For example, if the artist estimates ₹10,000-₹15,000 but your analysis suggests lower quality, your range might be ₹8,000-₹12,000. DO NOT provide an excessively wide range like ₹100 - ₹1,20,000; this is unhelpful. The range should be justifiable for a real-world sale.
+-   **Market Valuation (INR):** Based on your expert analysis, provide a REALISTIC and TIGHT estimated market price range (minPriceAI and maxPriceAI) in INR. **IMPORTANT: Your valuation MUST be independent.** Disregard any price estimates that may have been provided by the artist. Your valuation should be grounded ONLY in the artwork's visual qualities, the provided context (artist bio, artwork details, etc.), and your internal knowledge of the art market.
 
 **ArtScoreChecklist Rubric:**
 ${ArtScoreChecklist.map(item => `| ${item.id} | ${item.criterion} | ${item.weight}% |`).join('\n')}
@@ -339,7 +340,7 @@ ${ArtScoreChecklist.map(item => `| ${item.id} | ${item.criterion} | ${item.weigh
 Begin your analysis. First, determine authenticity. If authentic, proceed to the full scoring and valuation.
 `,
   config: {
-    temperature: 0.1,
+    temperature: 0.0,
     model: 'googleai/gemini-pro-vision',
   },
 });
@@ -413,9 +414,9 @@ const evaluateArtworkFlow = ai.defineFlow(
     else if (Q > 20) grade = 'A';
     else grade = 'A-';
     
-    // ArtValueEst - Use the lower bound of user's and AI's min estimate, and the lower bound of their max estimate.
+    // ArtValueEst - Per user spec: use the lower of the mins, and the HIGHER of the maxes.
     const Pmin_calc = Math.min(input.minEstimatedValue, output.minPriceAI);
-    const Pmax_calc = Math.min(input.maxEstimatedValue, output.maxPriceAI);
+    const Pmax_calc = Math.max(input.maxEstimatedValue, output.maxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
     const P_regression = Math.exp(6.907755 + 0.015 * Q);
@@ -429,7 +430,3 @@ const evaluateArtworkFlow = ai.defineFlow(
     };
   }
 );
-
-    
-
-    
