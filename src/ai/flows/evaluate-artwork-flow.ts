@@ -145,22 +145,15 @@ const AiCriterionScoreSchema = z.object({
   score: z.number().min(0).max(10).describe('The score assigned by the AI for this criterion (0-10).'),
 });
 
-const AuthenticArtworkSchema = z.object({
-  isAuthentic: z.literal(true),
-  scores: z.array(AiCriterionScoreSchema).describe('An array of scores for each AI-evaluated criterion.'),
-  minPriceAI: z.number().describe("The AI's estimated minimum market price for the artwork in INR, based on all available data."),
-  maxPriceAI: z.number().describe("The AI's estimated maximum market price for the artwork in INR, based on all available data."),
+const ArtworkAnalysisSchema = z.object({
+  isAuthentic: z.boolean().describe('Whether or not the artwork is authentic. This is the most critical field.'),
+  // Fields for an authentic artwork - marked optional because they are conditional
+  scores: z.array(AiCriterionScoreSchema).optional().describe('An array of scores for each AI-evaluated criterion. ONLY provide if isAuthentic is true.'),
+  minPriceAI: z.number().optional().describe("The AI's estimated minimum market price in INR. ONLY provide if isAuthentic is true."),
+  maxPriceAI: z.number().optional().describe("The AI's estimated maximum market price in INR. ONLY provide if isAuthentic is true."),
+  // Field for an unauthentic artwork - marked optional because it's conditional
+  authenticityConcern: z.string().optional().describe('If isAuthentic is false, provide a brief explanation of the concern here.'),
 });
-
-const UnauthenticArtworkSchema = z.object({
-  isAuthentic: z.literal(false),
-  authenticityConcern: z.string().describe('A brief explanation of the authenticity concern (e.g., "Potential AI-generated content detected", "High similarity to existing artwork").'),
-});
-
-const ArtworkAnalysisSchema = z.discriminatedUnion("isAuthentic", [
-  AuthenticArtworkSchema,
-  UnauthenticArtworkSchema,
-]);
 
 
 const SuccessfulEvaluationSchema = z.object({
@@ -208,7 +201,7 @@ export async function evaluateArtwork(
     }
     
     // 1. Simulate the AI's output
-    const mockAiOutput: z.infer<typeof AuthenticArtworkSchema> = {
+    const mockAiOutput = {
         isAuthentic: true,
         // Create a realistic mock AI price range based on user input
         minPriceAI: Math.round(input.minEstimatedValue * (0.9 + Math.random() * 0.2)), // Between 90% and 110% of user min
@@ -365,8 +358,9 @@ const evaluateArtworkFlow = ai.defineFlow(
     }
     
     if (!output.isAuthentic) {
+        const concern = output.authenticityConcern || "No specific reason provided by AI.";
         let analysisDetail = `Artwork ('${input.title}') was flagged for manual review.\n`;
-        analysisDetail += `Reason: ${output.authenticityConcern}\n\n`;
+        analysisDetail += `Reason: ${concern}\n\n`;
         analysisDetail += `--- Provided Artwork Details ---\n`;
         analysisDetail += `Title: ${input.title}\n`;
         analysisDetail += `Description: ${input.description}\n`;
@@ -374,9 +368,17 @@ const evaluateArtworkFlow = ai.defineFlow(
         
         return {
             status: 'manual_review_required',
-            concern: output.authenticityConcern,
+            concern: concern,
             analysisForEmail: analysisDetail,
         };
+    }
+
+    if (!output.scores || output.minPriceAI === undefined || output.maxPriceAI === undefined) {
+      return {
+          status: 'manual_review_required',
+          concern: 'AI determined the work is authentic but failed to provide a full evaluation. Please try again or submit for manual review.',
+          analysisForEmail: `Artwork ('${input.title}') was flagged for manual review due to an incomplete AI analysis despite being marked as authentic.`
+      };
     }
     
     const breakdown: AIScorecardBreakdown[] = [];
@@ -427,5 +429,7 @@ const evaluateArtworkFlow = ai.defineFlow(
     };
   }
 );
+
+    
 
     
