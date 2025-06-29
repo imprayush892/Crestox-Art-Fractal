@@ -7,7 +7,7 @@
  */
 
 import {ai, isAiConfigured} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 import { type AIScorecardBreakdown } from '@/lib/data';
 
 /**
@@ -184,7 +184,7 @@ export async function evaluateArtwork(
   input: z.infer<typeof EvaluateArtworkInputSchema>
 ): Promise<EvaluationResult> {
   if (!isAiConfigured) {
-    console.warn("AI is not configured. Bypassing real evaluation.");
+    console.warn("AI is not configured. Running mock evaluation with ArtValueEst logic.");
     // Simulate a successful evaluation when no API key is present.
     await new Promise(resolve => setTimeout(resolve, 2000)); 
 
@@ -196,37 +196,65 @@ export async function evaluateArtwork(
             analysisForEmail: `Artwork '${input.title}' was flagged for manual review. AI detection systems indicated a high probability of plagiarism. No scoring was performed.`
         };
     }
-
-    const mockScore = Math.floor(Math.random() * (75 - 45 + 1)) + 45; // Random score between 45 and 75
-    const mockMinPrice = Math.round(input.minEstimatedValue * 1.1);
-    const mockMaxPrice = Math.round(input.maxEstimatedValue * 1.2);
     
-    let grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
-    if (mockScore > 80) grade = 'AAA';
-    else if (mockScore > 60) grade = 'AA';
-    else if (mockScore > 40) grade = 'A+';
-    else if (mockScore > 20) grade = 'A';
-    else grade = 'A-';
+    // 1. Simulate the AI's output
+    const mockAiOutput = {
+        isAuthentic: true,
+        // Create a realistic mock AI price range based on user input
+        minPriceAI: Math.round(input.minEstimatedValue * (0.9 + Math.random() * 0.2)), // Between 90% and 110% of user min
+        maxPriceAI: Math.round(input.maxEstimatedValue * (0.95 + Math.random() * 0.2)), // Between 95% and 115% of user max
+        scores: ArtScoreChecklist.map(item => ({
+            id: item.id,
+            score: Math.floor(Math.random() * 6) + 4 // Random score between 4 and 9
+        }))
+    };
+    
+    // 2. Run the exact same ArtValueEst logic as the real flow
+    const breakdown: AIScorecardBreakdown[] = [];
+    let totalWeightedScore = 0;
+    let totalPossibleWeight = 0;
 
-    return {
-      status: 'success',
-      evaluation: {
-        finalScore: mockScore,
-        grade: grade,
-        breakdown: ArtScoreChecklist
-          .filter(item => item.type === 'AI')
-          .map(item => {
-              const score = Math.floor(Math.random() * 4) + 5; // Score between 5-8
-              return {
-                  id: item.id,
-                  criterion: item.criterion,
-                  score: score,
-                  weight: item.weight,
-                  weightedScore: (score / 10) * item.weight
-              }
-          }),
-        crestoxPriceRange: [mockMinPrice, mockMaxPrice],
-      }
+    const aiScores = new Map(mockAiOutput.scores.map(item => [item.id, item.score]));
+
+    ArtScoreChecklist.forEach(item => {
+        const score = aiScores.get(item.id);
+        totalPossibleWeight += item.weight;
+        if (score !== undefined) {
+            const weightedScore = (score / 10) * item.weight;
+            totalWeightedScore += weightedScore;
+            breakdown.push({
+                id: item.id,
+                criterion: item.criterion,
+                score: score,
+                weight: item.weight,
+                weightedScore: weightedScore
+            });
+        }
+    });
+
+    const finalScore = totalPossibleWeight > 0 ? (totalWeightedScore / totalPossibleWeight) * 100 : 0;
+    const Q = finalScore;
+
+    let grade: 'AAA' | 'AA' | 'A+' | 'A' | 'A-';
+    if (Q > 80) grade = 'AAA';
+    else if (Q > 60) grade = 'AA';
+    else if (Q > 40) grade = 'A+';
+    else if (Q > 20) grade = 'A';
+    else grade = 'A-';
+    
+    // ArtValueEst
+    const Pmin_calc = Math.min(input.minEstimatedValue, mockAiOutput.minPriceAI);
+    const Pmax_calc = Math.min(input.maxEstimatedValue, mockAiOutput.maxPriceAI);
+    
+    const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
+    const P_regression = Math.exp(6.907755 + 0.015 * Q);
+
+    const P_avg = (P_linear + P_regression) / 2;
+    const crestoxPriceRange: [number, number] = [Math.round(P_avg * 0.9), Math.round(P_avg * 1.1)];
+
+    return { 
+        status: 'success',
+        evaluation: { finalScore: Math.round(finalScore), grade, breakdown, crestoxPriceRange }
     };
   }
   return evaluateArtworkFlow(input);
@@ -369,5 +397,3 @@ const evaluateArtworkFlow = ai.defineFlow(
     };
   }
 );
-
-    
