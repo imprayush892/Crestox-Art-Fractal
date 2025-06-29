@@ -33,9 +33,13 @@ export interface Artist {
   linkedin?: string;
   fractalPrice: number;
   priceHistory: { date: string; price: number }[];
+  totalPortfolioValue: number;
   totalPortfolioValueHistory: { date: string; value: number }[];
   totalEditions: number;
   availableEditions: number;
+  kFactor: number;
+  totalScoreWeightedValuation: number;
+  sumOfScoresSquared: number;
 }
 
 export interface Fractal {
@@ -50,11 +54,11 @@ export interface Fractal {
   aiHint: string;
   width: number;
   height: number;
-  price: number;
+  price: number; // This is Vi
   priceHistory: { date: string; price: number }[];
   editions?: number;
   editionsAvailable?: number;
-  aiScore?: number;
+  aiScore?: number; // This is Si
   crestoxGrade?: string;
   aiScorecard?: AIScorecardBreakdown[];
   crestoxPriceRange?: [number, number];
@@ -164,7 +168,7 @@ export const editArtworkFormSchema = z.object({
 
 export type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
 
-export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions'> & { avatar: File | string | null };
+export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'totalPortfolioValue' | 'kFactor' | 'totalScoreWeightedValuation' | 'sumOfScoresSquared'> & { avatar: File | string | null };
 
 export type NewArtworkData = {
     title: string;
@@ -325,7 +329,7 @@ const tempArtists = (() => {
 
 
 // Step 2: Generate fractals, assigning them to the temp artists.
-const tempFractals: Fractal[] = (() => {
+const tempFractals: Omit<Fractal, 'priceHistory'>[] = (() => {
     const allPossibleTitles = new Set<string>();
     while (allPossibleTitles.size < 500) {
         const title = `${getRandom(fractalAdjectives)} ${getRandom(fractalNouns)}`;
@@ -362,7 +366,6 @@ const tempFractals: Fractal[] = (() => {
             width,
             height,
             price,
-            priceHistory: generatePriceHistory(price),
             editions: editions,
             editionsAvailable: randomInt(0, editions),
             aiScore,
@@ -376,26 +379,35 @@ const tempFractals: Fractal[] = (() => {
 })();
 
 // Step 3: Calculate derived portfolio values and create final artists array.
-const finalArtists: Artist[] = tempArtists.map(artist => {
-    const artistFractals = tempFractals.filter(f => f.artistId === artist.id);
+const finalArtists: Artist[] = tempArtists.map(artistData => {
+    const artistFractals = tempFractals.filter(f => f.artistId === artistData.id);
+    
     const totalPortfolioValue = artistFractals.reduce((sum, f) => sum + f.price, 0);
-
-    const initialFractalPrice = totalPortfolioValue > 0 && artist.totalEditions > 0
-        ? totalPortfolioValue / artist.totalEditions
-        : 0; 
-
+    const totalScoreWeightedValuation = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) * f.price), 0);
+    const sumOfScoresSquared = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) ** 2), 0);
+    
+    const kFactor = totalScoreWeightedValuation > 0 ? totalPortfolioValue / totalScoreWeightedValuation : 0;
+    
+    const initialFractalPrice = artistData.totalEditions > 0 ? totalPortfolioValue / artistData.totalEditions : 0; 
     const roundedFractalPrice = Math.round(initialFractalPrice * 100) / 100;
 
     return {
-        ...artist,
+        ...artistData,
         fractalPrice: roundedFractalPrice,
         priceHistory: generatePriceHistory(roundedFractalPrice),
-        totalPortfolioValueHistory: generateTotalValueHistory(totalPortfolioValue)
+        totalPortfolioValue: totalPortfolioValue,
+        totalPortfolioValueHistory: generateTotalValueHistory(totalPortfolioValue),
+        kFactor,
+        totalScoreWeightedValuation,
+        sumOfScoresSquared,
     };
 });
 
+export const fractals: Fractal[] = tempFractals.map(f => ({
+    ...f,
+    priceHistory: generatePriceHistory(f.price)
+}));
 export const artists: Artist[] = finalArtists;
-export const fractals: Fractal[] = tempFractals;
 // RemoveCandy end
 
 

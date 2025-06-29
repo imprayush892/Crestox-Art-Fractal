@@ -85,22 +85,13 @@ export default function CreateArtworkPage() {
   const { editionsToIssue, minEstimatedValue, maxEstimatedValue } = form.watch();
 
   const estimatedFractalPrice = useMemo(() => {
-    if (!artistProfile) return 0;
-
     const newArtworkValue = (minEstimatedValue && maxEstimatedValue) ? (minEstimatedValue + maxEstimatedValue) / 2 : 0;
     
     if (newArtworkValue <= 0 || !editionsToIssue || editionsToIssue <= 0) return 0;
 
-    const currentPortfolioValue = artistProfile.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0;
-    const currentTotalEditions = artistProfile.totalEditions;
-
-    const projectedPortfolioValue = currentPortfolioValue + newArtworkValue;
-    const projectedTotalEditions = currentTotalEditions + editionsToIssue;
-
-    if (projectedTotalEditions === 0) return 0;
-
-    return projectedPortfolioValue / projectedTotalEditions;
-  }, [editionsToIssue, minEstimatedValue, maxEstimatedValue, artistProfile]);
+    // Per user instruction: Vi / Fi
+    return newArtworkValue / editionsToIssue;
+  }, [editionsToIssue, minEstimatedValue, maxEstimatedValue]);
   
   useEffect(() => {
     if (!isLoggedIn) {
@@ -609,11 +600,11 @@ export default function CreateArtworkPage() {
                             name="editionsToIssue"
                             render={({ field }) => (
                                 <FormItem className="flex-1">
-                                <FormLabel>New Portfolio Fractals to Issue</FormLabel>
+                                <FormLabel>Fractals to Issue for this Artwork (Fi)</FormLabel>
                                 <FormControl>
                                     <Input type="number" placeholder="100" {...field} />
                                 </FormControl>
-                                <FormDescription> New 'fractals' to add to your total supply. </FormDescription>
+                                <FormDescription> This artwork's contribution to the portfolio's total fractals. </FormDescription>
                                 <FormMessage />
                                 </FormItem>
                             )}

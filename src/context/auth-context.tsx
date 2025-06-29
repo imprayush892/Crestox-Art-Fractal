@@ -252,16 +252,19 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     }
     
     const artistRef = doc(firestoreCollection(db, 'artists'));
-    const newArtistData: Artist = {
+    const newArtistData: Omit<Artist, 'id'> = {
         ...restOfProfileData,
-        id: artistRef.id,
         userId: user.uid,
         avatar: avatarUrl,
         fractalPrice: 0,
         priceHistory: [],
+        totalPortfolioValue: 0,
         totalPortfolioValueHistory: [],
         totalEditions: 0,
         availableEditions: 0,
+        kFactor: 0,
+        totalScoreWeightedValuation: 0,
+        sumOfScoresSquared: 0,
     };
     try {
         await setDoc(artistRef, newArtistData);
@@ -330,6 +333,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         if (!artistSnap.exists()) throw new Error("Artist profile does not exist.");
 
         const currentArtistData = artistSnap.data() as Artist;
+        
+        // ArtFractalValuePro - new artwork data
+        const new_Vi = finalPrice; // Vi
+        const new_Si = evaluationResult.finalScore; // Si
+        const new_Fi = artworkData.editionsToIssue; // Fi
 
         const { length, breadth, height, unit } = artworkData;
         const artworkSize = { length, breadth, unit, ...(height && { height }) };
@@ -342,8 +350,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             artworkSize,
             images: imageUrls,
             heroImage: heroImageUrl,
-            price: finalPrice,
-            priceHistory: [{ date: new Date().toISOString(), price: finalPrice }],
+            price: new_Vi,
+            priceHistory: [{ date: new Date().toISOString(), price: new_Vi }],
             artistMinEstimate: artworkData.minEstimatedValue,
             artistMaxEstimate: artworkData.maxEstimatedValue,
             width: 600, 
@@ -354,28 +362,39 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             timeEffort: artworkData.timeEffort || "",
             biographicalContext: artworkData.biographicalContext || "",
             commissionPatronage: artworkData.commissionPatronage || "",
-            aiScore: evaluationResult.finalScore,
+            aiScore: new_Si,
             aiScorecard: evaluationResult.breakdown,
             crestoxGrade: shouldApplyGrade ? evaluationResult.grade : undefined,
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
         };
         
-        const currentTotalValue = Number(currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0);
-        const newTotalValue = currentTotalValue + finalPrice;
-        
-        const newTotalEditions = Number(currentArtistData.totalEditions || 0) + Number(artworkData.editionsToIssue);
-        const newAvailableEditions = Number(currentArtistData.availableEditions || 0) + Number(artworkData.editionsToIssue);
-        const newFractalPrice = newTotalEditions > 0 ? newTotalValue / newTotalEditions : 0;
+        // ArtFractalValuePro - portfolio update logic
+        const V_old = currentArtistData.totalPortfolioValue ?? 0;
+        const F_old = currentArtistData.totalEditions ?? 0;
+        const sum_SiVi_old = currentArtistData.totalScoreWeightedValuation ?? 0;
+        const sum_Si2_old = currentArtistData.sumOfScoresSquared ?? 0;
+
+        const V_new = V_old + new_Vi;
+        const F_new = F_old + new_Fi;
+        const sum_SiVi_new = sum_SiVi_old + (new_Si * new_Vi);
+        const sum_Si2_new = sum_Si2_old + (new_Si * new_Si);
+
+        const k_new = sum_SiVi_new > 0 ? V_new / sum_SiVi_new : 0;
+        const P_new = F_new > 0 ? V_new / F_new : 0;
 
         const newFractalRef = doc(db, "fractals", newFractalId);
         transaction.set(newFractalRef, newFractalData);
 
         transaction.update(artistRef, {
-            totalEditions: newTotalEditions,
-            availableEditions: newAvailableEditions,
-            fractalPrice: newFractalPrice,
-            priceHistory: arrayUnion({ date: new Date().toISOString(), price: newFractalPrice }),
-            totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: newTotalValue })
+            totalPortfolioValue: V_new,
+            totalEditions: F_new,
+            availableEditions: (currentArtistData.availableEditions ?? 0) + new_Fi,
+            fractalPrice: P_new,
+            totalScoreWeightedValuation: sum_SiVi_new,
+            sumOfScoresSquared: sum_Si2_new,
+            kFactor: k_new,
+            priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_new }),
+            totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_new })
         });
     }).catch(error => {
       console.error("Add artwork transaction failed: ", error);
@@ -408,8 +427,30 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const [artistSnap, fractalSnap] = await Promise.all([transaction.get(artistRef), transaction.get(fractalRef)]);
           
           if (!artistSnap.exists() || !fractalSnap.exists()) throw new Error("Artist or Fractal not found.");
+
+          const currentArtistData = artistSnap.data() as Artist;
+          const oldFractalData = fractalSnap.data() as Fractal;
+
+          // ArtFractalValuePro - artwork update data
+          const v_old = oldFractalData.price;
+          const s_old = oldFractalData.aiScore || 0;
+          const v_new = finalPrice;
+          const s_new = evaluation.finalScore;
+          const f_portfolio_new = artworkData.editionsToIssue || 0;
           
-          const oldFractalPrice = fractalSnap.data().price;
+          // ArtFractalValuePro - portfolio update logic
+          const V_old = currentArtistData.totalPortfolioValue;
+          const F_old = currentArtistData.totalEditions;
+          const sum_SiVi_old = currentArtistData.totalScoreWeightedValuation;
+          const sum_Si2_old = currentArtistData.sumOfScoresSquared;
+
+          const V_final = V_old - v_old + v_new;
+          const F_final = F_old + f_portfolio_new;
+          const sum_SiVi_final = sum_SiVi_old - (s_old * v_old) + (s_new * v_new);
+          const sum_Si2_final = sum_Si2_old - (s_old * s_old) + (s_new * s_new);
+
+          const k_final = sum_SiVi_final > 0 ? V_final / sum_SiVi_final : 0;
+          const P_final = F_final > 0 ? V_final / F_final : 0;
           
           const { length, breadth, height, unit, ...restOfArtworkData } = artworkData;
           const artworkSize = { length, breadth, unit, ...(height && { height }) };
@@ -417,31 +458,26 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           transaction.update(fractalRef, {
               ...restOfArtworkData,
               artworkSize,
-              price: finalPrice,
-              priceHistory: arrayUnion({ date: new Date().toISOString(), price: finalPrice }),
-              aiScore: evaluation.finalScore,
+              price: v_new,
+              priceHistory: arrayUnion({ date: new Date().toISOString(), price: v_new }),
+              aiScore: s_new,
               aiScorecard: evaluation.breakdown,
-              crestoxGrade: shouldApplyGrade ? evaluation.grade : fractalSnap.data().crestoxGrade,
+              crestoxGrade: shouldApplyGrade ? evaluation.grade : oldFractalData.crestoxGrade,
               artistMinEstimate: artworkData.minEstimatedValue,
               artistMaxEstimate: artworkData.maxEstimatedValue,
               crestoxPriceRange: evaluation.crestoxPriceRange,
           });
 
-          const currentArtistData = artistSnap.data() as Artist;
-          const currentTotalValue = Number(currentArtistData.totalPortfolioValueHistory?.slice(-1)[0]?.value ?? 0);
-
-          const newTotalValue = currentTotalValue - oldFractalPrice + finalPrice;
-          
-          const newTotalEditions = Number(currentArtistData.totalEditions || 0) + Number(artworkData.editionsToIssue || 0);
-          const newAvailableEditions = Number(currentArtistData.availableEditions || 0) + Number(artworkData.editionsToIssue || 0);
-          const newFractalPrice = newTotalEditions > 0 ? newTotalValue / newTotalEditions : 0;
-          
           transaction.update(artistRef, {
-              totalEditions: newTotalEditions,
-              availableEditions: newAvailableEditions,
-              fractalPrice: newFractalPrice,
-              priceHistory: arrayUnion({ date: new Date().toISOString(), price: newFractalPrice }),
-              totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: newTotalValue })
+              totalPortfolioValue: V_final,
+              totalEditions: F_final,
+              availableEditions: currentArtistData.availableEditions + f_portfolio_new,
+              fractalPrice: P_final,
+              totalScoreWeightedValuation: sum_SiVi_final,
+              sumOfScoresSquared: sum_Si2_final,
+              kFactor: k_final,
+              priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_final }),
+              totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_final })
           });
       });
   };
@@ -461,7 +497,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       if (!db) throw new Error("Database not available.");
       const fractalRef = doc(db, "fractals", artworkId);
       try {
-        await updateDoc(fractalRef, data as any);
+        const { length, breadth, height, unit, ...restOfData } = data;
+        const artworkSize = { length, breadth, unit, ...(height && { height }) };
+        await updateDoc(fractalRef, {...restOfData, artworkSize});
         toast({ title: "Update Successful", description: "Artwork details have been saved." });
       } catch (error) { throw new Error(handleAuthError(error)); }
   };
