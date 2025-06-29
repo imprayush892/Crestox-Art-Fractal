@@ -85,12 +85,16 @@ export default function CreateArtworkPage() {
   const { editionsToIssue, minEstimatedValue, maxEstimatedValue } = form.watch();
 
   const estimatedFractalPrice = useMemo(() => {
-    const newArtworkValue = (minEstimatedValue && maxEstimatedValue) ? (minEstimatedValue + maxEstimatedValue) / 2 : 0;
+    const minVal = Number(minEstimatedValue) || 0;
+    const maxVal = Number(maxEstimatedValue) || 0;
+    const editions = Number(editionsToIssue) || 0;
+
+    const newArtworkValue = (minVal + maxVal) / 2;
     
-    if (newArtworkValue <= 0 || !editionsToIssue || editionsToIssue <= 0) return 0;
+    if (newArtworkValue <= 0 || editions <= 0) return 0;
 
     // Per user instruction: Vi / Fi
-    return newArtworkValue / editionsToIssue;
+    return newArtworkValue / editions;
   }, [editionsToIssue, minEstimatedValue, maxEstimatedValue]);
   
   useEffect(() => {
