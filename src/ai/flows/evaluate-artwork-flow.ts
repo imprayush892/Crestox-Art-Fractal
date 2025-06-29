@@ -122,7 +122,7 @@ const ArtScoreChecklist = [
 
 const EvaluateArtworkInputSchema = z.object({
   photoDataUri: z.string().describe(
-    "A photo of the artwork, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    "A photo of the artwork. Can be a data URI or an HTTP/S URL."
   ),
   title: z.string(),
   description: z.string(),
@@ -257,7 +257,26 @@ export async function evaluateArtwork(
         evaluation: { finalScore: Math.round(finalScore), grade, breakdown, crestoxPriceRange }
     };
   }
-  return evaluateArtworkFlow(input);
+
+  // This is a server action, so we can fetch directly.
+  let processedInput = { ...input };
+  if (processedInput.photoDataUri.startsWith('http')) {
+    try {
+      const response = await fetch(processedInput.photoDataUri);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.statusText}`);
+      }
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      const buffer = await response.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString('base64');
+      processedInput.photoDataUri = `data:${contentType};base64,${base64}`;
+    } catch (error) {
+      console.error("Error fetching and converting image URL:", error);
+      throw new Error("Could not process the artwork image from the provided URL.");
+    }
+  }
+
+  return evaluateArtworkFlow(processedInput);
 }
 
 const evaluationPrompt = ai.definePrompt({
@@ -314,6 +333,7 @@ Begin your analysis. First, determine authenticity. If authentic, proceed to the
 `,
   config: {
     temperature: 0.1,
+    model: 'googleai/gemini-pro-vision',
   },
 });
 
@@ -397,3 +417,5 @@ const evaluateArtworkFlow = ai.defineFlow(
     };
   }
 );
+
+    
