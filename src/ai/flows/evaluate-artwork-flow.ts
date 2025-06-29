@@ -358,7 +358,7 @@ const evaluateArtworkFlow = ai.defineFlow(
     const Pmax_calc = Math.min(input.maxEstimatedValue, output.maxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
-    const P_regression = Math.exp(6.2 + 0.015 * Q);
+    const P_regression = Math.exp(6.907755 + 0.015 * Q);
 
     const P_avg = (P_linear + P_regression) / 2;
     const crestoxPriceRange: [number, number] = [Math.round(P_avg * 0.9), Math.round(P_avg * 1.1)];
