@@ -4,11 +4,11 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem } from '@/lib/data';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser } from '@/lib/data';
 import type { EvaluationResult, ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,6 +34,7 @@ export interface ArtistProfile extends Artist {
 interface AuthContextType {
   user: User | null;
   artistProfile: ArtistProfile | null;
+  allUsers: PublicUser[];
   isLoggedIn: boolean;
   isLoading: boolean;
   artists: Artist[];
@@ -55,6 +56,7 @@ interface AuthContextType {
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
   reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
+  getCollectorsForArtist: (artistId: string) => Promise<any[]>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -105,6 +107,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
   const [resaleListings, setResaleListings] = useState<ResaleListing[]>([]);
+  const [allUsers, setAllUsers] = useState<PublicUser[]>([]);
 
   // Stage 1: One-time auth state check and initial profile load
   useEffect(() => {
@@ -131,6 +134,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         } else {
             setUser(null);
             setArtistProfile(null);
+            setAllUsers([]);
         }
         setIsLoading(false);
     });
@@ -141,6 +145,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   // Stage 2: Real-time listeners for all data, dependent on user state
   useEffect(() => {
       if (!db) return;
+      
       const artistsUnsub = onSnapshot(firestoreCollection(db, "artists"), (snapshot) => {
           const liveArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
           const liveArtistIds = new Set(liveArtists.map(a => a.id));
@@ -169,7 +174,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       let artistUnsub = () => {};
       let holdingsUnsub = () => {};
       let userUnsub = () => {};
-
+      let allUsersUnsub = () => {};
+      
       if (user?.uid) {
           const userRef = doc(db, 'users', user.uid);
           userUnsub = onSnapshot(userRef, (docSnap) => {
@@ -192,9 +198,27 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               const userHoldings = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as OwnedFractal[];
               setCollection(userHoldings);
           });
+          
+          // Only fetch all users if a user is logged in
+          const allUsersQuery = query(firestoreCollection(db, 'users'));
+          allUsersUnsub = onSnapshot(allUsersQuery, (snapshot) => {
+            const users = snapshot.docs.map(d => {
+                const data = d.data();
+                return {
+                    id: d.id,
+                    name: `${data.firstName} ${data.lastName}`,
+                    avatar: (data.artistProfile as any)?.avatar || '',
+                }
+            }) as PublicUser[];
+            setAllUsers(users);
+          }, (error) => {
+             console.error("Error fetching all users:", error);
+          });
+
       } else {
           setArtistProfile(null);
           setCollection([]);
+          setAllUsers([]);
       }
 
       return () => {
@@ -204,8 +228,37 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           artistUnsub();
           holdingsUnsub();
           userUnsub();
+          allUsersUnsub();
       };
   }, [user?.uid]);
+  
+  const getCollectorsForArtist = async (artistId: string) => {
+      if (!db || !user) throw new Error("Not authenticated");
+      const holdingsQuery = query(
+          collectionGroup(db, 'holdings'),
+          where('artistId', '==', artistId)
+      );
+      
+      const snapshot = await getDocs(holdingsQuery);
+      
+      const collectorData: Record<string, { owned: number, listed: number, userId: string }> = {};
+
+      snapshot.forEach(doc => {
+          const holding = doc.data() as OwnedFractal;
+          const userId = doc.ref.parent.parent!.id;
+          
+          if (!collectorData[userId]) {
+              collectorData[userId] = { userId, owned: 0, listed: 0 };
+          }
+          if (holding.status === 'owned') {
+              collectorData[userId].owned++;
+          } else if (holding.status === 'listed') {
+              collectorData[userId].listed++;
+          }
+      });
+      
+      return Object.values(collectorData);
+  }
 
   const signup = async (firstName: string, lastName: string, email: string, pass: string) => {
     if (!db) throw new Error("Database not available.");
@@ -277,12 +330,19 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     };
     try {
         await setDoc(artistRef, newArtistData);
+        await updateDoc(doc(db, "users", user.uid), {
+          artistProfile: {
+            id: artistRef.id,
+            avatar: avatarUrl,
+            name: newArtistData.name,
+          }
+        });
         setArtistProfile({ ...newArtistData, id: artistRef.id, userId: user.uid });
     } catch (error) { throw new Error(handleAuthError(error)); }
   };
   
   const updateArtistProfile = async (profileData: Partial<CreateArtistProfileData>) => {
-      if (!db || !artistProfile) throw new Error("Artist profile not found or database not available.");
+      if (!db || !artistProfile || !user) throw new Error("Artist profile not found or database not available.");
       
       const { avatar, ...restOfProfileData } = profileData;
       const dataToUpdate: { [key: string]: any } = {
@@ -317,6 +377,15 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       const artistRef = doc(db, "artists", artistProfile.id);
       try {
           await updateDoc(artistRef, dataToUpdate);
+          
+          const userArtistProfileUpdate: any = {};
+          if(dataToUpdate.avatar) userArtistProfileUpdate['artistProfile.avatar'] = dataToUpdate.avatar;
+          if(dataToUpdate.name) userArtistProfileUpdate['artistProfile.name'] = dataToUpdate.name;
+
+          if (Object.keys(userArtistProfileUpdate).length > 0) {
+            await updateDoc(doc(db, "users", user.uid), userArtistProfileUpdate);
+          }
+          
           toast({title: "Profile Updated", description: "Your changes have been saved."});
       } catch (error) { throw new Error(handleAuthError(error)); }
   };
@@ -367,18 +436,18 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             timeEffort: artworkData.timeEffort || "",
             biographicalContext: artworkData.biographicalContext || "",
             commissionPatronage: artworkData.commissionPatronage || "",
-            aiScore: Number(evaluationResult.finalScore) || 0,
-            aiScorecard: evaluationResult.breakdown,
-            valuationBreakdown: evaluationResult.valuationBreakdown,
-            crestoxPriceRange: evaluationResult.crestoxPriceRange,
+            aiScore: Number(evaluationResult.evaluation.finalScore) || 0,
+            aiScorecard: evaluationResult.evaluation.breakdown,
+            valuationBreakdown: evaluationResult.evaluation.valuationBreakdown,
+            crestoxPriceRange: evaluationResult.evaluation.crestoxPriceRange,
         };
 
         if (shouldApplyGrade) {
-            newFractalData.crestoxGrade = evaluationResult.grade;
+            newFractalData.crestoxGrade = evaluationResult.evaluation.grade;
         }
         
         const new_Vi = Number(finalPrice) || 0;
-        const new_Si = Number(evaluationResult.finalScore) || 0;
+        const new_Si = Number(evaluationResult.evaluation.finalScore) || 0;
         const new_Fi = parseInt(String(artworkData.editionsToIssue), 10) || 0;
         
         const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
@@ -646,11 +715,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         
         const newFractalPrice = applyPriceImpact(artistData.fractalPrice, totalQuantityTraded, artistData.totalEditions, true);
         
-        transaction.update(docRefs.get(`artist_${artistId}`)!, {
-            availableEditions: artistData.availableEditions - quantityFromArtist,
+        const artistUpdate: Record<string, any> = {
             fractalPrice: newFractalPrice,
             priceHistory: arrayUnion({ date: new Date().toISOString(), price: newFractalPrice })
-        });
+        };
+        
+        if (quantityFromArtist > 0) {
+            artistUpdate.availableEditions = artistData.availableEditions - quantityFromArtist;
+        }
+        
+        transaction.update(docRefs.get(`artist_${artistId}`)!, artistUpdate);
     });
     toast({ title: "Collection Successful!", description: `You have collected ${orderBreakdown.reduce((sum, item) => sum + item.quantity, 0)} fractal(s).` });
   };
@@ -775,6 +849,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const contextValue: AuthContextType = {
     user,
     artistProfile,
+    allUsers,
     isLoggedIn: !!user,
     isLoading,
     artists,
@@ -796,6 +871,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     updateAndReevaluateArtwork,
     updateArtworkDetails,
     reevaluateArtworkForGrading,
+    getCollectorsForArtist,
   };
   
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
