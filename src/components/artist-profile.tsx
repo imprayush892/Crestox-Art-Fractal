@@ -232,10 +232,11 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
       </div>
       
       <Tabs defaultValue="artworks" className="mb-12">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
           <TabsTrigger value="artworks"><Palette className="mr-2" />Artworks</TabsTrigger>
           <TabsTrigger value="analytics"><TrendingUp className="mr-2" />Analytics</TabsTrigger>
           <TabsTrigger value="collectors"><Users className="mr-2" />Collectors</TabsTrigger>
+          <TabsTrigger value="achievements"><Award className="mr-2" />Achievements</TabsTrigger>
         </TabsList>
         <TabsContent value="artworks" className="mt-6">
             <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8 space-y-8">
@@ -386,26 +387,39 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
          <TabsContent value="collectors" className="mt-6">
             <ArtistCollectorsList artistId={artist.id} />
         </TabsContent>
+        <TabsContent value="achievements" className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                            <Award /> Awards
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {artist.awards.length > 0 ? (
+                            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                                {artist.awards.map((award, i) => <li key={i}>{award}</li>)}
+                            </ul>
+                        ) : <p className="text-sm text-muted-foreground">No awards listed.</p>}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                            <Building2 /> Exhibitions
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {artist.exhibitions.length > 0 ? (
+                             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                                {artist.exhibitions.map((ex, i) => <li key={i}>{ex}</li>)}
+                            </ul>
+                        ) : <p className="text-sm text-muted-foreground">No exhibitions listed.</p>}
+                    </CardContent>
+                </Card>
+            </div>
+        </TabsContent>
       </Tabs>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-                <h3 className="font-headline text-2xl font-bold mb-4 flex items-center gap-2"><Award /> Awards</h3>
-                {artist.awards.length > 0 ? (
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                        {artist.awards.map((award, i) => <li key={i}>{award}</li>)}
-                    </ul>
-                ) : <p className="text-sm text-muted-foreground">No awards listed.</p>}
-            </div>
-             <div>
-                <h3 className="font-headline text-2xl font-bold mb-4 flex items-center gap-2"><Building2 /> Exhibitions</h3>
-                {artist.exhibitions.length > 0 ? (
-                     <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                        {artist.exhibitions.map((ex, i) => <li key={i}>{ex}</li>)}
-                    </ul>
-                ) : <p className="text-sm text-muted-foreground">No exhibitions listed.</p>}
-            </div>
-        </div>
     </>
   );
 }
