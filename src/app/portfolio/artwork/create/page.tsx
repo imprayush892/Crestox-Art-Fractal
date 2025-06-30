@@ -36,10 +36,10 @@ import type { z } from 'zod';
 import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
 import { EvaluationScorecardDialog } from '@/components/evaluation-scorecard-dialog';
 
-type SuccessfulEvaluation = Extract<EvaluationResult, { status: 'success' }>['evaluation'];
+type SuccessfulEvaluationData = Extract<EvaluationResult, { status: 'success' }>['evaluation'];
 
 type ArtworkSubmissionData = {
-    evaluationResult: SuccessfulEvaluation;
+    evaluationResult: SuccessfulEvaluationData;
     finalPrice: number;
     shouldApplyGrade: boolean;
 };
@@ -53,7 +53,7 @@ export default function CreateArtworkPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
-  const [evaluationResult, setEvaluationResult] = useState<SuccessfulEvaluation | null>(null);
+  const [evaluationResult, setEvaluationResult] = useState<SuccessfulEvaluationData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
@@ -203,7 +203,12 @@ export default function CreateArtworkPage() {
     const formData = form.getValues();
 
     try {
-      await addArtwork(formData, evaluationResult, finalPrice, shouldApplyGrade);
+      const fullSuccessfulEvaluation: Extract<EvaluationResult, { status: 'success' }> = {
+        status: 'success',
+        evaluation: evaluationResult
+      };
+
+      await addArtwork(formData, fullSuccessfulEvaluation, finalPrice, shouldApplyGrade);
       
       toast({
         title: "Artwork Added!",
@@ -783,5 +788,3 @@ export default function CreateArtworkPage() {
     </>
   );
 }
-
-    
