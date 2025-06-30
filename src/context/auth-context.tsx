@@ -434,17 +434,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const oldFractalData = fractalSnap.data() as Fractal;
 
           // ArtFractalValuePro - artwork update data
-          const v_old = oldFractalData.price;
-          const s_old = oldFractalData.aiScore || 0;
-          const v_new = finalPrice;
-          const s_new = evaluation.finalScore;
-          const f_portfolio_new = Number(artworkData.editionsToIssue || 0);
+          const v_old = Number(oldFractalData.price) || 0;
+          const s_old = Number(oldFractalData.aiScore) || 0;
+          const v_new = Number(finalPrice) || 0;
+          const s_new = Number(evaluation.finalScore) || 0;
+          const f_portfolio_new = Number(artworkData.editionsToIssue) || 0;
           
           // ArtFractalValuePro - portfolio update logic
-          const V_old = Number(currentArtistData.totalPortfolioValue || 0);
-          const F_old = Number(currentArtistData.totalEditions || 0);
-          const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation || 0);
-          const sum_Si2_old = Number(currentArtistData.sumOfScoresSquared || 0);
+          const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
+          const F_old = Number(currentArtistData.totalEditions) || 0;
+          const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation) || 0;
+          const sum_Si2_old = Number(currentArtistData.sumOfScoresSquared) || 0;
 
           const V_final = V_old - v_old + v_new;
           const F_final = F_old + f_portfolio_new;
@@ -474,7 +474,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           transaction.update(artistRef, {
               totalPortfolioValue: V_final,
               totalEditions: F_final,
-              availableEditions: Number(currentArtistData.availableEditions || 0) + f_portfolio_new,
+              availableEditions: (Number(currentArtistData.availableEditions) || 0) + f_portfolio_new,
               fractalPrice: P_final,
               totalScoreWeightedValuation: sum_SiVi_final,
               sumOfScoresSquared: sum_Si2_final,
