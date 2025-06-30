@@ -8,7 +8,7 @@ import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, que
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser } from '@/lib/data';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser, PrivateHolding, PublicHolding, CollectorInfo } from '@/lib/data';
 import type { EvaluationResult, ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
@@ -56,7 +56,7 @@ interface AuthContextType {
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
   reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
-  getCollectorsForArtist: (artistId: string) => Promise<any[]>;
+  getCollectorsForArtist: (artistId: string) => Promise<CollectorInfo[]>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -193,13 +193,25 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               }
           });
           
-          const holdingsRef = firestoreCollection(db, 'users', user.uid, 'holdings');
-          holdingsUnsub = onSnapshot(holdingsRef, (snapshot) => {
-              const userHoldings = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as OwnedFractal[];
-              setCollection(userHoldings);
+          const publicHoldingsRef = firestoreCollection(db, 'users', user.uid, 'holdings');
+          holdingsUnsub = onSnapshot(publicHoldingsRef, async (publicSnapshot) => {
+              const publicHoldings = publicSnapshot.docs.map(d => ({ id: d.id, ...d.data() })) as (PublicHolding & {id: string})[];
+              
+              const fullCollection: OwnedFractal[] = [];
+              for (const publicDoc of publicHoldings) {
+                  const privateDocRef = doc(db, 'users', user.uid, 'privateHoldings', publicDoc.id);
+                  const privateDocSnap = await getDoc(privateDocRef);
+                  if (privateDocSnap.exists()) {
+                      const privateData = privateDocSnap.data() as PrivateHolding;
+                      fullCollection.push({
+                          ...publicDoc,
+                          ...privateData
+                      });
+                  }
+              }
+              setCollection(fullCollection);
           });
           
-          // Only fetch all users if a user is logged in
           const allUsersQuery = query(firestoreCollection(db, 'users'));
           allUsersUnsub = onSnapshot(allUsersQuery, (snapshot) => {
             const users = snapshot.docs.map(d => {
@@ -241,20 +253,15 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       
       const snapshot = await getDocs(holdingsQuery);
       
-      const collectorData: Record<string, { owned: number, listed: number, userId: string }> = {};
+      const collectorData: Record<string, { userId: string, ownedCount: number }> = {};
 
       snapshot.forEach(doc => {
-          const holding = doc.data() as OwnedFractal;
           const userId = doc.ref.parent.parent!.id;
           
           if (!collectorData[userId]) {
-              collectorData[userId] = { userId, owned: 0, listed: 0 };
+              collectorData[userId] = { userId, ownedCount: 0 };
           }
-          if (holding.status === 'owned') {
-              collectorData[userId].owned++;
-          } else if (holding.status === 'listed') {
-              collectorData[userId].listed++;
-          }
+          collectorData[userId].ownedCount++;
       });
       
       return Object.values(collectorData);
@@ -649,6 +656,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 listingIdToHoldingIds.set(listingData.id, holdingsToTransfer);
                 for (const holdingId of holdingsToTransfer) {
                     holdingRefsToRead.push(doc(db, `users/${item.resellerId}/holdings/${holdingId}`));
+                    holdingRefsToRead.push(doc(db, `users/${item.resellerId}/privateHoldings/${holdingId}`));
                 }
             }
         }
@@ -682,9 +690,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                     holdingIds: listingData.holdingIds.slice(item.quantity),
                     status: newQuantity === 0 ? 'completed' : 'active',
                 });
+
                 const holdingsForListing = listingIdToHoldingIds.get(item.listingId)!;
                 for (const holdingId of holdingsForListing) {
                     transaction.delete(doc(db, `users/${item.resellerId}/holdings/${holdingId}`));
+                    transaction.delete(doc(db, `users/${item.resellerId}/privateHoldings/${holdingId}`));
                 }
             }
         }
@@ -692,13 +702,23 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         // 3. Create new holdings for the buyer
         for (const item of orderBreakdown) {
             for (let j = 0; j < item.quantity; j++) {
-                const newHoldingRef = doc(firestoreCollection(db, `users/${user.uid}/holdings`));
-                const newHoldingData: Omit<OwnedFractal, 'id'> = {
-                    fractalId: "portfolio-fractal", artistId, purchaseDate: new Date().toISOString(),
-                    purchasePrice: item.price,
-                    serialNumber: uuidv4(), status: 'owned',
+                const newHoldingId = uuidv4();
+                
+                const newPublicHoldingRef = doc(db, `users/${user.uid}/holdings/${newHoldingId}`);
+                const newPublicData: PublicHolding = {
+                    fractalId: "portfolio-fractal", 
+                    artistId, 
+                    purchaseDate: new Date().toISOString(),
+                    status: 'owned',
                 };
-                transaction.set(newHoldingRef, newHoldingData);
+                transaction.set(newPublicHoldingRef, newPublicData);
+
+                const newPrivateHoldingRef = doc(db, `users/${user.uid}/privateHoldings/${newHoldingId}`);
+                const newPrivateData: PrivateHolding = {
+                    purchasePrice: item.price,
+                    serialNumber: uuidv4(),
+                };
+                transaction.set(newPrivateHoldingRef, newPrivateData);
             }
         }
 

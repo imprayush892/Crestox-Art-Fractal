@@ -74,6 +74,7 @@ export interface Fractal {
   commissionPatronage?: string;
 }
 
+// Combined view of a holding for the logged-in user
 export interface OwnedFractal {
   id: string;
   fractalId: string;
@@ -82,6 +83,20 @@ export interface OwnedFractal {
   purchasePrice: number;
   serialNumber: string;
   status: 'owned' | 'listed';
+}
+
+// Publicly visible holding data
+export interface PublicHolding {
+  fractalId: string;
+  artistId: string;
+  purchaseDate: string;
+  status: 'owned' | 'listed';
+}
+
+// Private holding data, only visible to the owner
+export interface PrivateHolding {
+  purchasePrice: number;
+  serialNumber: string;
 }
 
 export interface ResaleListing {
@@ -109,6 +124,11 @@ export interface PublicUser {
   id: string;
   name: string;
   avatar: string;
+}
+
+export interface CollectorInfo {
+  userId: string;
+  ownedCount: number;
 }
 
 
@@ -422,5 +442,6 @@ export const artists: Artist[] = finalArtists;
 
     
     
+
 
 

@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -5,56 +6,51 @@ service cloud.firestore {
 
     // --- Users Collection ---
     match /users/{userId} {
-      // READ: Any authenticated user can read any other user's public profile data.
       allow read: if request.auth.uid != null;
-      
-      // CREATE & DELETE: A user can only create or delete their own profile.
       allow create, delete: if request.auth.uid == userId;
-      
-      // UPDATE: A user can update their own profile.
-      // A different user (a buyer) can also update this user's profile (as a seller),
-      // but ONLY if they are increasing the seller's walletBalance. No other fields can be changed.
       allow update: if (request.auth.uid == userId) || 
                      (request.auth.uid != userId &&
                       request.resource.data.walletBalance > resource.data.walletBalance &&
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
                       
-      // --- Holdings Subcollection ---
+      // --- Public Holdings Subcollection ---
+      // Readable by any logged-in user to see who collects an artist's work.
       match /holdings/{holdingId} {
-        // READ: Any authenticated user can read any holding document.
         allow read: if request.auth.uid != null;
-        
-        // WRITE: Allow any authenticated user to write to a holding.
-        // WARNING: This is a permissive rule for prototyping. In a production environment,
-        // this should be handled by a Cloud Function to ensure a seller's holdings
-        // can only be deleted as part of a verified, complete transaction by a buyer.
-        allow write: if request.auth.uid != null;
+        // Write is permissive for client-side prototype logic.
+        // In production, this should be handled by secure Cloud Functions.
+        allow write: if request.auth.uid != null; 
+      }
+
+      // --- Private Holdings Subcollection ---
+      // Sensitive data, readable/writable only by the owner.
+      match /privateHoldings/{holdingId} {
+        allow read, write: if request.auth.uid == userId;
       }
     }
 
     // --- Artists Collection ---
     match /artists/{artistId} {
-      // READ: Anyone can read artist data.
       allow read: if true;
-      // CREATE: Any authenticated user can create an artist profile.
       allow create: if request.auth.uid != null;
-      // UPDATE: The artist can update their own profile.
-      // A buyer can also update the profile, but only under specific purchase conditions.
       allow update: if request.auth.uid != null &&
                    (
-                     // Artist is updating their own profile
+                     // Artist can update their own profile
                      request.auth.uid == resource.data.userId ||
-                     // A buyer is updating the profile during a purchase
+                     // A transaction (buy/sell) can update specific fields
                      (
                        request.auth.uid != resource.data.userId &&
-                       // Case 1: Buying from Artist (affects availableEditions)
-                       (request.resource.data.availableEditions < resource.data.availableEditions &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasAll(['availableEditions', 'fractalPrice', 'priceHistory']) &&
-                        request.resource.data.diff(resource.data).affectedKeys().size() == 3) ||
-                       // Case 2: Buying from Reseller (does NOT affect availableEditions)
-                       (request.resource.data.availableEditions == resource.data.availableEditions &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasAll(['fractalPrice', 'priceHistory']) &&
-                        request.resource.data.diff(resource.data).affectedKeys().size() == 2)
+                       (
+                          (
+                            request.resource.data.availableEditions <= resource.data.availableEditions &&
+                            request.resource.data.diff(resource.data).affectedKeys().hasAll(['availableEditions', 'fractalPrice', 'priceHistory']) &&
+                            request.resource.data.diff(resource.data).affectedKeys().size() == 3
+                          ) ||
+                          (
+                             request.resource.data.diff(resource.data).affectedKeys().hasAll(['fractalPrice', 'priceHistory']) &&
+                             request.resource.data.diff(resource.data).affectedKeys().size() == 2
+                          )
+                       )
                      )
                    );
     }
@@ -66,20 +62,17 @@ service cloud.firestore {
     }
     match /resaleListings/{listingId} {
       allow read: if true;
-      // CREATE: A user can only create a listing for themselves.
       allow create: if request.auth.uid != null && request.resource.data.resellerId == request.auth.uid;
-      // UPDATE: The owner can update (e.g., to cancel), or a buyer can update during a purchase.
       allow update: if request.auth.uid != null &&
-        (
-          // The owner can update (e.g. to cancel)
-          resource.data.resellerId == request.auth.uid ||
-          // A buyer can update, but only to decrease quantity and change status/holdings
-          (
-            request.auth.uid != resource.data.resellerId &&
-            request.resource.data.quantity < resource.data.quantity &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'status', 'holdingIds'])
-          )
-        );
+                   (
+                     // The lister can cancel their own listing
+                     resource.data.resellerId == request.auth.uid ||
+                     // A buyer can update the listing by purchasing from it
+                     (
+                       request.resource.data.quantity < resource.data.quantity &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasAll(['quantity', 'status', 'holdingIds'])
+                     )
+                   );
     }
   }
 }
