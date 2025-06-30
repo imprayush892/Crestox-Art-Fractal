@@ -35,8 +35,8 @@ export function EvaluationScorecardDialog({ isOpen, onClose, evaluation, onOptFo
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle className="font-headline text-2xl">Evaluation Scorecard</DialogTitle>
-                    <DialogDescription>This scorecard details the AI's quality assessment, which is a key factor in determining the final monetary valuation.</DialogDescription>
+                    <DialogTitle className="font-headline text-2xl">Crestox Quality Scorecard</DialogTitle>
+                    <DialogDescription>This scorecard details the AI's quality assessment (ArtScoreChecklist), which is a key factor in determining the final monetary valuation via the ArtValueEst model.</DialogDescription>
                 </DialogHeader>
                 <div className="max-h-[60vh] overflow-y-auto pr-4">
                     <Table>
