@@ -41,12 +41,19 @@ service cloud.firestore {
                    (
                      // Artist is updating their own profile
                      request.auth.uid == resource.data.userId ||
-                     // A buyer is updating the profile during a purchase
+                     // Scenario 1: Buyer purchases from the ARTIST directly
                      (
                        request.auth.uid != resource.data.userId &&
-                       request.resource.data.availableEditions <= resource.data.availableEditions &&
+                       request.resource.data.availableEditions < resource.data.availableEditions &&
                        request.resource.data.diff(resource.data).affectedKeys().hasAll(['availableEditions', 'fractalPrice', 'priceHistory']) &&
                        request.resource.data.diff(resource.data).affectedKeys().size() == 3
+                     ) ||
+                     // Scenario 2: Buyer purchases from a RESELLER
+                     (
+                       request.auth.uid != resource.data.userId &&
+                       request.resource.data.availableEditions == resource.data.availableEditions &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasAll(['fractalPrice', 'priceHistory']) &&
+                       request.resource.data.diff(resource.data).affectedKeys().size() == 2
                      )
                    );
     }
@@ -60,8 +67,18 @@ service cloud.firestore {
       allow read: if true;
       // CREATE: A user can only create a listing for themselves.
       allow create: if request.auth.uid != null && request.resource.data.resellerId == request.auth.uid;
-      // UPDATE: Only the owner can update their listing (e.g., to cancel it).
-      allow update: if request.auth.uid != null && resource.data.resellerId == request.auth.uid;
+      // UPDATE: Allow the owner to update (e.g. to cancel), or a buyer to update during a purchase.
+      allow update: if request.auth.uid != null && 
+                     (
+                       // The owner is updating their own listing (e.g., cancelling it).
+                       resource.data.resellerId == request.auth.uid
+                     ) ||
+                     (
+                       // A buyer is purchasing from the listing, which requires updating it.
+                       resource.data.resellerId != request.auth.uid &&
+                       request.resource.data.quantity < resource.data.quantity &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'status', 'holdingIds'])
+                     );
     }
   }
 }
