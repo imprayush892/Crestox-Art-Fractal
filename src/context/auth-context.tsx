@@ -12,7 +12,7 @@ import type { EvaluationResult, ValuationBreakdownItem } from '@/ai/flows/evalua
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
 
-type SuccessfulEvaluation = Extract<EvaluationResult, { status: 'success' }>['evaluation'];
+type SuccessfulEvaluation = Extract<EvaluationResult, { status: 'success' }>;
 
 
 // --- Interfaces ---
@@ -85,6 +85,15 @@ const sanitizeArtist = (artist: Artist): Artist => ({
   totalEditions: Number(artist.totalEditions || 0),
   availableEditions: Number(artist.availableEditions || 0),
 });
+
+const applyPriceImpact = (currentPrice: number, tradeQty: number, totalShares: number, isBuy: boolean): number => {
+    if (totalShares <= 0 || tradeQty <= 0) return currentPrice;
+    const fraction = tradeQty / totalShares;
+    const beta = 1.118;
+    const exponent = beta * Math.sqrt(fraction);
+    const impactFactor = isBuy ? Math.exp(exponent) : Math.exp(-exponent);
+    return currentPrice * impactFactor;
+};
 
 export function AuthProvider({ children, initialArtists, initialFractals }: { children: ReactNode, initialArtists: Artist[], initialFractals: Fractal[] }) {
   const { toast } = useToast();
@@ -367,7 +376,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             newFractalData.crestoxGrade = evaluationResult.grade;
         }
         
-        // --- Robust Numeric Calculations ---
         const new_Vi = Number(finalPrice) || 0;
         const new_Si = Number(evaluationResult.finalScore) || 0;
         const new_Fi = parseInt(String(artworkData.editionsToIssue), 10) || 0;
@@ -375,16 +383,13 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
         const F_old = parseInt(String(currentArtistData.totalEditions), 10) || 0;
         const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation) || 0;
-        const sum_Si2_old = Number(currentArtistData.sumOfScoresSquared) || 0;
         const available_F_old = parseInt(String(currentArtistData.availableEditions), 10) || 0;
 
         const V_new = V_old + new_Vi;
         const F_new = F_old + new_Fi;
         const available_F_new = available_F_old + new_Fi;
         const sum_SiVi_new = sum_SiVi_old + (new_Si * new_Vi);
-        const sum_Si2_new = sum_Si2_old + (new_Si * new_Si);
 
-        const k_new = sum_SiVi_new > 0 ? V_new / sum_SiVi_new : 0;
         const P_new = F_new > 0 ? V_new / F_new : 0;
 
         const newFractalRef = doc(db, "fractals", newFractalId);
@@ -396,8 +401,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             availableEditions: available_F_new,
             fractalPrice: P_new,
             totalScoreWeightedValuation: sum_SiVi_new,
-            sumOfScoresSquared: sum_Si2_new,
-            kFactor: k_new,
             priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_new }),
             totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_new })
         });
@@ -438,7 +441,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const currentArtistData = artistSnap.data() as Artist;
           const oldFractalData = fractalSnap.data() as Fractal;
 
-          // --- Robust Numeric Calculations ---
           const v_old = Number(oldFractalData.price) || 0;
           const s_old = Number(oldFractalData.aiScore) || 0;
           const v_new = Number(finalPrice) || 0;
@@ -447,7 +449,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
           const F_old = parseInt(String(currentArtistData.totalEditions), 10) || 0;
           const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation) || 0;
-          const sum_Si2_old = Number(currentArtistData.sumOfScoresSquared) || 0;
           const available_F_old = parseInt(String(currentArtistData.availableEditions), 10) || 0;
 
           const f_portfolio_new = parseInt(String(artworkData.editionsToIssue), 10) || 0;
@@ -456,15 +457,13 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const F_final = F_old + f_portfolio_new;
           const available_F_final = available_F_old + f_portfolio_new;
           const sum_SiVi_final = sum_SiVi_old - (s_old * v_old) + (s_new * v_new);
-          const sum_Si2_final = sum_Si2_old - (s_old * s_old) + (s_new * s_new);
 
-          const k_final = sum_SiVi_final > 0 ? V_final / sum_SiVi_final : 0;
           const P_final = F_final > 0 ? V_final / F_final : 0;
           
           const { length, breadth, height, unit, ...restOfArtworkData } = artworkData;
           const artworkSize = { length, breadth, unit, ...(height && { height }) };
           
-          const fractalUpdateData: any = {
+          const fractalUpdateData: Partial<Fractal> & { [key: string]: any } = {
               ...restOfArtworkData,
               artworkSize,
               price: v_new,
@@ -480,7 +479,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           if (shouldApplyGrade) {
               fractalUpdateData.crestoxGrade = evaluation.grade;
           } else {
-              fractalUpdateData.crestoxGrade = null; // Use null instead of undefined for Firestore
+              fractalUpdateData.crestoxGrade = null;
           }
           
           transaction.update(fractalRef, fractalUpdateData);
@@ -491,8 +490,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               availableEditions: available_F_final,
               fractalPrice: P_final,
               totalScoreWeightedValuation: sum_SiVi_final,
-              sumOfScoresSquared: sum_Si2_final,
-              kFactor: k_final,
               priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_final }),
               totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_final })
           });
@@ -524,21 +521,18 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const executeFractalPurchase = async (artistId: string, orderBreakdown: OrderBreakdownItem[], totalCost: number) => {
     if (!db || !user) throw new Error("User not authenticated.");
 
-    if (user.walletBalance < totalCost) {
+    const totalPayable = totalCost * 1.18; // 18% GST
+    if (user.walletBalance < totalPayable) {
         throw new Error("Insufficient CreCoin balance.");
     }
 
     await runTransaction(db, async (transaction) => {
-        // --- PHASE 1: READ ALL TOP-LEVEL DOCUMENTS ---
         const docRefs = new Map<string, DocumentReference>();
         docRefs.set('buyer', doc(db, "users", user.uid));
+        docRefs.set(`artist_${artistId}`, doc(db, "artists", artistId));
 
         for (const item of orderBreakdown) {
-            if (item.source === 'ARTIST') {
-                if (!docRefs.has(`artist_${artistId}`)) {
-                    docRefs.set(`artist_${artistId}`, doc(db, "artists", artistId));
-                }
-            } else if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
+            if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
                 if (!docRefs.has(`seller_${item.resellerId}`)) {
                     docRefs.set(`seller_${item.resellerId}`, doc(db, "users", item.resellerId));
                 }
@@ -560,9 +554,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             docSnaps.set(key, snapshots[i++]);
         }
         
-        // --- PHASE 2: VALIDATE AND READ HOLDING DOCUMENTS ---
         const buyerSnap = docSnaps.get('buyer');
-        if (!buyerSnap?.exists() || (buyerSnap.data() as User).walletBalance < totalCost) {
+        if (!buyerSnap?.exists() || (buyerSnap.data() as User).walletBalance < totalPayable) {
             throw new Error("Insufficient funds or user not found.");
         }
 
@@ -581,52 +574,40 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 if (!listingData.holdingIds || !Array.isArray(listingData.holdingIds) || listingData.holdingIds.length < item.quantity) {
                     throw new Error(`Listing ${listingData.id} has insufficient holdings for this sale.`);
                 }
-
                 const holdingsToTransfer = listingData.holdingIds.slice(0, item.quantity);
                 listingIdToHoldingIds.set(listingData.id, holdingsToTransfer);
-
                 for (const holdingId of holdingsToTransfer) {
                     holdingRefsToRead.push(doc(db, `users/${item.resellerId}/holdings/${holdingId}`));
                 }
             }
         }
         
-        // Read all required holding documents
-        const holdingDocSnapsToProcess: DocumentSnapshot[] = [];
         if (holdingRefsToRead.length > 0) {
             const holdingSnaps = await Promise.all(holdingRefsToRead.map(ref => transaction.get(ref)));
             for(const snap of holdingSnaps) {
                 if (!snap.exists()) {
                     throw new Error(`A holding document (${snap.ref.path}) required for the sale does not exist.`);
                 }
-                holdingDocSnapsToProcess.push(snap);
             }
         }
 
-
-        // --- PHASE 3: PREPARE AND EXECUTE WRITES ---
-        transaction.update(docRefs.get('buyer')!, { walletBalance: (buyerSnap.data() as User).walletBalance - totalCost });
+        transaction.update(docRefs.get('buyer')!, { walletBalance: (buyerSnap.data() as User).walletBalance - totalPayable });
         
-        const holdingsToCreate: Omit<OwnedFractal, 'id'>[] = [];
+        let totalQuantityTraded = 0;
 
         for (const item of orderBreakdown) {
+            totalQuantityTraded += item.quantity;
             if (item.source === 'ARTIST') {
-                const artistRef = docRefs.get(`artist_${artistId}`)!;
                 const artistData = docSnaps.get(`artist_${artistId}`)!.data() as Artist;
                 if (artistData.availableEditions < item.quantity) {
                     throw new Error("Not enough fractals available from artist.");
                 }
-                transaction.update(artistRef, { availableEditions: artistData.availableEditions - item.quantity });
-                for (let j = 0; j < item.quantity; j++) {
-                    holdingsToCreate.push({
-                        fractalId: "portfolio-fractal", artistId, purchaseDate: new Date().toISOString(),
-                        purchasePrice: item.price, serialNumber: uuidv4(), status: 'owned',
-                    });
-                }
+                transaction.update(docRefs.get(`artist_${artistId}`)!, { availableEditions: artistData.availableEditions - item.quantity });
             } else if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
                 const sellerRef = docRefs.get(`seller_${item.resellerId}`)!;
                 const sellerData = docSnaps.get(`seller_${item.resellerId}`)!.data() as User;
-                transaction.update(sellerRef, { walletBalance: sellerData.walletBalance + (item.quantity * item.price) });
+                const proceeds = (item.quantity * item.price) * 0.98; // 2% platform fee
+                transaction.update(sellerRef, { walletBalance: sellerData.walletBalance + proceeds });
                 
                 const listingRef = docRefs.get(`listing_${item.listingId}`)!;
                 const listingData = docSnaps.get(`listing_${item.listingId}`)!.data() as ResaleListing;
@@ -637,21 +618,28 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                     holdingIds: listingData.holdingIds.slice(item.quantity),
                     status: newQuantity === 0 ? 'completed' : 'active',
                 });
-
                 const holdingsForListing = listingIdToHoldingIds.get(item.listingId)!;
                 for (const holdingId of holdingsForListing) {
                     transaction.delete(doc(db, `users/${item.resellerId}/holdings/${holdingId}`));
-                    holdingsToCreate.push({
-                         fractalId: "portfolio-fractal", artistId: listingData.artistId, purchaseDate: new Date().toISOString(),
-                         purchasePrice: item.price, serialNumber: `resale-${uuidv4()}`, status: 'owned',
-                    });
                 }
             }
+
+            for (let j = 0; j < item.quantity; j++) {
+                const newHoldingRef = doc(firestoreCollection(db, `users/${user.uid}/holdings`));
+                const newHoldingData: Omit<OwnedFractal, 'id'> = {
+                    fractalId: "portfolio-fractal", artistId, purchaseDate: new Date().toISOString(),
+                    purchasePrice: item.price, // Store pre-tax price
+                    serialNumber: uuidv4(), status: 'owned',
+                };
+                transaction.set(newHoldingRef, newHoldingData);
+            }
         }
-                
-        holdingsToCreate.forEach(holding => {
-            const newHoldingRef = doc(firestoreCollection(db, `users/${user.uid}/holdings`));
-            transaction.set(newHoldingRef, { ...holding, id: newHoldingRef.id });
+        
+        const artistData = docSnaps.get(`artist_${artistId}`)!.data() as Artist;
+        const newFractalPrice = applyPriceImpact(artistData.fractalPrice, totalQuantityTraded, artistData.totalEditions, true);
+        transaction.update(docRefs.get(`artist_${artistId}`)!, {
+            fractalPrice: newFractalPrice,
+            priceHistory: arrayUnion({ date: new Date().toISOString(), price: newFractalPrice })
         });
     });
     toast({ title: "Collection Successful!", description: `You have collected ${orderBreakdown.reduce((sum, item) => sum + item.quantity, 0)} fractal(s).` });
@@ -662,7 +650,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     
     const { quantity, initialPrice, minPrice, periodDays } = options;
     
-    // Step 1: Query for available holdings OUTSIDE the transaction.
     const holdingsQuery = query(
       firestoreCollection(db, `users/${user.uid}/holdings`),
       where("artistId", "==", artist.id),
@@ -675,14 +662,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       throw new Error("Not enough fractals to list.");
     }
     
-    // Get references to the documents we intend to modify.
     const docsToUpdate = initialHoldingsSnap.docs.slice(0, quantity);
     const docRefsToUpdate = docsToUpdate.map(d => d.ref);
 
-    // Step 2: Run the transaction.
     try {
       await runTransaction(db, async (transaction) => {
-        // Step 3: Re-read the documents INSIDE the transaction to ensure they haven't changed.
         const holdingsSnaps = await Promise.all(
           docRefsToUpdate.map(ref => transaction.get(ref))
         );
@@ -695,7 +679,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         
         const holdingIdsToList = holdingsSnaps.map(doc => doc.id);
 
-        // Step 4: Perform all writes.
         for (const docRef of docRefsToUpdate) {
           transaction.update(docRef, { status: "listed" });
         }
@@ -725,7 +708,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             title: "Listing Failed",
             description: e.message || "Could not list fractals for sale.",
         });
-        // Re-throw to indicate failure to the caller if needed
         throw e;
     }
   };

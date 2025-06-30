@@ -101,7 +101,6 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
 
     orderBook.sort((a, b) => {
         if (a.price !== b.price) return a.price - b.price;
-        // Prioritize reseller if prices are equal
         return a.source === 'RESELLER' ? -1 : 1;
     });
 
@@ -142,7 +141,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
     try {
         await executeFractalPurchase(currentArtist.id, breakdown, totalCost);
         onClose();
-        setQuantity(1); // Reset for next time
+        setQuantity(1);
     } catch (error: any) {
         toast({
             variant: "destructive",
@@ -154,6 +153,9 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
     }
   };
   
+  const gstAmount = totalCost * 0.18;
+  const totalPayable = totalCost + gstAmount;
+
   if (!currentArtist) return null;
 
   return (
@@ -205,9 +207,18 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
             </div>
 
             <div className="space-y-2">
-                <div className="flex items-center justify-between text-lg font-bold text-primary">
-                    <span>Total Cost</span>
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
                     <span>{totalCost.toLocaleString('default', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">G.S.T. (18%)</span>
+                    <span>{gstAmount.toLocaleString('default', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between text-lg font-bold text-primary">
+                    <span>Total Payable</span>
+                    <span>{totalPayable.toLocaleString('default', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
                 </div>
             </div>
         </div>
@@ -215,7 +226,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
           <DialogClose asChild>
             <Button type="button" variant="secondary" disabled={isLoading}> Cancel </Button>
           </DialogClose>
-          <Button type="button" onClick={handleConfirm} disabled={!user || user.walletBalance < totalCost || quantity === 0 || isLoading}>
+          <Button type="button" onClick={handleConfirm} disabled={!user || user.walletBalance < totalPayable || quantity === 0 || isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
             Confirm Collection
           </Button>

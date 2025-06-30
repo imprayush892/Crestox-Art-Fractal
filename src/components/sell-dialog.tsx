@@ -41,7 +41,8 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
   const ownedShares = useMemo(() => ownedFractals.length, [ownedFractals]);
   
   const initialSaleValue = useMemo(() => quantity * (Number(initialPrice) || 0), [quantity, initialPrice]);
-  const netProceeds = useMemo(() => initialSaleValue, [initialSaleValue]);
+  const platformFee = useMemo(() => initialSaleValue * 0.02, [initialSaleValue]);
+  const netProceeds = useMemo(() => initialSaleValue - platformFee, [initialSaleValue, platformFee]);
 
   useEffect(() => {
     if (artist) {
@@ -150,6 +151,10 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Est. Gross Sale (at initial price)</span>
                     <span className="font-medium">{initialSaleValue.toLocaleString('default', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Platform Fee (2%)</span>
+                    <span className="font-medium text-destructive">- {platformFee.toLocaleString('default', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CreCoins</span>
                 </div>
                 <Separator className="my-2"/>
                 <div className="flex items-center justify-between text-base font-bold">

@@ -52,18 +52,19 @@ export function CollectionClient() {
   const portfolioStats = useMemo(() => {
     const holdings = collection.filter(f => f.status === 'owned');
     
-    const totalCollectedValue = holdings.reduce((sum, f) => sum + f.purchasePrice, 0);
+    // Total spent includes 18% GST on purchase price
+    const totalSpent = holdings.reduce((sum, f) => sum + (f.purchasePrice * 1.18), 0);
     
     const currentValue = holdings.reduce((sum, f) => {
       const artist = artistMap.get(f.artistId);
       return sum + (artist?.fractalPrice || 0);
     }, 0);
 
-    const gainLoss = currentValue - totalCollectedValue;
-    const gainLossPercent = totalCollectedValue > 0 ? (gainLoss / totalCollectedValue) * 100 : 0;
+    const gainLoss = currentValue - totalSpent;
+    const gainLossPercent = totalSpent > 0 ? (gainLoss / totalSpent) * 100 : 0;
 
     return {
-      totalCollectedValue,
+      totalSpent,
       currentValue,
       gainLoss,
       gainLossPercent
@@ -184,7 +185,7 @@ export function CollectionClient() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₹{portfolioStats.currentValue.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">in CreCoins</p>
+              <p className="text-xs text-muted-foreground">Current market value of holdings</p>
             </CardContent>
           </Card>
           <Card>
@@ -193,8 +194,8 @@ export function CollectionClient() {
               <BarChart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹{portfolioStats.totalCollectedValue.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">in CreCoins</p>
+              <div className="text-2xl font-bold">₹{portfolioStats.totalSpent.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">Includes all fees and taxes</p>
             </CardContent>
           </Card>
           <Card>
@@ -207,7 +208,7 @@ export function CollectionClient() {
               ₹{portfolioStats.gainLoss.toLocaleString('default', { signDisplay: 'always' })}
               </div>
               <p className={`text-xs ${portfolioStats.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {portfolioStats.gainLossPercent.toFixed(2)}% all time (in CreCoins)
+                {portfolioStats.gainLossPercent.toFixed(2)}% all time
               </p>
             </CardContent>
           </Card>
@@ -228,9 +229,9 @@ export function CollectionClient() {
                         const allFractalsForArtist = collectionByArtist[artist.id] || [];
                         const ownedByArtist = allFractalsForArtist.filter(f => f.status === 'owned');
 
-                        const totalCollected = ownedByArtist.reduce((sum, f) => sum + f.purchasePrice, 0);
+                        const totalSpent = ownedByArtist.reduce((sum, f) => sum + (f.purchasePrice * 1.18), 0);
                         const currentValue = ownedByArtist.reduce((sum) => sum + artist.fractalPrice, 0);
-                        const gainLoss = currentValue - totalCollected;
+                        const gainLoss = currentValue - totalSpent;
 
                         return (
                             <Card 
@@ -246,8 +247,8 @@ export function CollectionClient() {
                                 </CardHeader>
                                 <CardContent className="grid gap-4 flex-grow cursor-pointer" onClick={() => handleCardClick(artist)}>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                                        <span className="text-sm text-muted-foreground">Total Spent</span>
-                                        <span className="font-semibold">₹{totalCollected.toLocaleString()}</span>
+                                        <span className="text-sm text-muted-foreground">Total Spent (incl. GST)</span>
+                                        <span className="font-semibold">₹{totalSpent.toLocaleString()}</span>
                                     </div>
                                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                                         <span className="text-sm text-muted-foreground">Current Value</span>
