@@ -14,19 +14,21 @@ service cloud.firestore {
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
                       
       // --- Public Holdings Subcollection ---
-      // Readable by any logged-in user to see who collects an artist's work.
+      // Write rule is for direct path access. Read is handled by the collection group rule.
       match /holdings/{holdingId} {
-        allow read: if request.auth.uid != null;
-        // Write is permissive for client-side prototype logic.
-        // In production, this should be handled by secure Cloud Functions.
-        allow write: if request.auth.uid != null; 
+        allow write: if request.auth.uid != null;
       }
 
       // --- Private Holdings Subcollection ---
-      // Sensitive data, readable/writable only by the owner.
       match /privateHoldings/{holdingId} {
         allow read, write: if request.auth.uid == userId;
       }
+    }
+    
+    // --- Collection Group Rule for Public Holdings ---
+    // This rule is required for the collectionGroup query to work across all users.
+    match /{path=**}/holdings/{holdingId} {
+      allow read: if request.auth.uid != null;
     }
 
     // --- Artists Collection ---
@@ -35,9 +37,7 @@ service cloud.firestore {
       allow create: if request.auth.uid != null;
       allow update: if request.auth.uid != null &&
                    (
-                     // Artist can update their own profile
                      request.auth.uid == resource.data.userId ||
-                     // A transaction (buy/sell) can update specific fields
                      (
                        request.auth.uid != resource.data.userId &&
                        (
@@ -65,9 +65,7 @@ service cloud.firestore {
       allow create: if request.auth.uid != null && request.resource.data.resellerId == request.auth.uid;
       allow update: if request.auth.uid != null &&
                    (
-                     // The lister can cancel their own listing
                      resource.data.resellerId == request.auth.uid ||
-                     // A buyer can update the listing by purchasing from it
                      (
                        request.resource.data.quantity < resource.data.quantity &&
                        request.resource.data.diff(resource.data).affectedKeys().hasAll(['quantity', 'status', 'holdingIds'])
