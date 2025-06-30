@@ -241,7 +241,7 @@ export async function evaluateArtwork(
     else grade = 'A-';
     
     const Pmin_calc = Math.min(input.minEstimatedValue, mockMinPriceAI);
-    const Pmax_calc = Math.max(input.maxEstimatedValue, mockMaxPriceAI);
+    const Pmax_calc = Math.min(input.maxEstimatedValue, mockMaxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
     const P_regression = Math.exp(6.907755 + 0.015 * Q);
@@ -402,7 +402,7 @@ const evaluateArtworkFlow = ai.defineFlow(
     else grade = 'A-';
     
     const Pmin_calc = Math.min(input.minEstimatedValue, output.minPriceAI);
-    const Pmax_calc = Math.max(input.maxEstimatedValue, output.maxPriceAI);
+    const Pmax_calc = Math.min(input.maxEstimatedValue, output.maxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
     const P_regression = Math.exp(6.907755 + 0.015 * Q);
