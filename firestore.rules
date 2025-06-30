@@ -24,8 +24,11 @@ service cloud.firestore {
         // READ: Any authenticated user can read any holding document.
         allow read: if request.auth.uid != null;
         
-        // WRITE: Only the owner of the parent user document can create, update, or delete their holdings.
-        allow write: if request.auth.uid == userId;
+        // WRITE: Allow any authenticated user to write to a holding.
+        // WARNING: This is a permissive rule for prototyping. In a production environment,
+        // this should be handled by a Cloud Function to ensure a seller's holdings
+        // can only be deleted as part of a verified, complete transaction by a buyer.
+        allow write: if request.auth.uid != null;
       }
     }
 
@@ -41,19 +44,17 @@ service cloud.firestore {
                    (
                      // Artist is updating their own profile
                      request.auth.uid == resource.data.userId ||
-                     // Scenario 1: Buyer purchases from the ARTIST directly
+                     // A buyer is updating the profile during a purchase
                      (
                        request.auth.uid != resource.data.userId &&
-                       request.resource.data.availableEditions < resource.data.availableEditions &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasAll(['availableEditions', 'fractalPrice', 'priceHistory']) &&
-                       request.resource.data.diff(resource.data).affectedKeys().size() == 3
-                     ) ||
-                     // Scenario 2: Buyer purchases from a RESELLER
-                     (
-                       request.auth.uid != resource.data.userId &&
-                       request.resource.data.availableEditions == resource.data.availableEditions &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasAll(['fractalPrice', 'priceHistory']) &&
-                       request.resource.data.diff(resource.data).affectedKeys().size() == 2
+                       // Case 1: Buying from Artist (affects availableEditions)
+                       (request.resource.data.availableEditions < resource.data.availableEditions &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasAll(['availableEditions', 'fractalPrice', 'priceHistory']) &&
+                        request.resource.data.diff(resource.data).affectedKeys().size() == 3) ||
+                       // Case 2: Buying from Reseller (does NOT affect availableEditions)
+                       (request.resource.data.availableEditions == resource.data.availableEditions &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasAll(['fractalPrice', 'priceHistory']) &&
+                        request.resource.data.diff(resource.data).affectedKeys().size() == 2)
                      )
                    );
     }
@@ -67,18 +68,18 @@ service cloud.firestore {
       allow read: if true;
       // CREATE: A user can only create a listing for themselves.
       allow create: if request.auth.uid != null && request.resource.data.resellerId == request.auth.uid;
-      // UPDATE: Allow the owner to update (e.g. to cancel), or a buyer to update during a purchase.
-      allow update: if request.auth.uid != null && 
-                     (
-                       // The owner is updating their own listing (e.g., cancelling it).
-                       resource.data.resellerId == request.auth.uid
-                     ) ||
-                     (
-                       // A buyer is purchasing from the listing, which requires updating it.
-                       resource.data.resellerId != request.auth.uid &&
-                       request.resource.data.quantity < resource.data.quantity &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'status', 'holdingIds'])
-                     );
+      // UPDATE: The owner can update (e.g., to cancel), or a buyer can update during a purchase.
+      allow update: if request.auth.uid != null &&
+        (
+          // The owner can update (e.g. to cancel)
+          resource.data.resellerId == request.auth.uid ||
+          // A buyer can update, but only to decrease quantity and change status/holdings
+          (
+            request.auth.uid != resource.data.resellerId &&
+            request.resource.data.quantity < resource.data.quantity &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'status', 'holdingIds'])
+          )
+        );
     }
   }
 }
