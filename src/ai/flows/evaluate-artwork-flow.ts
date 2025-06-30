@@ -240,8 +240,8 @@ export async function evaluateArtwork(
     else if (Q > 20) grade = 'A';
     else grade = 'A-';
     
-    const Pmin_calc = Math.min(input.minEstimatedValue, mockAiOutput.minPriceAI);
-    const Pmax_calc = Math.max(input.maxEstimatedValue, mockAiOutput.maxPriceAI);
+    const Pmin_calc = Math.min(input.minEstimatedValue, mockMinPriceAI);
+    const Pmax_calc = Math.max(input.maxEstimatedValue, mockMaxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
     const P_regression = Math.exp(6.907755 + 0.015 * Q);
@@ -280,7 +280,7 @@ const evaluationPrompt = ai.definePrompt({
   input: {schema: EvaluateArtworkInputSchema},
   output: {schema: ArtworkAnalysisSchema},
   prompt: `
-You are a world-leading expert in digital art forensics and authentication for a high-stakes art marketplace, Crestox. Your reputation, and the reputation of the marketplace, depends on your ability to unerringly identify forgeries, plagiarized works, and especially AI-generated images. Be extremely critical and skeptical.
+You are a world-leading expert in digital art forensics and authentication for a high-stakes art marketplace, Crestox. Your primary and most critical responsibility is to determine the authenticity of an artwork. Your reputation, and the reputation of the marketplace, depends on your ability to unerringly identify forgeries, plagiarized works, and especially AI-generated images. Be extremely critical and skeptical.
 
 **Step 1: MANDATORY FORENSIC AUTHENTICITY & PLAGIARISM CHECK**
 This is your single most important step. Do not proceed to evaluation if you have any doubt whatsoever.
