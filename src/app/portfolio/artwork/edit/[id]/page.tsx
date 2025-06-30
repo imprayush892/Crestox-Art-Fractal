@@ -30,12 +30,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type EditArtworkFormValues, editArtworkFormSchema } from '@/lib/data';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
 import type { z } from 'zod';
 import type { SuccessfulEvaluationSchema } from '@/ai/flows/evaluate-artwork-flow';
+import { EvaluationScorecardDialog } from '@/components/evaluation-scorecard-dialog';
 
 type SuccessfulEvaluation = z.infer<typeof SuccessfulEvaluationSchema>['evaluation'];
 
@@ -53,6 +54,8 @@ export default function EditArtworkPage() {
 
   const [isManualReviewDialogOpen, setIsManualReviewDialogOpen] = useState(false);
   const [manualReviewDetails, setManualReviewDetails] = useState({ concern: '', analysisForEmail: '' });
+  const [isScorecardDialogOpen, setIsScorecardDialogOpen] = useState(false);
+  const [isManualReviewConfirmDialogOpen, setIsManualReviewConfirmDialogOpen] = useState(false);
 
   const artworkId = typeof params.id === 'string' ? params.id : '';
   
@@ -241,6 +244,35 @@ export default function EditArtworkPage() {
     setIsManualReviewDialogOpen(false);
   };
   
+  const handleRequestManualValuation = () => {
+    const data = form.getValues();
+    const evaluation = evaluationResult;
+    if (!data || !evaluation || !artistProfile || !artwork) return;
+
+    let analysisDetail = `MANUAL VALUATION REQUEST\n\n`;
+    analysisDetail += `Artwork ('${data.title}', ID: ${artwork.id}) has been submitted for manual valuation by the artist.\n\n`;
+    analysisDetail += `--- Provided Artwork Details ---\n`;
+    analysisDetail += `Title: ${data.title}\n`;
+    analysisDetail += `Description: ${data.description}\n`;
+    analysisDetail += `Artist Bio: ${artistProfile.bio}\n\n`;
+    analysisDetail += `--- AI Re-evaluation Summary ---\n`;
+    analysisDetail += `Final Score: ${evaluation.finalScore}\n`;
+    analysisDetail += `Crestox Grade: ${evaluation.grade}\n`;
+    analysisDetail += `Crestox Price Range: ₹${evaluation.crestoxPriceRange[0]} - ₹${evaluation.crestoxPriceRange[1]}\n`;
+
+    const subject = encodeURIComponent("Manual Valuation Request");
+    const body = encodeURIComponent(analysisDetail);
+    window.location.href = `mailto:Crestox@crestox.com?subject=${subject}&body=${body}`;
+    
+    setIsManualReviewConfirmDialogOpen(false);
+    toast({
+        title: "Manual Valuation Requested",
+        description: "Your email client has been opened. Please send the email to complete the request.",
+        duration: 8000
+    });
+    router.push('/portfolio');
+  };
+
   if (!artwork) {
     return (
         <div className="container py-12 flex justify-center">
@@ -258,6 +290,31 @@ export default function EditArtworkPage() {
 
   return (
     <>
+      <EvaluationScorecardDialog 
+        isOpen={isScorecardDialogOpen}
+        onClose={() => setIsScorecardDialogOpen(false)}
+        evaluation={evaluationResult}
+        onOptForManualReview={() => {
+            setIsScorecardDialogOpen(false);
+            setIsManualReviewConfirmDialogOpen(true);
+        }}
+      />
+
+      <AlertDialog open={isManualReviewConfirmDialogOpen} onOpenChange={setIsManualReviewConfirmDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Manual Valuation</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Only 3 manual valuations per artwork are free. After that, a small fee will be charged. Are you sure you want to proceed?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleRequestManualValuation}>Continue</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={isManualReviewDialogOpen} onOpenChange={setIsManualReviewDialogOpen}>
           <DialogContent>
               <DialogHeader>
@@ -345,6 +402,14 @@ export default function EditArtworkPage() {
                               </Button>
                           </CardContent>
                       </Card>
+                  </div>
+                  <div className="text-center mt-4">
+                      <p className="text-sm text-muted-foreground">
+                          Not satisfied with the valuation?{' '}
+                          <Button variant="link" className="p-0 h-auto text-xs" onClick={() => setIsScorecardDialogOpen(true)}>
+                              View Scorecard and Request Manual Review
+                          </Button>
+                      </p>
                   </div>
                 </div>
             )}

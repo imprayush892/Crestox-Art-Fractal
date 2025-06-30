@@ -417,7 +417,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       const { evaluation } = evaluationResult;
       
       const crestoxPrice = Math.round((evaluation.crestoxPriceRange[0] + evaluation.crestoxPriceRange[1]) / 2);
-      const artistPrice = Math.round(((artworkData.minEstimatedValue || 0) + (artworkData.maxEstimatedValue || 0)) / 2);
+      const artistMin = Number(artworkData.minEstimatedValue || 0);
+      const artistMax = Number(artworkData.maxEstimatedValue || 0);
+      const artistPrice = Math.round((artistMin + artistMax) / 2);
       const finalPrice = useCrestoxPrice ? crestoxPrice : artistPrice;
       const shouldApplyGrade = useCrestoxPrice || artistPrice <= crestoxPrice;
 
@@ -799,3 +801,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    

@@ -23,18 +23,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { Loader2, UploadCloud, X, Wand2, ArrowRight, Star, Info, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
-import { evaluateArtwork, type EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
+import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { artworkFormSchema, type ArtworkFormValues } from '@/lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import type { z } from 'zod';
 import type { SuccessfulEvaluationSchema } from '@/ai/flows/evaluate-artwork-flow';
+import { EvaluationScorecardDialog } from '@/components/evaluation-scorecard-dialog';
 
 type SuccessfulEvaluation = z.infer<typeof SuccessfulEvaluationSchema>['evaluation'];
 
@@ -42,52 +42,6 @@ type ArtworkSubmissionData = {
     evaluationResult: SuccessfulEvaluation;
     finalPrice: number;
     shouldApplyGrade: boolean;
-};
-
-const getScoreColor = (score: number) => {
-    if (score >= 8) return 'text-green-600';
-    if (score >= 5) return 'text-yellow-600';
-    return 'text-red-600';
-};
-
-const EvaluationScorecardDialog = ({ isOpen, onClose, evaluation, onOptForManualReview }: {isOpen: boolean, onClose: () => void, evaluation: SuccessfulEvaluation | null, onOptForManualReview: () => void}) => {
-    if (!evaluation) return null;
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-2xl">
-                <DialogHeader>
-                    <DialogTitle className="font-headline text-2xl">Evaluation Scorecard</DialogTitle>
-                    <DialogDescription>Detailed analysis for your artwork.</DialogDescription>
-                </DialogHeader>
-                <div className="max-h-[60vh] overflow-y-auto pr-4">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Criterion</TableHead>
-                                <TableHead className="text-center">Weight</TableHead>
-                                <TableHead className="text-center">Score (0-10)</TableHead>
-                                <TableHead className="text-right">Weighted Score</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {evaluation.breakdown?.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="font-medium text-xs">{item.criterion}</TableCell>
-                                    <TableCell className="text-center">{item.weight}%</TableCell>
-                                    <TableCell className={`text-center font-bold text-lg ${getScoreColor(item.score)}`}>{item.score}</TableCell>
-                                    <TableCell className="text-right font-medium">{item.weightedScore.toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-                <DialogFooter className="flex-col items-center gap-4 mt-4 pt-4 border-t">
-                    <p className="text-sm text-center">Still not satisfied with valuation?</p>
-                    <Button onClick={onOptForManualReview}>Opt for Manual Valuation</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
 };
 
 
@@ -281,7 +235,9 @@ export default function CreateArtworkPage() {
     if (!evaluationResult || !artistProfile) return;
 
     const crestoxPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
-    const artistPrice = Math.round((form.getValues().minEstimatedValue + form.getValues().maxEstimatedValue) / 2);
+    const artistMin = Number(form.getValues().minEstimatedValue);
+    const artistMax = Number(form.getValues().maxEstimatedValue);
+    const artistPrice = Math.round((artistMin + artistMax) / 2);
     const finalPrice = useCrestoxPrice ? crestoxPrice : artistPrice;
     const shouldApplyGrade = useCrestoxPrice || artistPrice <= crestoxPrice;
     
@@ -357,7 +313,6 @@ export default function CreateArtworkPage() {
 
   const handleCancelManualCheck = () => {
     setIsManualReviewDialogOpen(false);
-    // Optional: add a toast to inform the user.
     toast({
         title: "Upload Cancelled",
         description: "The artwork was not uploaded. You can make changes and try again.",
@@ -828,3 +783,5 @@ export default function CreateArtworkPage() {
     </>
   );
 }
+
+    
