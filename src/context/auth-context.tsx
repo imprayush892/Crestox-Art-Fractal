@@ -333,6 +333,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         const currentArtistData = artistSnap.data() as Artist;
         
+        // Explicitly parse all incoming and existing values to numbers.
         const new_Vi = Number(finalPrice) || 0;
         const new_Si = Number(evaluationResult.finalScore) || 0;
         const new_Fi = parseInt(String(artworkData.editionsToIssue), 10) || 0;
@@ -340,7 +341,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         const { length, breadth, height, unit } = artworkData;
         const artworkSize = { length, breadth, unit, ...(height && { height }) };
 
-        const newFractalData: Omit<Fractal, 'id' | 'crestoxGrade'> & { crestoxGrade?: string } = {
+        const newFractalData: Partial<Fractal> = {
+            id: newFractalId,
             artistId: artistProfile.id,
             title: artworkData.title,
             description: artworkData.description,
@@ -385,12 +387,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         const P_new = F_new > 0 ? V_new / F_new : 0;
 
         const newFractalRef = doc(db, "fractals", newFractalId);
-        if (shouldApplyGrade) {
-            transaction.set(newFractalRef, newFractalData);
-        } else {
-            const { crestoxGrade, ...dataWithoutGrade } = newFractalData;
-            transaction.set(newFractalRef, dataWithoutGrade);
-        }
+        transaction.set(newFractalRef, newFractalData);
 
         transaction.update(artistRef, {
             totalPortfolioValue: V_new,
@@ -440,6 +437,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const currentArtistData = artistSnap.data() as Artist;
           const oldFractalData = fractalSnap.data() as Fractal;
 
+          // Explicitly parse all incoming and existing values to numbers.
           const v_old = Number(oldFractalData.price) || 0;
           const s_old = Number(oldFractalData.aiScore) || 0;
           const v_new = Number(finalPrice) || 0;
@@ -453,6 +451,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const sum_Si2_old = Number(currentArtistData.sumOfScoresSquared) || 0;
           const available_F_old = parseInt(String(currentArtistData.availableEditions), 10) || 0;
 
+          // Now all arithmetic should be safe.
           const V_final = V_old - v_old + v_new;
           const F_final = F_old + f_portfolio_new;
           const sum_SiVi_final = sum_SiVi_old - (s_old * v_old) + (s_new * v_new);
