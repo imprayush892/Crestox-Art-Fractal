@@ -2,11 +2,62 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default rule: Allow read and write access for all authenticated users.
-    // This is permissive for development but should be refined with more
-    // specific rules for a production application.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      // READ: Any authenticated user can read any other user's public profile data.
+      // This is necessary for the collector list to get names and avatars.
+      allow read: if request.auth.uid != null;
+      
+      // CREATE & DELETE: A user can only create or delete their own profile.
+      allow create, delete: if request.auth.uid == userId;
+      
+      // UPDATE: A user can update their own profile.
+      // A different user (a buyer) can also update this user's profile (as a seller),
+      // but ONLY if they are increasing the seller's walletBalance. No other fields can be changed.
+      // This is critical for the "buy fractal from reseller" transaction to work.
+      allow update: if (request.auth.uid == userId) || 
+                     (request.auth.uid != userId &&
+                      request.resource.data.walletBalance > resource.data.walletBalance &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
+                      
+      // --- Holdings Subcollection ---
+      match /holdings/{holdingId} {
+        // READ: Any authenticated user can read any holding document.
+        allow read: if request.auth.uid != null;
+        
+        // WRITE: Only the owner of the parent user document can create, update, or delete their holdings.
+        allow write: if request.auth.uid == userId;
+      }
+    }
+
+    // --- Artists Collection ---
+    match /artists/{artistId} {
+      // READ: Anyone can read artist data.
+      allow read: if true;
+      // CREATE: Any authenticated user can create an artist profile.
+      allow create: if request.auth.uid != null;
+      // UPDATE: The artist can update their own profile.
+      // A buyer can also update the profile, but ONLY to decrease the availableEditions count.
+      // This is critical for the "buy fractal from artist" transaction.
+      allow update: if request.auth.uid != null && 
+                       (request.auth.uid == resource.data.userId || 
+                        (request.resource.data.availableEditions < resource.data.availableEditions &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availableEditions']))
+                       );
+    }
+
+    // --- Fractals & ResaleListings Collections ---
+    match /fractals/{fractalId} {
+      allow read: if true;
+      allow write: if request.auth.uid != null;
+    }
+    match /resaleListings/{listingId} {
+      allow read: if true;
+      // CREATE: A user can only create a listing for themselves.
+      allow create: if request.auth.uid != null && request.resource.data.resellerId == request.auth.uid;
+      // UPDATE: Only the owner can update their listing (e.g., to cancel it).
+      allow update: if request.auth.uid != null && resource.data.resellerId == request.auth.uid;
     }
   }
 }
