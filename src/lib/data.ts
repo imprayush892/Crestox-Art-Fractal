@@ -105,6 +105,12 @@ export interface OrderBreakdownItem {
   resellerId?: string;
 }
 
+export interface PublicUser {
+  id: string;
+  name: string;
+  avatar: string;
+}
+
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
