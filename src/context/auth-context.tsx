@@ -333,10 +333,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         const currentArtistData = artistSnap.data() as Artist;
         
-        // ArtFractalValuePro - new artwork data
-        const new_Vi = finalPrice; // Vi
-        const new_Si = evaluationResult.finalScore; // Si
-        const new_Fi = artworkData.editionsToIssue; // Fi
+        const new_Vi = Number(finalPrice) || 0;
+        const new_Si = Number(evaluationResult.finalScore) || 0;
+        const new_Fi = Number(artworkData.editionsToIssue) || 0;
 
         const { length, breadth, height, unit } = artworkData;
         const artworkSize = { length, breadth, unit, ...(height && { height }) };
@@ -371,11 +370,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             newFractalData.crestoxGrade = evaluationResult.grade;
         }
         
-        // ArtFractalValuePro - portfolio update logic
-        const V_old = currentArtistData.totalPortfolioValue ?? 0;
-        const F_old = currentArtistData.totalEditions ?? 0;
-        const sum_SiVi_old = currentArtistData.totalScoreWeightedValuation ?? 0;
-        const sum_Si2_old = currentArtistData.sumOfScoresSquared ?? 0;
+        const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
+        const F_old = Number(currentArtistData.totalEditions) || 0;
+        const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation) || 0;
+        const sum_Si2_old = Number(currentArtistData.sumOfScoresSquared) || 0;
 
         const V_new = V_old + new_Vi;
         const F_new = F_old + new_Fi;
@@ -391,7 +389,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         transaction.update(artistRef, {
             totalPortfolioValue: V_new,
             totalEditions: F_new,
-            availableEditions: (currentArtistData.availableEditions ?? 0) + new_Fi,
+            availableEditions: (Number(currentArtistData.availableEditions) || 0) + new_Fi,
             fractalPrice: P_new,
             totalScoreWeightedValuation: sum_SiVi_new,
             sumOfScoresSquared: sum_Si2_new,
@@ -436,14 +434,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const currentArtistData = artistSnap.data() as Artist;
           const oldFractalData = fractalSnap.data() as Fractal;
 
-          // ArtFractalValuePro - artwork update data
           const v_old = Number(oldFractalData.price) || 0;
           const s_old = Number(oldFractalData.aiScore) || 0;
           const v_new = Number(finalPrice) || 0;
           const s_new = Number(evaluation.finalScore) || 0;
           const f_portfolio_new = Number(artworkData.editionsToIssue) || 0;
           
-          // ArtFractalValuePro - portfolio update logic
           const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
           const F_old = Number(currentArtistData.totalEditions) || 0;
           const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation) || 0;
@@ -476,7 +472,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           if (shouldApplyGrade) {
               fractalUpdateData.crestoxGrade = evaluation.grade;
           }
-
+          
           transaction.update(fractalRef, fractalUpdateData);
 
           transaction.update(artistRef, {
