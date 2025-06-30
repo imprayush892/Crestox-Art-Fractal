@@ -29,6 +29,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { artworkFormSchema, type ArtworkFormValues } from '@/lib/data';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import type { z } from 'zod';
@@ -41,6 +43,53 @@ type ArtworkSubmissionData = {
     finalPrice: number;
     shouldApplyGrade: boolean;
 };
+
+const getScoreColor = (score: number) => {
+    if (score >= 8) return 'text-green-600';
+    if (score >= 5) return 'text-yellow-600';
+    return 'text-red-600';
+};
+
+const EvaluationScorecardDialog = ({ isOpen, onClose, evaluation, onOptForManualReview }: {isOpen: boolean, onClose: () => void, evaluation: SuccessfulEvaluation | null, onOptForManualReview: () => void}) => {
+    if (!evaluation) return null;
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle className="font-headline text-2xl">Evaluation Scorecard</DialogTitle>
+                    <DialogDescription>Detailed analysis for your artwork.</DialogDescription>
+                </DialogHeader>
+                <div className="max-h-[60vh] overflow-y-auto pr-4">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Criterion</TableHead>
+                                <TableHead className="text-center">Weight</TableHead>
+                                <TableHead className="text-center">Score (0-10)</TableHead>
+                                <TableHead className="text-right">Weighted Score</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {evaluation.breakdown?.map((item) => (
+                                <TableRow key={item.id}>
+                                    <TableCell className="font-medium text-xs">{item.criterion}</TableCell>
+                                    <TableCell className="text-center">{item.weight}%</TableCell>
+                                    <TableCell className={`text-center font-bold text-lg ${getScoreColor(item.score)}`}>{item.score}</TableCell>
+                                    <TableCell className="text-right font-medium">{item.weightedScore.toFixed(2)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                <DialogFooter className="flex-col items-center gap-4 mt-4 pt-4 border-t">
+                    <p className="text-sm text-center">Still not satisfied with valuation?</p>
+                    <Button onClick={onOptForManualReview}>Opt for Manual Valuation</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 
 export default function CreateArtworkPage() {
   const { isLoggedIn, artistProfile, addArtwork, updateArtistProfile } = useAuth();
@@ -58,6 +107,8 @@ export default function CreateArtworkPage() {
   const [manualReviewDetails, setManualReviewDetails] = useState({ concern: '', analysisForEmail: '' });
   const [newMessage, setNewMessage] = useState("");
   const [artworkSubmissionData, setArtworkSubmissionData] = useState<ArtworkSubmissionData | null>(null);
+  const [isScorecardDialogOpen, setIsScorecardDialogOpen] = useState(false);
+  const [isManualReviewConfirmDialogOpen, setIsManualReviewConfirmDialogOpen] = useState(false);
   
   const form = useForm<ArtworkFormValues>({
     resolver: zodResolver(artworkFormSchema),
@@ -274,6 +325,35 @@ export default function CreateArtworkPage() {
     });
     router.push('/portfolio');
   };
+  
+  const handleRequestManualValuation = () => {
+    const data = form.getValues();
+    const evaluation = evaluationResult;
+    if (!data || !evaluation || !artistProfile) return;
+
+    let analysisDetail = `MANUAL VALUATION REQUEST\n\n`;
+    analysisDetail += `Artwork ('${data.title}') has been submitted for manual valuation by the artist.\n\n`;
+    analysisDetail += `--- Provided Artwork Details ---\n`;
+    analysisDetail += `Title: ${data.title}\n`;
+    analysisDetail += `Description: ${data.description}\n`;
+    analysisDetail += `Artist Bio: ${artistProfile.bio}\n\n`;
+    analysisDetail += `--- AI Evaluation Summary ---\n`;
+    analysisDetail += `Final Score: ${evaluation.finalScore}\n`;
+    analysisDetail += `Crestox Grade: ${evaluation.grade}\n`;
+    analysisDetail += `Crestox Price Range: ₹${evaluation.crestoxPriceRange[0]} - ₹${evaluation.crestoxPriceRange[1]}\n`;
+
+    const subject = encodeURIComponent("Manual Valuation Request");
+    const body = encodeURIComponent(analysisDetail);
+    window.location.href = `mailto:Crestox@crestox.com?subject=${subject}&body=${body}`;
+    
+    setIsManualReviewConfirmDialogOpen(false);
+    toast({
+        title: "Manual Valuation Requested",
+        description: "Your email client has been opened. Please send the email to complete the request.",
+        duration: 8000
+    });
+    router.push('/portfolio');
+};
 
   const handleCancelManualCheck = () => {
     setIsManualReviewDialogOpen(false);
@@ -290,6 +370,31 @@ export default function CreateArtworkPage() {
 
   return (
     <>
+      <EvaluationScorecardDialog 
+        isOpen={isScorecardDialogOpen}
+        onClose={() => setIsScorecardDialogOpen(false)}
+        evaluation={evaluationResult}
+        onOptForManualReview={() => {
+            setIsScorecardDialogOpen(false);
+            setIsManualReviewConfirmDialogOpen(true);
+        }}
+      />
+      
+      <AlertDialog open={isManualReviewConfirmDialogOpen} onOpenChange={setIsManualReviewConfirmDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Manual Valuation</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Only 3 manual valuations per artwork are free. After that, a small fee will be charged. Are you sure you want to proceed?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleRequestManualValuation}>Continue</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
         <DialogContent>
             <DialogHeader>
@@ -396,6 +501,14 @@ export default function CreateArtworkPage() {
                               </Button>
                           </CardContent>
                       </Card>
+                  </div>
+                  <div className="text-center mt-4">
+                      <p className="text-sm text-muted-foreground">
+                          Not satisfied with the valuation?{' '}
+                          <Button variant="link" className="p-0 h-auto text-xs" onClick={() => setIsScorecardDialogOpen(true)}>
+                              View Scorecard and Request Manual Review
+                          </Button>
+                      </p>
                   </div>
                 </div>
             )}
@@ -715,5 +828,3 @@ export default function CreateArtworkPage() {
     </>
   );
 }
-
-    
