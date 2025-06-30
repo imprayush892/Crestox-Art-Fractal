@@ -333,11 +333,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         const currentArtistData = artistSnap.data() as Artist;
         
-        // Explicitly parse all incoming and existing values to numbers.
-        const new_Vi = Number(finalPrice) || 0;
-        const new_Si = Number(evaluationResult.finalScore) || 0;
-        const new_Fi = parseInt(String(artworkData.editionsToIssue), 10) || 0;
-
         const { length, breadth, height, unit } = artworkData;
         const artworkSize = { length, breadth, unit, ...(height && { height }) };
 
@@ -350,8 +345,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             artworkSize,
             images: imageUrls,
             heroImage: heroImageUrl,
-            price: new_Vi,
-            priceHistory: [{ date: new Date().toISOString(), price: new_Vi }],
+            price: Number(finalPrice) || 0,
+            priceHistory: [{ date: new Date().toISOString(), price: Number(finalPrice) || 0 }],
             artistMinEstimate: artworkData.minEstimatedValue,
             artistMaxEstimate: artworkData.maxEstimatedValue,
             width: 600, 
@@ -362,7 +357,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             timeEffort: artworkData.timeEffort || "",
             biographicalContext: artworkData.biographicalContext || "",
             commissionPatronage: artworkData.commissionPatronage || "",
-            aiScore: new_Si,
+            aiScore: Number(evaluationResult.finalScore) || 0,
             aiScorecard: evaluationResult.breakdown,
             valuationBreakdown: evaluationResult.valuationBreakdown,
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
@@ -372,6 +367,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             newFractalData.crestoxGrade = evaluationResult.grade;
         }
         
+        // --- Robust Numeric Calculations ---
+        const new_Vi = Number(finalPrice) || 0;
+        const new_Si = Number(evaluationResult.finalScore) || 0;
+        const new_Fi = parseInt(String(artworkData.editionsToIssue), 10) || 0;
+        
         const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
         const F_old = parseInt(String(currentArtistData.totalEditions), 10) || 0;
         const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation) || 0;
@@ -380,6 +380,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         const V_new = V_old + new_Vi;
         const F_new = F_old + new_Fi;
+        const available_F_new = available_F_old + new_Fi;
         const sum_SiVi_new = sum_SiVi_old + (new_Si * new_Vi);
         const sum_Si2_new = sum_Si2_old + (new_Si * new_Si);
 
@@ -392,7 +393,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         transaction.update(artistRef, {
             totalPortfolioValue: V_new,
             totalEditions: F_new,
-            availableEditions: available_F_old + new_Fi,
+            availableEditions: available_F_new,
             fractalPrice: P_new,
             totalScoreWeightedValuation: sum_SiVi_new,
             sumOfScoresSquared: sum_Si2_new,
@@ -437,13 +438,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const currentArtistData = artistSnap.data() as Artist;
           const oldFractalData = fractalSnap.data() as Fractal;
 
-          // Explicitly parse all incoming and existing values to numbers.
+          // --- Robust Numeric Calculations ---
           const v_old = Number(oldFractalData.price) || 0;
           const s_old = Number(oldFractalData.aiScore) || 0;
           const v_new = Number(finalPrice) || 0;
           const s_new = Number(evaluation.finalScore) || 0;
-          
-          const f_portfolio_new = parseInt(String(artworkData.editionsToIssue), 10) || 0;
           
           const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
           const F_old = parseInt(String(currentArtistData.totalEditions), 10) || 0;
@@ -451,9 +450,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const sum_Si2_old = Number(currentArtistData.sumOfScoresSquared) || 0;
           const available_F_old = parseInt(String(currentArtistData.availableEditions), 10) || 0;
 
-          // Now all arithmetic should be safe.
+          const f_portfolio_new = parseInt(String(artworkData.editionsToIssue), 10) || 0;
+
           const V_final = V_old - v_old + v_new;
           const F_final = F_old + f_portfolio_new;
+          const available_F_final = available_F_old + f_portfolio_new;
           const sum_SiVi_final = sum_SiVi_old - (s_old * v_old) + (s_new * v_new);
           const sum_Si2_final = sum_Si2_old - (s_old * s_old) + (s_new * s_new);
 
@@ -479,7 +480,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           if (shouldApplyGrade) {
               fractalUpdateData.crestoxGrade = evaluation.grade;
           } else {
-              delete fractalUpdateData.crestoxGrade;
+              fractalUpdateData.crestoxGrade = null; // Use null instead of undefined for Firestore
           }
           
           transaction.update(fractalRef, fractalUpdateData);
@@ -487,7 +488,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           transaction.update(artistRef, {
               totalPortfolioValue: V_final,
               totalEditions: F_final,
-              availableEditions: available_F_old + f_portfolio_new,
+              availableEditions: available_F_final,
               fractalPrice: P_final,
               totalScoreWeightedValuation: sum_SiVi_final,
               sumOfScoresSquared: sum_Si2_final,
