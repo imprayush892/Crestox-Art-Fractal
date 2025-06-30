@@ -335,7 +335,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         
         const new_Vi = Number(finalPrice) || 0;
         const new_Si = Number(evaluationResult.finalScore) || 0;
-        const new_Fi = Number(artworkData.editionsToIssue) || 0;
+        const new_Fi = parseInt(String(artworkData.editionsToIssue), 10) || 0;
 
         const { length, breadth, height, unit } = artworkData;
         const artworkSize = { length, breadth, unit, ...(height && { height }) };
@@ -371,9 +371,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         }
         
         const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
-        const F_old = Number(currentArtistData.totalEditions) || 0;
+        const F_old = parseInt(String(currentArtistData.totalEditions), 10) || 0;
         const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation) || 0;
         const sum_Si2_old = Number(currentArtistData.sumOfScoresSquared) || 0;
+        const available_F_old = parseInt(String(currentArtistData.availableEditions), 10) || 0;
 
         const V_new = V_old + new_Vi;
         const F_new = F_old + new_Fi;
@@ -384,12 +385,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         const P_new = F_new > 0 ? V_new / F_new : 0;
 
         const newFractalRef = doc(db, "fractals", newFractalId);
-        transaction.set(newFractalRef, newFractalData);
+        if (shouldApplyGrade) {
+            transaction.set(newFractalRef, newFractalData);
+        } else {
+            const { crestoxGrade, ...dataWithoutGrade } = newFractalData;
+            transaction.set(newFractalRef, dataWithoutGrade);
+        }
 
         transaction.update(artistRef, {
             totalPortfolioValue: V_new,
             totalEditions: F_new,
-            availableEditions: (Number(currentArtistData.availableEditions) || 0) + new_Fi,
+            availableEditions: available_F_old + new_Fi,
             fractalPrice: P_new,
             totalScoreWeightedValuation: sum_SiVi_new,
             sumOfScoresSquared: sum_Si2_new,
@@ -438,12 +444,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const s_old = Number(oldFractalData.aiScore) || 0;
           const v_new = Number(finalPrice) || 0;
           const s_new = Number(evaluation.finalScore) || 0;
-          const f_portfolio_new = Number(artworkData.editionsToIssue) || 0;
+          
+          const f_portfolio_new = parseInt(String(artworkData.editionsToIssue), 10) || 0;
           
           const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
-          const F_old = Number(currentArtistData.totalEditions) || 0;
+          const F_old = parseInt(String(currentArtistData.totalEditions), 10) || 0;
           const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation) || 0;
           const sum_Si2_old = Number(currentArtistData.sumOfScoresSquared) || 0;
+          const available_F_old = parseInt(String(currentArtistData.availableEditions), 10) || 0;
 
           const V_final = V_old - v_old + v_new;
           const F_final = F_old + f_portfolio_new;
@@ -471,6 +479,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
           if (shouldApplyGrade) {
               fractalUpdateData.crestoxGrade = evaluation.grade;
+          } else {
+              delete fractalUpdateData.crestoxGrade;
           }
           
           transaction.update(fractalRef, fractalUpdateData);
@@ -478,7 +488,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           transaction.update(artistRef, {
               totalPortfolioValue: V_final,
               totalEditions: F_final,
-              availableEditions: (Number(currentArtistData.availableEditions) || 0) + f_portfolio_new,
+              availableEditions: available_F_old + f_portfolio_new,
               fractalPrice: P_final,
               totalScoreWeightedValuation: sum_SiVi_final,
               sumOfScoresSquared: sum_Si2_final,
