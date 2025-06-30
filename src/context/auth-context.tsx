@@ -341,7 +341,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         const { length, breadth, height, unit } = artworkData;
         const artworkSize = { length, breadth, unit, ...(height && { height }) };
 
-        const newFractalData: Omit<Fractal, 'id'> = {
+        const newFractalData: Omit<Fractal, 'id' | 'crestoxGrade'> & { crestoxGrade?: string } = {
             artistId: artistProfile.id,
             title: artworkData.title,
             description: artworkData.description,
@@ -364,9 +364,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             aiScore: new_Si,
             aiScorecard: evaluationResult.breakdown,
             valuationBreakdown: evaluationResult.valuationBreakdown,
-            crestoxGrade: shouldApplyGrade ? evaluationResult.grade : undefined,
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
         };
+
+        if (shouldApplyGrade) {
+            newFractalData.crestoxGrade = evaluationResult.grade;
+        }
         
         // ArtFractalValuePro - portfolio update logic
         const V_old = currentArtistData.totalPortfolioValue ?? 0;
@@ -457,7 +460,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const { length, breadth, height, unit, ...restOfArtworkData } = artworkData;
           const artworkSize = { length, breadth, unit, ...(height && { height }) };
           
-          transaction.update(fractalRef, {
+          const fractalUpdateData: any = {
               ...restOfArtworkData,
               artworkSize,
               price: v_new,
@@ -465,11 +468,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               aiScore: s_new,
               aiScorecard: evaluation.breakdown,
               valuationBreakdown: evaluation.valuationBreakdown,
-              crestoxGrade: shouldApplyGrade ? evaluation.grade : oldFractalData.crestoxGrade,
               artistMinEstimate: artworkData.minEstimatedValue,
               artistMaxEstimate: artworkData.maxEstimatedValue,
               crestoxPriceRange: evaluation.crestoxPriceRange,
-          });
+          };
+
+          if (shouldApplyGrade) {
+              fractalUpdateData.crestoxGrade = evaluation.grade;
+          }
+
+          transaction.update(fractalRef, fractalUpdateData);
 
           transaction.update(artistRef, {
               totalPortfolioValue: V_final,
