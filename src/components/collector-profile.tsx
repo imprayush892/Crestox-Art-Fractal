@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useMemo } from 'react';
 import type { PublicHolding, PublicUser, ResaleListing } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from 'next/link';
 import { ArrowUpRight, DollarSign, Package } from 'lucide-react';
@@ -35,20 +36,23 @@ export function CollectorProfile({ collector, holdings, listings }: CollectorPro
     const totalHoldings = holdings.length;
     const totalListings = listings.reduce((sum, l) => sum + l.quantity, 0);
 
-    const listingsByArtist = useMemo(() => {
-        return listings.reduce((acc, listing) => {
-            (acc[listing.artistId] = acc[listing.artistId] || []).push(listing);
-            return acc;
-        }, {} as Record<string, ResaleListing[]>);
-    }, [listings]);
+    const collectionByArtist = useMemo(() => {
+        const allArtistIds = new Set(holdings.map(h => h.artistId));
+        
+        return Array.from(allArtistIds).map(artistId => {
+            const artist = artistMap.get(artistId);
+            if (!artist) return null;
 
-    const holdingsByArtist = useMemo(() => {
-        return holdings.reduce((acc, holding) => {
-            (acc[holding.artistId] = acc[holding.artistId] || 0);
-            acc[holding.artistId]++;
-            return acc;
-        }, {} as Record<string, number>);
-    }, [holdings]);
+            const artistHoldingsCount = holdings.filter(h => h.artistId === artistId).length;
+            const artistListings = listings.filter(l => l.artistId === artistId);
+
+            return {
+                artist,
+                holdingsCount: artistHoldingsCount,
+                listings: artistListings,
+            };
+        }).filter(Boolean) as { artist: NonNullable<typeof artist>, holdingsCount: number, listings: ResaleListing[] }[];
+    }, [holdings, listings, artistMap]);
 
 
     return (
@@ -92,53 +96,53 @@ export function CollectorProfile({ collector, holdings, listings }: CollectorPro
             </div>
             
             <div className="space-y-8">
-                <h2 className="font-headline text-3xl font-bold">Fractals For Sale</h2>
-                {Object.keys(listingsByArtist).length > 0 ? (
+                <h2 className="font-headline text-3xl font-bold">Collection by Artist</h2>
+                {collectionByArtist.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {Object.entries(listingsByArtist).map(([artistId, artistListings]) => {
-                            const artist = artistMap.get(artistId);
-                            if (!artist) return null;
-
-                            const fractalsHeldForArtist = holdingsByArtist[artistId] || 0;
-                            const fractalsForSaleForArtist = artistListings.reduce((sum, l) => sum + l.quantity, 0);
+                        {collectionByArtist.map(({ artist, holdingsCount, listings }) => {
+                            const forSaleCount = listings.reduce((sum, l) => sum + l.quantity, 0);
 
                             return (
-                                <Card key={artistId}>
+                                <Card key={artist.id}>
                                     <CardHeader>
                                         <CardTitle className="font-headline">{artist.name}</CardTitle>
                                         <div className="text-sm text-muted-foreground flex items-center gap-4 pt-1">
                                             <div className="flex items-center gap-1.5">
                                                 <Package className="h-4 w-4"/>
-                                                <span>{fractalsHeldForArtist} Held</span>
+                                                <span>{holdingsCount} Held</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <DollarSign className="h-4 w-4"/>
-                                                <span>{fractalsForSaleForArtist} For Sale</span>
+                                                <span>{forSaleCount} For Sale</span>
                                             </div>
                                         </div>
                                     </CardHeader>
                                     <CardContent>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Qty</TableHead>
-                                                    <TableHead>Price Range</TableHead>
-                                                    <TableHead className="text-right">Current Price</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {artistListings.map(listing => {
-                                                    const currentPrice = calculateCurrentResalePrice(listing);
-                                                    return (
-                                                        <TableRow key={listing.id}>
-                                                            <TableCell>{listing.quantity}</TableCell>
-                                                            <TableCell>₹{listing.minPrice.toFixed(2)} - ₹{listing.initialPrice.toFixed(2)}</TableCell>
-                                                            <TableCell className="text-right font-semibold">₹{currentPrice.toFixed(2)}</TableCell>
-                                                        </TableRow>
-                                                    )
-                                                })}
-                                            </TableBody>
-                                        </Table>
+                                        {listings.length > 0 ? (
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Qty</TableHead>
+                                                        <TableHead>Price Range</TableHead>
+                                                        <TableHead className="text-right">Current Price</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {listings.map(listing => {
+                                                        const currentPrice = calculateCurrentResalePrice(listing);
+                                                        return (
+                                                            <TableRow key={listing.id}>
+                                                                <TableCell>{listing.quantity}</TableCell>
+                                                                <TableCell>₹{listing.minPrice.toFixed(2)} - ₹{listing.initialPrice.toFixed(2)}</TableCell>
+                                                                <TableCell className="text-right font-semibold">₹{currentPrice.toFixed(2)}</TableCell>
+                                                            </TableRow>
+                                                        )
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground py-4">No fractals from this artist are currently listed for sale.</p>
+                                        )}
                                          <Link href={`/artist/${artist.id}`} className="inline-flex items-center gap-1 text-primary hover:underline text-xs mt-4">
                                             View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
                                         </Link>
@@ -149,7 +153,7 @@ export function CollectorProfile({ collector, holdings, listings }: CollectorPro
                     </div>
                 ) : (
                      <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
-                        This collector has no items currently for sale.
+                        This collector does not hold any fractals yet.
                     </div>
                 )}
             </div>
