@@ -6,7 +6,6 @@ service cloud.firestore {
     // --- Users Collection ---
     match /users/{userId} {
       // READ: Any authenticated user can read any other user's public profile data.
-      // This is necessary for the collector list to get names and avatars.
       allow read: if request.auth.uid != null;
       
       // CREATE & DELETE: A user can only create or delete their own profile.
@@ -15,7 +14,6 @@ service cloud.firestore {
       // UPDATE: A user can update their own profile.
       // A different user (a buyer) can also update this user's profile (as a seller),
       // but ONLY if they are increasing the seller's walletBalance. No other fields can be changed.
-      // This is critical for the "buy fractal from reseller" transaction to work.
       allow update: if (request.auth.uid == userId) || 
                      (request.auth.uid != userId &&
                       request.resource.data.walletBalance > resource.data.walletBalance &&
@@ -38,13 +36,19 @@ service cloud.firestore {
       // CREATE: Any authenticated user can create an artist profile.
       allow create: if request.auth.uid != null;
       // UPDATE: The artist can update their own profile.
-      // A buyer can also update the profile, but ONLY to decrease the availableEditions count.
-      // This is critical for the "buy fractal from artist" transaction.
-      allow update: if request.auth.uid != null && 
-                       (request.auth.uid == resource.data.userId || 
-                        (request.resource.data.availableEditions < resource.data.availableEditions &&
-                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['availableEditions']))
-                       );
+      // A buyer can also update the profile, but only under specific purchase conditions.
+      allow update: if request.auth.uid != null &&
+                   (
+                     // Artist is updating their own profile
+                     request.auth.uid == resource.data.userId ||
+                     // A buyer is updating the profile during a purchase
+                     (
+                       request.auth.uid != resource.data.userId &&
+                       request.resource.data.availableEditions <= resource.data.availableEditions &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasAll(['availableEditions', 'fractalPrice', 'priceHistory']) &&
+                       request.resource.data.diff(resource.data).affectedKeys().size() == 3
+                     )
+                   );
     }
 
     // --- Fractals & ResaleListings Collections ---

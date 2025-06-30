@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -463,7 +464,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           const { length, breadth, height, unit, ...restOfArtworkData } = artworkData;
           const artworkSize = { length, breadth, unit, ...(height && { height }) };
           
-          const fractalUpdateData: Partial<Fractal> & { [key: string]: any } = {
+          const fractalUpdateData: { [key: string]: any } = {
               ...restOfArtworkData,
               artworkSize,
               price: v_new,
@@ -479,7 +480,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           if (shouldApplyGrade) {
               fractalUpdateData.crestoxGrade = evaluation.grade;
           } else {
-              fractalUpdateData.crestoxGrade = null;
+              fractalUpdateData.crestoxGrade = null; // Use null for explicit removal
           }
           
           transaction.update(fractalRef, fractalUpdateData);
@@ -555,7 +556,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         }
         
         const buyerSnap = docSnaps.get('buyer');
-        if (!buyerSnap?.exists() || (buyerSnap.data() as User).walletBalance < totalPayable) {
+        const buyerData = buyerSnap?.data() as User;
+        if (!buyerSnap?.exists() || buyerData.walletBalance < totalPayable) {
             throw new Error("Insufficient funds or user not found.");
         }
 
@@ -591,19 +593,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             }
         }
 
-        transaction.update(docRefs.get('buyer')!, { walletBalance: (buyerSnap.data() as User).walletBalance - totalPayable });
+        // 1. Debit the buyer
+        transaction.update(docRefs.get('buyer')!, { walletBalance: buyerData.walletBalance - totalPayable });
         
-        let totalQuantityTraded = 0;
-
+        // 2. Process Reseller transactions
         for (const item of orderBreakdown) {
-            totalQuantityTraded += item.quantity;
-            if (item.source === 'ARTIST') {
-                const artistData = docSnaps.get(`artist_${artistId}`)!.data() as Artist;
-                if (artistData.availableEditions < item.quantity) {
-                    throw new Error("Not enough fractals available from artist.");
-                }
-                transaction.update(docRefs.get(`artist_${artistId}`)!, { availableEditions: artistData.availableEditions - item.quantity });
-            } else if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
+            if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
                 const sellerRef = docRefs.get(`seller_${item.resellerId}`)!;
                 const sellerData = docSnaps.get(`seller_${item.resellerId}`)!.data() as User;
                 const proceeds = (item.quantity * item.price) * 0.98; // 2% platform fee
@@ -623,21 +618,36 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                     transaction.delete(doc(db, `users/${item.resellerId}/holdings/${holdingId}`));
                 }
             }
+        }
 
+        // 3. Create new holdings for the buyer
+        for (const item of orderBreakdown) {
             for (let j = 0; j < item.quantity; j++) {
                 const newHoldingRef = doc(firestoreCollection(db, `users/${user.uid}/holdings`));
                 const newHoldingData: Omit<OwnedFractal, 'id'> = {
                     fractalId: "portfolio-fractal", artistId, purchaseDate: new Date().toISOString(),
-                    purchasePrice: item.price, // Store pre-tax price
+                    purchasePrice: item.price,
                     serialNumber: uuidv4(), status: 'owned',
                 };
                 transaction.set(newHoldingRef, newHoldingData);
             }
         }
-        
+
+        // 4. Perform a single, combined update on the Artist document
         const artistData = docSnaps.get(`artist_${artistId}`)!.data() as Artist;
+        const totalQuantityTraded = orderBreakdown.reduce((sum, item) => sum + item.quantity, 0);
+        const quantityFromArtist = orderBreakdown
+            .filter(item => item.source === 'ARTIST')
+            .reduce((sum, item) => sum + item.quantity, 0);
+
+        if (quantityFromArtist > 0 && artistData.availableEditions < quantityFromArtist) {
+            throw new Error("Not enough fractals available from artist.");
+        }
+        
         const newFractalPrice = applyPriceImpact(artistData.fractalPrice, totalQuantityTraded, artistData.totalEditions, true);
+        
         transaction.update(docRefs.get(`artist_${artistId}`)!, {
+            availableEditions: artistData.availableEditions - quantityFromArtist,
             fractalPrice: newFractalPrice,
             priceHistory: arrayUnion({ date: new Date().toISOString(), price: newFractalPrice })
         });
