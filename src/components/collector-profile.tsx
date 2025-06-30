@@ -1,15 +1,13 @@
-
 'use client';
 
 import { useMemo } from 'react';
 import type { PublicHolding, PublicUser, ResaleListing } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
-import { Button } from './ui/button';
+import { ArrowUpRight, DollarSign, Package } from 'lucide-react';
 
 interface CollectorProfileProps {
     collector: PublicUser;
@@ -35,6 +33,23 @@ export function CollectorProfile({ collector, holdings, listings }: CollectorPro
     };
     
     const totalHoldings = holdings.length;
+    const totalListings = listings.reduce((sum, l) => sum + l.quantity, 0);
+
+    const listingsByArtist = useMemo(() => {
+        return listings.reduce((acc, listing) => {
+            (acc[listing.artistId] = acc[listing.artistId] || []).push(listing);
+            return acc;
+        }, {} as Record<string, ResaleListing[]>);
+    }, [listings]);
+
+    const holdingsByArtist = useMemo(() => {
+        return holdings.reduce((acc, holding) => {
+            (acc[holding.artistId] = acc[holding.artistId] || 0);
+            acc[holding.artistId]++;
+            return acc;
+        }, {} as Record<string, number>);
+    }, [holdings]);
+
 
     return (
         <>
@@ -60,10 +75,10 @@ export function CollectorProfile({ collector, holdings, listings }: CollectorPro
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Items for Sale</CardTitle>
+                        <CardTitle>Fractals for Sale</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-4xl font-bold">{listings.length}</p>
+                        <p className="text-4xl font-bold">{totalListings.toLocaleString()}</p>
                     </CardContent>
                 </Card>
                  <Card>
@@ -76,53 +91,68 @@ export function CollectorProfile({ collector, holdings, listings }: CollectorPro
                 </Card>
             </div>
             
-            <Card>
-                <CardHeader>
-                    <CardTitle>Currently For Sale</CardTitle>
-                    <CardDescription>Fractals this collector has listed on the secondary market.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Artist</TableHead>
-                                <TableHead>Quantity</TableHead>
-                                <TableHead>Price Range</TableHead>
-                                <TableHead>Current Price</TableHead>
-                                <TableHead>Ends In</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {listings.length > 0 ? (
-                                listings.map(listing => {
-                                    const artist = artistMap.get(listing.artistId);
-                                    if (!artist) return null;
-                                    const currentPrice = calculateCurrentResalePrice(listing);
-                                    const endDate = new Date(new Date(listing.listingTimestamp).getTime() + listing.periodSeconds * 1000);
+            <div className="space-y-8">
+                <h2 className="font-headline text-3xl font-bold">Fractals For Sale</h2>
+                {Object.keys(listingsByArtist).length > 0 ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {Object.entries(listingsByArtist).map(([artistId, artistListings]) => {
+                            const artist = artistMap.get(artistId);
+                            if (!artist) return null;
 
-                                    return (
-                                        <TableRow key={listing.id}>
-                                            <TableCell>
-                                                <Button variant="link" asChild className="p-0 h-auto">
-                                                    <Link href={`/artist/${artist.id}`} className="font-medium">{artist.name}</Link>
-                                                </Button>
-                                            </TableCell>
-                                            <TableCell>{listing.quantity}</TableCell>
-                                            <TableCell>₹{listing.minPrice.toFixed(2)} - ₹{listing.initialPrice.toFixed(2)}</TableCell>
-                                            <TableCell className="font-semibold">₹{currentPrice.toFixed(2)}</TableCell>
-                                            <TableCell>{formatDistanceToNow(endDate, { addSuffix: true })}</TableCell>
-                                        </TableRow>
-                                    );
-                                })
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24">This collector has no items for sale.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                            const fractalsHeldForArtist = holdingsByArtist[artistId] || 0;
+                            const fractalsForSaleForArtist = artistListings.reduce((sum, l) => sum + l.quantity, 0);
+
+                            return (
+                                <Card key={artistId}>
+                                    <CardHeader>
+                                        <CardTitle className="font-headline">{artist.name}</CardTitle>
+                                        <div className="text-sm text-muted-foreground flex items-center gap-4 pt-1">
+                                            <div className="flex items-center gap-1.5">
+                                                <Package className="h-4 w-4"/>
+                                                <span>{fractalsHeldForArtist} Held</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <DollarSign className="h-4 w-4"/>
+                                                <span>{fractalsForSaleForArtist} For Sale</span>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Qty</TableHead>
+                                                    <TableHead>Price Range</TableHead>
+                                                    <TableHead className="text-right">Current Price</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {artistListings.map(listing => {
+                                                    const currentPrice = calculateCurrentResalePrice(listing);
+                                                    return (
+                                                        <TableRow key={listing.id}>
+                                                            <TableCell>{listing.quantity}</TableCell>
+                                                            <TableCell>₹{listing.minPrice.toFixed(2)} - ₹{listing.initialPrice.toFixed(2)}</TableCell>
+                                                            <TableCell className="text-right font-semibold">₹{currentPrice.toFixed(2)}</TableCell>
+                                                        </TableRow>
+                                                    )
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                         <Link href={`/artist/${artist.id}`} className="inline-flex items-center gap-1 text-primary hover:underline text-xs mt-4">
+                                            View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
+                                        </Link>
+                                    </CardContent>
+                                </Card>
+                            )
+                        })}
+                    </div>
+                ) : (
+                     <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
+                        This collector has no items currently for sale.
+                    </div>
+                )}
+            </div>
         </>
     );
 }
