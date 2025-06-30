@@ -28,6 +28,10 @@ export function ArtistCollectorsList({ artistId }: ArtistCollectorsListProps) {
     const usersMap = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
 
     useEffect(() => {
+        if (!artistId) {
+            return;
+        }
+
         const fetchCollectors = async () => {
             setIsLoading(true);
             setError(null);
@@ -48,14 +52,8 @@ export function ArtistCollectorsList({ artistId }: ArtistCollectorsListProps) {
             }
         };
 
-        if (artistId && allUsers.length > 0) {
-          fetchCollectors();
-        } else if (!allUsers.length && !isLoading) {
-          // If allUsers hasn't loaded, wait. If it's loaded and empty, proceed.
-          setIsLoading(false);
-        }
-
-    }, [artistId, getCollectorsForArtist, allUsers, isLoading]);
+        fetchCollectors();
+    }, [artistId, getCollectorsForArtist]);
 
     const collectorsWithStats = useMemo(() => {
         return collectors.map(collector => {
@@ -79,7 +77,9 @@ export function ArtistCollectorsList({ artistId }: ArtistCollectorsListProps) {
         }).filter(Boolean) as { user: PublicUser, stats: CollectorStats, ownedCount: number }[];
     }, [collectors, usersMap, resaleListings, artistId]);
 
-    if (isLoading) {
+    const isStillLoadingProfiles = !isLoading && collectors.length > 0 && collectorsWithStats.length === 0;
+
+    if (isLoading || isStillLoadingProfiles) {
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[...Array(3)].map((_, i) => (
