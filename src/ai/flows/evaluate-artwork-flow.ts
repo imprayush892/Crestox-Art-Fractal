@@ -12,9 +12,8 @@ import { type AIScorecardBreakdown } from '@/lib/data';
 
 /**
  * ArtScoreChecklist
- * This constant contains the full 100-point evaluation rubric for artworks.
- * It is a critical part of the platform's evaluation system and should not be
- * modified without explicit instruction.
+ * This constant contains the full 100-point quality evaluation rubric.
+ * The final score (Q) from this is used in the ArtValueEst pricing model.
  */
 const ArtScoreChecklist = [
     {"id": 1, "criterion": "Artist Reputation/Notability", "type": "AI", "weight": 10},
@@ -119,6 +118,112 @@ const ArtScoreChecklist = [
     {"id": 100, "criterion": "Residue / Tape Marks", "type": "AI", "weight": 0.5}
 ];
 
+/**
+ * ArtValueEstCriteria
+ * This constant contains the criteria for monetary valuation. It is not currently
+ * used to generate a scorecard but is here for future system expansion.
+ */
+const ArtValueEstCriteria = [
+    { id: 1, criterion: "Artist Reputation & Demand", category: "Artist Profile and Reputation", weight: 2.64 },
+    { id: 2, criterion: "Career Stage", category: "Artist Profile and Reputation", weight: 2.11 },
+    { id: 3, criterion: "Awards and Honors", category: "Artist Profile and Reputation", weight: 1.06 },
+    { id: 4, criterion: "Education & Training", category: "Artist Profile and Reputation", weight: 0.53 },
+    { id: 5, criterion: "Gallery Representation", category: "Artist Profile and Reputation", weight: 1.58 },
+    { id: 6, criterion: "Published Catalogues/Monographs", category: "Artist Profile and Reputation", weight: 1.06 },
+    { id: 7, criterion: "Signature Style / Innovation", category: "Artist Profile and Reputation", weight: 1.58 },
+    { id: 8, criterion: "Volume of Works", category: "Artist Profile and Reputation", weight: 0.53 },
+    { id: 9, criterion: "Collaborations & Public Works", category: "Artist Profile and Reputation", weight: 1.06 },
+    { id: 10, criterion: "Artist Age / Active Period", category: "Artist Profile and Reputation", weight: 0.53 },
+    { id: 11, criterion: "Auction/Resale History of Artist", category: "Artist Profile and Reputation", weight: 1.58 },
+    { id: 12, criterion: "Collector Base & Followers", category: "Artist Profile and Reputation", weight: 1.06 },
+    { id: 13, criterion: "Geographic/Cultural Origin", category: "Artist Profile and Reputation", weight: 0.53 },
+    { id: 14, criterion: "External Endorsements", category: "Artist Profile and Reputation", weight: 0.53 },
+    { id: 15, criterion: "Body of Work Popularity", category: "Artist Profile and Reputation", weight: 0.53 },
+    { id: 16, criterion: "Provenance Records", category: "Artwork Authenticity and Provenance", weight: 3.25 },
+    { id: 17, criterion: "Certificate of Authenticity", category: "Artwork Authenticity and Provenance", weight: 1.95 },
+    { id: 18, criterion: "Catalogue Raisonné Entry", category: "Artwork Authenticity and Provenance", weight: 1.30 },
+    { id: 19, criterion: "Ownership Verification", category: "Artwork Authenticity and Provenance", weight: 1.30 },
+    { id: 20, criterion: "Stolen/Disputed History", category: "Artwork Authenticity and Provenance", weight: 1.30 },
+    { id: 21, criterion: "Blockchain/Digital Provenance", category: "Artwork Authenticity and Provenance", weight: 0.65 },
+    { id: 22, criterion: "Trademark/Copyright Clearance", category: "Artwork Authenticity and Provenance", weight: 0.65 },
+    { id: 23, criterion: "Authenticity Seals/Tags", category: "Artwork Authenticity and Provenance", weight: 0.65 },
+    { id: 24, criterion: "Scientific/Forensic Analysis", category: "Artwork Authenticity and Provenance", weight: 0.65 },
+    { id: 25, criterion: "Signature or Inscription", category: "Artwork Authenticity and Provenance", weight: 0.65 },
+    { id: 26, criterion: "Condition Report/Restoration Records", category: "Artwork Authenticity and Provenance", weight: 1.30 },
+    { id: 27, criterion: "Insurance/Appraisal Documentation", category: "Artwork Authenticity and Provenance", weight: 1.30 },
+    { id: 28, criterion: "Medium & Materials", category: "Materials, Technique, and Craftsmanship", weight: 1.67 },
+    { id: 29, criterion: "Technical Skill & Complexity", category: "Materials, Technique, and Craftsmanship", weight: 1.11 },
+    { id: 30, criterion: "Innovation in Technique", category: "Materials, Technique, and Craftsmanship", weight: 0.55 },
+    { id: 31, criterion: "Size/Scale", category: "Materials, Technique, and Craftsmanship", weight: 1.11 },
+    { id: 32, criterion: "Edition Size", category: "Materials, Technique, and Craftsmanship", weight: 1.11 },
+    { id: 33, criterion: "Surface/Support Quality", category: "Materials, Technique, and Craftsmanship", weight: 0.55 },
+    { id: 34, criterion: "Frame/Presentation", category: "Materials, Technique, and Craftsmanship", weight: 0.55 },
+    { id: 35, criterion: "Medium Scarcity", category: "Materials, Technique, and Craftsmanship", weight: 0.55 },
+    { id: 36, criterion: "Color Quality", category: "Materials, Technique, and Craftsmanship", weight: 0.55 },
+    { id: 37, criterion: "Multimedia/Interactive Features", category: "Materials, Technique, and Craftsmanship", weight: 0.55 },
+    { id: 38, criterion: "Condition of Materials", category: "Materials, Technique, and Craftsmanship", weight: 1.11 },
+    { id: 39, criterion: "Technique Rarity", category: "Materials, Technique, and Craftsmanship", weight: 0.55 },
+    { id: 40, criterion: "Time Invested", category: "Materials, Technique, and Craftsmanship", weight: 0.55 },
+    { id: 41, criterion: "Work Complexity", category: "Materials, Technique, and Craftsmanship", weight: 0.55 },
+    { id: 42, criterion: "Uniqueness of Format", category: "Materials, Technique, and Craftsmanship", weight: 0.55 },
+    { id: 43, criterion: "Subject Matter", category: "Aesthetic and Artistic Content", weight: 1.11 },
+    { id: 44, criterion: "Cultural Significance", category: "Aesthetic and Artistic Content", weight: 1.67 },
+    { id: 45, criterion: "Emotional/Visual Impact", category: "Aesthetic and Artistic Content", weight: 1.11 },
+    { id: 46, criterion: "Symbolism & Depth", category: "Aesthetic and Artistic Content", weight: 0.55 },
+    { id: 47, criterion: "Stylistic Rarity", category: "Aesthetic and Artistic Content", weight: 1.11 },
+    { id: 48, criterion: "Artistic Innovation", category: "Aesthetic and Artistic Content", weight: 0.55 },
+    { id: 49, criterion: "Visual Harmony", category: "Aesthetic and Artistic Content", weight: 0.55 },
+    { id: 50, criterion: "Historical Context", category: "Aesthetic and Artistic Content", weight: 1.11 },
+    { id: 51, criterion: "Scale in Narrative", category: "Aesthetic and Artistic Content", weight: 0.55 },
+    { id: 52, criterion: "Figurative vs. Abstract", category: "Aesthetic and Artistic Content", weight: 0.55 },
+    { id: 53, criterion: "Iconography", category: "Aesthetic and Artistic Content", weight: 0.55 },
+    { id: 54, criterion: "Color Usage", category: "Aesthetic and Artistic Content", weight: 0.55 },
+    { id: 55, criterion: "Subject Popularity", category: "Aesthetic and Artistic Content", weight: 0.55 },
+    { id: 56, criterion: "Design Elements", category: "Aesthetic and Artistic Content", weight: 0.55 },
+    { id: 57, criterion: "Authentic Narrative", category: "Aesthetic and Artistic Content", weight: 0.55 },
+    { id: 58, criterion: "Physical Condition", category: "Condition and Conservation", weight: 2.94 },
+    { id: 59, criterion: "Restoration Quality", category: "Condition and Conservation", weight: 1.76 },
+    { id: 60, criterion: "Aging / Patina", category: "Condition and Conservation", weight: 0.59 },
+    { id: 61, criterion: "Environmental Durability", category: "Condition and Conservation", weight: 0.59 },
+    { id: 62, criterion: "Conservation History", category: "Condition and Conservation", weight: 0.59 },
+    { id: 63, criterion: "Signed vs. Unsigned State", category: "Condition and Conservation", weight: 1.18 },
+    { id: 64, criterion: "Presentation State", category: "Condition and Conservation", weight: 0.59 },
+    { id: 65, criterion: "Framing / Mounting", category: "Condition and Conservation", weight: 0.59 },
+    { id: 66, criterion: "Completeness", category: "Condition and Conservation", weight: 0.59 },
+    { id: 67, criterion: "Original Components", category: "Condition and Conservation", weight: 0.59 },
+    { id: 68, criterion: "Comparable Sales", category: "Market Performance and Sales History", weight: 2.00 },
+    { id: 69, criterion: "Auction House / Gallery Prestige", category: "Market Performance and Sales History", weight: 1.34 },
+    { id: 70, criterion: "Current Market Trends", category: "Market Performance and Sales History", weight: 1.34 },
+    { id: 72, criterion: "Liquidity & Demand", category: "Market Performance and Sales History", weight: 0.67 },
+    { id: 73, criterion: "Collector Base", category: "Market Performance and Sales History", weight: 0.67 },
+    { id: 77, criterion: "Rarity of the Artwork", category: "Market Performance and Sales History", weight: 1.34 },
+    { id: 78, criterion: "Buyer & Seller Reputation", category: "Market Performance and Sales History", weight: 0.67 },
+    { id: 79, criterion: "Location of Sale", category: "Market Performance and Sales History", weight: 0.67 },
+    { id: 80, criterion: "Seasonality", category: "Market Performance and Sales History", weight: 0.67 },
+    { id: 82, criterion: "Display History", category: "Market Performance and Sales History", weight: 0.67 },
+    { id: 71, criterion: "Economic Conditions (71+75 combined)", category: "Economic and Investment Considerations", weight: 1.49 },
+    { id: 74, criterion: "Tax & Customs", category: "Economic and Investment Considerations", weight: 0.75 },
+    { id: 76, criterion: "Investment Performance", category: "Economic and Investment Considerations", weight: 1.50 },
+    { id: 81, criterion: "Commission & Fees", category: "Economic and Investment Considerations", weight: 0.75 },
+    { id: 83, criterion: "Cultural Heritage", category: "Cultural Significance and Social Impact", weight: 2.07 },
+    { id: 84, criterion: "Historical Era", category: "Cultural Significance and Social Impact", weight: 1.38 },
+    { id: 85, criterion: "Social Impact", category: "Cultural Significance and Social Impact", weight: 0.69 },
+    { id: 86, criterion: "Diversity & Representation", category: "Cultural Significance and Social Impact", weight: 0.69 },
+    { id: 87, criterion: "Celebrity Subjects", category: "Cultural Significance and Social Impact", weight: 0.69 },
+    { id: 88, criterion: "Community Engagement", category: "Cultural Significance and Social Impact", weight: 0.69 },
+    { id: 89, criterion: "Artistic Freedom", category: "Cultural Significance and Social Impact", weight: 0.69 },
+    { id: 90, criterion: "Popularity Among Young Collectors", category: "Cultural Significance and Social Impact", weight: 0.69 },
+    { id: 91, criterion: "Philanthropic Tie-ins", category: "Cultural Significance and Social Impact", weight: 0.69 },
+    { id: 92, criterion: "Pop-Culture Relevance", category: "Cultural Significance and Social Impact", weight: 0.69 },
+    { id: 93, criterion: "Publicity & Media", category: "Cultural Significance and Social Impact", weight: 0.69 },
+    { id: 94, criterion: "Creation Method – Human vs. AI", category: "AI Involvement and Digital Aspects", weight: 3.32 },
+    { id: 95, criterion: "Degree of AI Assistance", category: "AI Involvement and Digital Aspects", weight: 1.33 },
+    { id: 96, criterion: "Transparency of AI Use", category: "AI Involvement and Digital Aspects", weight: 0.66 },
+    { id: 97, criterion: "Training Data Ethics", category: "AI Involvement and Digital Aspects", weight: 0.66 },
+    { id: 98, criterion: "Innovation with AI", category: "AI Involvement and Digital Aspects", weight: 0.66 },
+    { id: 99, criterion: "Digital Certificate / Hash", category: "AI Involvement and Digital Aspects", weight: 0.66 },
+    { id: 100, criterion: "Originality / Plagiarism Risk/Originality Ethics", category: "Originality and Ethical Considerations", weight: 3.29 },
+];
 
 const EvaluateArtworkInputSchema = z.object({
   photoDataUri: z.string().describe(
@@ -148,11 +253,21 @@ const AiCriterionScoreSchema = z.object({
 const ArtworkAnalysisSchema = z.object({
   isAuthentic: z.boolean().describe('Whether or not the artwork is authentic. This is the most critical field.'),
   authenticityConcern: z.string().optional().describe('If isAuthentic is false, provide a brief explanation of the concern here.'),
-  scores: z.array(AiCriterionScoreSchema).optional().describe('An array of scores for each AI-evaluated criterion. ONLY provide if isAuthentic is true.'),
+  scores: z.array(AiCriterionScoreSchema).optional().describe('An array of scores for each ArtScoreChecklist criterion. ONLY provide if isAuthentic is true.'),
+  valuationScores: z.array(AiCriterionScoreSchema).optional().describe('An array of scores for each ArtValueEst criterion. ONLY provide if isAuthentic is true.'),
   minPriceAI: z.number().optional().describe("The AI's estimated minimum market price in INR (AMIN). ONLY provide if isAuthentic is true."),
   maxPriceAI: z.number().optional().describe("The AI's estimated maximum market price in INR (AMAX). ONLY provide if isAuthentic is true."),
 });
 
+const valuationBreakdownItemSchema = z.object({
+    id: z.number(),
+    criterion: z.string(),
+    category: z.string(),
+    score: z.number(),
+    weight: z.number(),
+    weightedScore: z.number(),
+});
+export type ValuationBreakdownItem = z.infer<typeof valuationBreakdownItemSchema>;
 
 const SuccessfulEvaluationSchema = z.object({
     status: z.literal('success'),
@@ -166,6 +281,7 @@ const SuccessfulEvaluationSchema = z.object({
             weight: z.number(),
             weightedScore: z.number(),
         })),
+        valuationBreakdown: z.array(valuationBreakdownItemSchema),
         crestoxPriceRange: z.tuple([z.number(), z.number()]),
     })
 });
@@ -205,7 +321,11 @@ export async function evaluateArtwork(
         scores: ArtScoreChecklist.map(item => ({
             id: item.id,
             score: Math.floor(Math.random() * 6) + 4
-        }))
+        })),
+        valuationScores: ArtValueEstCriteria.map(item => ({
+            id: item.id,
+            score: Math.floor(Math.random() * 6) + 4
+        })),
     };
     
     const breakdown: AIScorecardBreakdown[] = [];
@@ -230,6 +350,20 @@ export async function evaluateArtwork(
         }
     });
 
+    const valuationBreakdown: ValuationBreakdownItem[] = [];
+    const valuationScoresMap = new Map(mockAiOutput.valuationScores.map(item => [item.id, item.score]));
+    ArtValueEstCriteria.forEach(item => {
+        const score = valuationScoresMap.get(item.id) || 0;
+        valuationBreakdown.push({
+            id: item.id,
+            criterion: item.criterion,
+            category: item.category,
+            score: score,
+            weight: item.weight,
+            weightedScore: (score / 10) * item.weight,
+        });
+    });
+
     const finalScore = totalPossibleWeight > 0 ? (totalWeightedScore / totalPossibleWeight) * 100 : 0;
     const Q = finalScore;
 
@@ -244,14 +378,14 @@ export async function evaluateArtwork(
     const Pmax_calc = Math.min(input.maxEstimatedValue, mockMaxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
-    const P_regression = Math.exp(6.907755 + 0.015 * Q);
+    const P_regression = Math.exp(6.2 + 0.015 * Q);
 
     const P_avg = (P_linear + P_regression) / 2;
     const crestoxPriceRange: [number, number] = [Math.round(P_avg * 0.9), Math.round(P_avg * 1.1)];
 
     return { 
         status: 'success',
-        evaluation: { finalScore: Math.round(finalScore), grade, breakdown, crestoxPriceRange }
+        evaluation: { finalScore: Math.round(finalScore), grade, breakdown, valuationBreakdown, crestoxPriceRange }
     };
   }
 
@@ -280,40 +414,40 @@ const evaluationPrompt = ai.definePrompt({
   input: {schema: EvaluateArtworkInputSchema},
   output: {schema: ArtworkAnalysisSchema},
   prompt: `
-You are a world-leading expert in digital art forensics and authentication for a high-stakes art marketplace, Crestox. Your primary and most critical responsibility is to determine the authenticity of an artwork. Your reputation, and the reputation of the marketplace, depends on your ability to unerringly identify forgeries, plagiarized works, and especially AI-generated images. Be extremely critical and skeptical.
+You are a world-leading expert in digital art forensics and authentication for Crestox. Your task is to provide a consistent, independent valuation. Your valuation MUST NOT be affected by user-provided price bounds.
 
-**Step 1: MANDATORY FORENSIC AUTHENTICITY & PLAGIARISM CHECK**
-This is your single most important step. Do not proceed to evaluation if you have any doubt whatsoever.
-- **Plagiarism Check:** First, analyze the image and compare it against your vast knowledge of art history and existing famous artworks. Is this a direct copy or a substantively similar imitation of a known piece? If you find a high degree of similarity to existing art, you MUST flag it as plagiarism.
-- **AI-Generated Image Forensic Analysis:** This is a non-negotiable check. You must act as a digital forensics expert. Scrutinize the image for the subtle but definitive signs of AI generation. Be meticulous. Look for:
-    - **Anatomical & Logical Inconsistencies:** Pay extreme attention to hands, fingers, eyes, teeth, and text. AI models notoriously fail at these details. Look for extra fingers, misshapen limbs, nonsensical text, or objects that blend illogically.
-    - **Unnatural Textures & Surfaces:** Scrutinize textures like skin, wood grain, fabric, and brushstrokes. AI-generated textures often appear overly smooth, plasticky, unnaturally repetitive, or lack the random imperfections of real-world materials.
-    - **Lighting & Shadow Anomalies:** Examine how light and shadow behave. Look for shadows that do not match the light source, reflections that are illogical, multiple conflicting light sources, or an overall "flatness" to the lighting.
-    - **Digital Artifacts:** Search for repeating patterns in noisy areas (a sign of upscaling), strange pixelation, or a "too perfect" digital sheen that lacks the subtle noise and imperfections of a real photograph or physical artwork.
-- **Decision:** If you have high confidence that the image is either **plagiarized OR AI-generated**, you MUST set 'isAuthentic' to \`false\` and provide a clear, specific reason in the 'authenticityConcern' field (e.g., "This work is a direct copy of Vincent van Gogh's 'The Starry Night'.", or "Image shows common artifacts of AI generation, including misshapen fingers and unnatural skin texture."). **You will not perform any scoring or valuation if the work is not authentic.**
+**Step 1: Mandatory Forensic Authenticity & Plagiarism Check**
+This is the most critical step.
+- **Plagiarism Check:** Compare the image against your knowledge of art history. If it's a copy, set \`isAuthentic\` to \`false\` and explain in \`authenticityConcern\`.
+- **AI-Generated Image Analysis:** Scrutinize for AI artifacts (hands, text, textures, lighting). If AI-generated, set \`isAuthentic\` to \`false\` and explain the issue.
+- **Decision:** If not authentic, stop here. If authentic, proceed to Step 2.
 
 **Step 2: Full Evaluation (ONLY if Authenticity is confirmed)**
-If, and only if, the artwork passes the rigorous authenticity check in Step 1, you will then proceed to the full evaluation. Your tasks are:
-1.  Set 'isAuthentic' to \`true\`.
-2.  Provide a score from 0 to 10 for EVERY SINGLE criterion in the 'ArtScoreChecklist' table below. The 'scores' field in your output must contain an entry for every ID from 1 to 100.
-3.  Provide an independent market valuation range (minPriceAI and maxPriceAI) in INR. This valuation MUST be independent of any price estimates provided by the user. Ground your valuation ONLY in the artwork's visual qualities, the provided context (artist bio, artwork details, etc.), and your internal knowledge of the art market.
+You must complete three tasks:
+1.  **ArtScoreChecklist Scoring:** Provide a score (0-10) for EVERY criterion (IDs 1-100) from the ArtScoreChecklist below. Return this in the \`scores\` field.
+2.  **ArtValueEst Scoring:** Provide a score (0-10) for EVERY criterion (IDs 1-100) from the ArtValueEst rubric. Return this in the \`valuationScores\` field.
+3.  **Independent Valuation (INR):** Provide your expert, independent market valuation range (\`minPriceAI\` and \`maxPriceAI\`) in INR. This MUST be based solely on your analysis of the artwork and context, ignoring any user-provided estimates.
 
 ---
-**ArtScoreChecklist Rubric:**
+**Table 1: ArtScoreChecklist Rubric (for Quality Score - 'scores' field)**
 ${ArtScoreChecklist.map(item => `| ${item.id} | ${item.criterion} | ${item.weight}% |`).join('\n')}
+
+---
+**Table 2: ArtValueEst Rubric (for Valuation - 'valuationScores' field)**
+${ArtValueEstCriteria.map(item => `| ${item.id} | ${item.criterion} | ${item.category} |`).join('\n')}
 
 ---
 **CONTEXT FOR EVALUATION**
 **Artwork Information:**
 - Title: {{{title}}}
-- Description (Artist's Intent/Theme): {{{description}}}
+- Description: {{{description}}}
 - Materials Used: {{{materials}}}
 - Artwork Size: {{{artworkSize}}}
-- Subject/Cultural Significance Statement: {{{subjectSignificance}}}
-- Personal/Emotional Significance Statement: {{{personalSignificance}}}
-- Time Spent / Effort Statement: {{{timeEffort}}}
-- Biographical/Contextual Relevance Statement: {{{biographicalContext}}}
-- Commission/Patronage Statement: {{{commissionPatronage}}}
+- Subject/Cultural Significance: {{{subjectSignificance}}}
+- Personal/Emotional Significance: {{{personalSignificance}}}
+- Time Spent / Effort: {{{timeEffort}}}
+- Biographical/Contextual Relevance: {{{biographicalContext}}}
+- Commission/Patronage: {{{commissionPatronage}}}
 **Artist Information:**
 - Artist Bio: {{{artistBio}}}
 - Artist Awards: {{{artistAwards}}}
@@ -324,7 +458,7 @@ ${ArtScoreChecklist.map(item => `| ${item.id} | ${item.criterion} | ${item.weigh
 {{media url=photoDataUri}}
 
 ---
-Begin your analysis. First, determine authenticity. If authentic, proceed to the full scoring and valuation as instructed in Step 2.
+Begin your analysis. First, authenticity. If authentic, provide both scorecards and your independent price range.
 `,
   config: {
     temperature: 0.0,
@@ -361,7 +495,7 @@ const evaluateArtworkFlow = ai.defineFlow(
         };
     }
 
-    if (!output.scores || output.minPriceAI === undefined || output.maxPriceAI === undefined) {
+    if (!output.scores || !output.valuationScores || output.minPriceAI === undefined || output.maxPriceAI === undefined) {
       return {
           status: 'manual_review_required',
           concern: 'AI determined the work is authentic but failed to provide a full evaluation. Please try again or submit for manual review.',
@@ -390,6 +524,21 @@ const evaluateArtworkFlow = ai.defineFlow(
             });
         }
     });
+    
+    const valuationBreakdown: ValuationBreakdownItem[] = [];
+    const valuationScoresMap = new Map(output.valuationScores.map(item => [item.id, item.score]));
+    ArtValueEstCriteria.forEach(item => {
+        const score = valuationScoresMap.get(item.id) || 0; // Default to 0 if not found
+        valuationBreakdown.push({
+            id: item.id,
+            criterion: item.criterion,
+            category: item.category,
+            score: score,
+            weight: item.weight,
+            weightedScore: (score / 10) * item.weight,
+        });
+    });
+
 
     const finalScore = totalPossibleWeight > 0 ? (totalWeightedScore / totalPossibleWeight) * 100 : 0;
     const Q = finalScore;
@@ -405,14 +554,14 @@ const evaluateArtworkFlow = ai.defineFlow(
     const Pmax_calc = Math.min(input.maxEstimatedValue, output.maxPriceAI);
     
     const P_linear = Pmin_calc + (Pmax_calc - Pmin_calc) * (Q / 100);
-    const P_regression = Math.exp(6.907755 + 0.015 * Q);
+    const P_regression = Math.exp(6.2 + 0.015 * Q);
 
     const P_avg = (P_linear + P_regression) / 2;
     const crestoxPriceRange: [number, number] = [Math.round(P_avg * 0.9), Math.round(P_avg * 1.1)];
     
     return { 
         status: 'success',
-        evaluation: { finalScore: Math.round(finalScore), grade, breakdown, crestoxPriceRange }
+        evaluation: { finalScore: Math.round(finalScore), grade, breakdown, valuationBreakdown, crestoxPriceRange }
     };
   }
 );

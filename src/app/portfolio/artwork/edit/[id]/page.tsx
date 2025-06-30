@@ -35,11 +35,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
-import type { z } from 'zod';
-import type { SuccessfulEvaluationSchema } from '@/ai/flows/evaluate-artwork-flow';
 import { EvaluationScorecardDialog } from '@/components/evaluation-scorecard-dialog';
 
-type SuccessfulEvaluation = z.infer<typeof SuccessfulEvaluationSchema>['evaluation'];
+type SuccessfulEvaluation = Extract<EvaluationResult, { status: 'success' }>['evaluation'];
+
 
 export default function EditArtworkPage() {
   const { isLoggedIn, artistProfile, fractals, updateAndReevaluateArtwork, updateArtworkDetails } = useAuth();

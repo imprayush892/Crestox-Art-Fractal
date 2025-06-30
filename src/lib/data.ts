@@ -1,5 +1,7 @@
 
 import { z } from 'zod';
+import type { ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
+
 
 export interface AIScorecardBreakdown {
   id: number;
@@ -61,6 +63,7 @@ export interface Fractal {
   aiScore?: number; // This is Si
   crestoxGrade?: string;
   aiScorecard?: AIScorecardBreakdown[];
+  valuationBreakdown?: ValuationBreakdownItem[];
   crestoxPriceRange?: [number, number];
   artistMinEstimate?: number;
   artistMaxEstimate?: number;

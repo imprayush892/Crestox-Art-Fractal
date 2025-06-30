@@ -33,10 +33,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import type { z } from 'zod';
-import type { SuccessfulEvaluationSchema } from '@/ai/flows/evaluate-artwork-flow';
+import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
 import { EvaluationScorecardDialog } from '@/components/evaluation-scorecard-dialog';
 
-type SuccessfulEvaluation = z.infer<typeof SuccessfulEvaluationSchema>['evaluation'];
+type SuccessfulEvaluation = Extract<EvaluationResult, { status: 'success' }>['evaluation'];
 
 type ArtworkSubmissionData = {
     evaluationResult: SuccessfulEvaluation;
@@ -237,7 +237,7 @@ export default function CreateArtworkPage() {
     const crestoxPrice = Math.round((evaluationResult.crestoxPriceRange[0] + evaluationResult.crestoxPriceRange[1]) / 2);
     const artistMin = Number(form.getValues().minEstimatedValue);
     const artistMax = Number(form.getValues().maxEstimatedValue);
-    const artistPrice = Math.round((artistMin + artistMax) / 2);
+    const artistPrice = (artistMin + artistMax) / 2;
     const finalPrice = useCrestoxPrice ? crestoxPrice : artistPrice;
     const shouldApplyGrade = useCrestoxPrice || artistPrice <= crestoxPrice;
     

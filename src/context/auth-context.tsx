@@ -8,13 +8,12 @@ import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem } from '@/lib/data';
-import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
-import type { z } from 'zod';
-import type { SuccessfulEvaluationSchema } from '@/ai/flows/evaluate-artwork-flow';
+import type { EvaluationResult, ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
 
-type SuccessfulEvaluation = z.infer<typeof SuccessfulEvaluationSchema>['evaluation'];
+type SuccessfulEvaluation = Extract<EvaluationResult, { status: 'success' }>['evaluation'];
+
 
 // --- Interfaces ---
 export interface User {
@@ -364,6 +363,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             commissionPatronage: artworkData.commissionPatronage || "",
             aiScore: new_Si,
             aiScorecard: evaluationResult.breakdown,
+            valuationBreakdown: evaluationResult.valuationBreakdown,
             crestoxGrade: shouldApplyGrade ? evaluationResult.grade : undefined,
             crestoxPriceRange: evaluationResult.crestoxPriceRange,
         };
@@ -419,7 +419,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       const crestoxPrice = Math.round((evaluation.crestoxPriceRange[0] + evaluation.crestoxPriceRange[1]) / 2);
       const artistMin = Number(artworkData.minEstimatedValue || 0);
       const artistMax = Number(artworkData.maxEstimatedValue || 0);
-      const artistPrice = Math.round((artistMin + artistMax) / 2);
+      const artistPrice = (artistMin + artistMax) / 2;
       const finalPrice = useCrestoxPrice ? crestoxPrice : artistPrice;
       const shouldApplyGrade = useCrestoxPrice || artistPrice <= crestoxPrice;
 
@@ -464,6 +464,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               priceHistory: arrayUnion({ date: new Date().toISOString(), price: v_new }),
               aiScore: s_new,
               aiScorecard: evaluation.breakdown,
+              valuationBreakdown: evaluation.valuationBreakdown,
               crestoxGrade: shouldApplyGrade ? evaluation.grade : oldFractalData.crestoxGrade,
               artistMinEstimate: artworkData.minEstimatedValue,
               artistMaxEstimate: artworkData.maxEstimatedValue,
@@ -801,5 +802,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
