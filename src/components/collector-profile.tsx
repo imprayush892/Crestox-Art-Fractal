@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { PublicHolding, PublicUser, ResaleListing } from '@/lib/data';
+import type { PublicHolding, PublicUser, ResaleListing, Artist } from '@/lib/data';
 import { useAuth } from '@/context/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -51,7 +51,7 @@ export function CollectorProfile({ collector, holdings, listings }: CollectorPro
                 holdingsCount: artistHoldingsCount,
                 listings: artistListings,
             };
-        }).filter(Boolean) as { artist: NonNullable<typeof artist>, holdingsCount: number, listings: ResaleListing[] }[];
+        }).filter(Boolean) as { artist: Artist, holdingsCount: number, listings: ResaleListing[] }[];
     }, [holdings, listings, artistMap]);
 
 
