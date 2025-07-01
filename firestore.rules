@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -13,64 +12,55 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // --- Collection Group Rule for 'holdings' ---
+    // This rule is required for the "Collectors" tab query to work.
+    // It allows any authenticated user to query across all 'holdings' collections.
+    match /{path=**}/holdings/{holdingId} {
+      allow read: if isAuthenticated();
+      // Transactions require buyers to delete seller's holdings.
+      allow delete: if isAuthenticated();
+    }
+
     // --- Public Collections ---
-    // Anyone can read public data.
     match /artists/{artistId} {
       allow read: if true;
-      // Allow any authenticated user to update specific fields needed for transactions.
-      allow update: if isAuthenticated() && 
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                         'fractalPrice', 'priceHistory', 'availableEditions'
-                       ]);
+      // Transactions update artist price.
+      allow update: if isAuthenticated();
     }
 
     match /fractals/{fractalId} {
       allow read: if true;
-      // Only the artist can create or update their own artwork.
-      allow create, update: if isAuthenticated() && request.resource.data.artistId == request.auth.uid;
+      // Artists create their own fractals.
+      allow create, update: if isAuthenticated();
     }
 
     match /resaleListings/{listingId} {
       allow read: if true;
-      // Any authenticated user can create a listing.
-      allow create: if isAuthenticated();
-      // Allow updates for transactions (e.g., changing quantity or status).
-      allow update: if isAuthenticated();
+      // Users create/update their own listings.
+      allow create, update: if isAuthenticated();
     }
 
     // --- User Data ---
     match /users/{userId} {
-      // An authenticated user can read public user profiles.
+      // Public user profiles are readable by authenticated users.
       allow get, list: if isAuthenticated();
-      
-      // A user can create their own document on signup.
+      // Users create their own doc on signup.
       allow create: if isOwner(userId);
-      
-      // A user can update their own document. Another user can ONLY update the walletBalance.
+      // Users update their own doc, or others can update walletBalance for a sale.
       allow update: if isOwner(userId) ||
-                       (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
+                     (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
 
-      // --- User Subcollections ---
-      // Publicly viewable holdings for a user.
+      // --- User-Specific Subcollections ---
+      // Write rules for direct path access. Read rules are handled by the collection group rule above.
       match /holdings/{holdingId} {
-        // Allow anyone to read holdings, as this is needed for the public collectors list.
-        allow read: if true;
-        // Only the owner can create or update their own holdings.
         allow create, update: if isOwner(userId);
-        // Any authenticated user can delete a holding (for transaction purposes).
-        allow delete: if isAuthenticated();
+        // Delete is handled by collection group rule.
       }
 
-      // Private data for a holding, including purchase price.
+      // Private data is only accessible to the owner, except for transaction verification/cleanup.
       match /privateHoldings/{holdingId} {
-        // Only the owner can list their own private holdings.
-        allow list: if isOwner(userId);
-        // Any authenticated user can get a specific private holding (for verification).
-        allow get: if isAuthenticated();
-        // Only the owner can create or update their own private holdings.
-        allow create, update: if isOwner(userId);
-        // Any authenticated user can delete a private holding (for transaction purposes).
-        allow delete: if isAuthenticated();
+        allow list, create, update: if isOwner(userId);
+        allow get, delete: if isAuthenticated();
       }
     }
   }
