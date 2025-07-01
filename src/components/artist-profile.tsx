@@ -290,9 +290,11 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                         </CardHeader>
                         <CardContent className="p-0 flex-grow flex">
                             <TabsContent value="fractal-value" className="mt-0 w-full flex flex-col">
-                            <CardDescription className="px-4 sm:px-6 mb-4 text-sm">
-                                    Historical value of one fractal from {artist.name}'s portfolio.
-                                </CardDescription>
+                                <div className="px-4 sm:px-6 mb-4 min-h-[48px] flex items-center">
+                                    <CardDescription className="text-sm">
+                                        Historical value of one fractal from {artist.name}'s portfolio.
+                                    </CardDescription>
+                                </div>
                                 <div className="p-4 pt-0 sm:p-6 sm:pt-0 flex-grow">
                                     <ChartContainer 
                                         config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
@@ -336,9 +338,11 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                 </div>
                             </TabsContent>
                             <TabsContent value="total-valuation" className="mt-0 w-full flex flex-col">
-                                <CardDescription className="px-4 sm:px-6 mb-4 text-sm">
-                                    Historical total valuation of {artist.name}'s entire collection.
-                                </CardDescription>
+                                <div className="px-4 sm:px-6 mb-4 min-h-[48px] flex items-center">
+                                    <CardDescription className="text-sm">
+                                        Historical total valuation of {artist.name}'s entire collection.
+                                    </CardDescription>
+                                </div>
                                 <div className="p-4 pt-0 sm:p-6 sm:pt-0 flex-grow">
                                     <ChartContainer 
                                         config={{ value: { label: "Value", color: "hsl(var(--accent-foreground))" } }} 
