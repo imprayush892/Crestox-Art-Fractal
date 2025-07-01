@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef, useEffect } from 'react';
-import { Loader2, User, PlusCircle, Trash2, Twitter, Instagram, Linkedin, Upload, Image as ImageIcon } from 'lucide-react';
+import { Loader2, User, PlusCircle, Trash2, Twitter, Instagram, Linkedin, Upload, Image as ImageIcon, DollarSign } from 'lucide-react';
 import type { Artist } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Card } from './ui/card';
@@ -31,6 +31,13 @@ interface ArtistSettingsFormProps {
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+const previouslySoldArtworkSchema = z.object({
+  name: z.string().min(1, "Artwork name cannot be empty."),
+  artworkImage: z.any().refine((file) => file, "Artwork image is required."),
+  proofOfSaleImage: z.any().refine((file) => file, "Proof of sale is required."),
+  saleValue: z.coerce.number().min(1, "Sale value is required."),
+});
 
 const profileFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters.").max(50),
@@ -49,6 +56,7 @@ const profileFormSchema = z.object({
       value: z.string().min(1, "Exhibition cannot be empty."),
       images: z.array(z.any()).max(2, "Maximum of 2 images per exhibition.").optional()
   })),
+  previouslySoldArtworks: z.array(previouslySoldArtworkSchema),
   twitter: z.string().url().optional().or(z.literal('')),
   instagram: z.string().url().optional().or(z.literal('')),
   linkedin: z.string().url().optional().or(z.literal('')),
@@ -79,6 +87,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
       style: artist.style || "",
       awards: artist.awards?.map(award => ({ value: award.value, image: award.image })) || [],
       exhibitions: artist.exhibitions?.map(ex => ({ value: ex.value, images: ex.images })) || [],
+      previouslySoldArtworks: artist.previouslySoldArtworks?.map(art => ({ ...art })) || [],
       twitter: artist.twitter || "",
       instagram: artist.instagram || "",
       linkedin: artist.linkedin || "",
@@ -88,6 +97,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
 
   const { fields: awardFields, append: appendAward, remove: removeAward } = useFieldArray({ control: form.control, name: "awards" });
   const { fields: exhibitionFields, append: appendExhibition, remove: removeExhibition } = useFieldArray({ control: form.control, name: "exhibitions" });
+  const { fields: soldFields, append: appendSold, remove: removeSold } = useFieldArray({ control: form.control, name: "previouslySoldArtworks" });
 
   async function onSubmit(data: ProfileFormValues) {
     if (!updateArtistProfile) {
@@ -224,6 +234,47 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
                 ))}
             </div>
             <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendExhibition({ value: '', images: [] })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Exhibition </Button>
+        </FormItem>
+
+        <FormItem>
+          <FormLabel>Previously Sold Artworks</FormLabel>
+            <FormDescription>Showcase your sales history to build credibility. This is optional.</FormDescription>
+            <div className="space-y-4">
+                {soldFields.map((field, index) => (
+                    <Card key={field.id} className="p-4 bg-muted/50">
+                        <div className="flex items-start gap-4">
+                            <div className="flex-1 space-y-4">
+                                <FormField control={form.control} name={`previouslySoldArtworks.${index}.name`} render={({ field }) => (
+                                    <FormItem><FormLabel className="text-xs">Artwork Name</FormLabel><FormControl><Input placeholder="e.g., Celestial Bloom" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField control={form.control} name={`previouslySoldArtworks.${index}.artworkImage`} render={({ field: { onChange, value, ...rest }}) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs">Artwork Image</FormLabel>
+                                            {typeof value === 'string' && value && <Image src={value} alt="preview" width={64} height={64} className="rounded-md object-cover h-16 w-16 mb-2" />}
+                                            <FormControl><Input type="file" className="text-xs" accept="image/*" onChange={(e) => onChange(e.target.files?.[0])} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                    <FormField control={form.control} name={`previouslySoldArtworks.${index}.proofOfSaleImage`} render={({ field: { onChange, value, ...rest }}) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs">Proof of Sale</FormLabel>
+                                             {typeof value === 'string' && value && <Image src={value} alt="preview" width={64} height={64} className="rounded-md object-cover h-16 w-16 mb-2" />}
+                                            <FormControl><Input type="file" className="text-xs" accept="image/*" onChange={(e) => onChange(e.target.files?.[0])} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                </div>
+                                <FormField control={form.control} name={`previouslySoldArtworks.${index}.saleValue`} render={({ field }) => (
+                                    <FormItem><FormLabel className="text-xs">Sale Value (₹)</FormLabel><div className="relative"><DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><FormControl><Input type="number" className="pl-8" placeholder="50000" {...field} /></FormControl></div><FormMessage /></FormItem>
+                                )}/>
+                            </div>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeSold(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                    </Card>
+                ))}
+            </div>
+            <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendSold({ name: '', saleValue: 0, artworkImage: null, proofOfSaleImage: null })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Sold Artwork </Button>
         </FormItem>
 
         <FormItem>

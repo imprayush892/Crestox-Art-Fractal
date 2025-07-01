@@ -21,12 +21,25 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState, useRef } from 'react';
-import { Loader2, PlusCircle, Trash2, Twitter, Instagram, Linkedin, User, Upload, Image as ImageIcon } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Twitter, Instagram, Linkedin, User, Upload, Image as ImageIcon, DollarSign } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+const previouslySoldArtworkSchema = z.object({
+  name: z.string().min(1, "Artwork name cannot be empty."),
+  artworkImage: z.any()
+    .refine((file) => file, "Artwork image is required.")
+    .refine((file) => !file || file.size <= MAX_FILE_SIZE, `Max file size is 2MB.`)
+    .refine((file) => !file || ACCEPTED_IMAGE_TYPES.includes(file.type), ".jpg, .jpeg, .png and .webp files are accepted."),
+  proofOfSaleImage: z.any()
+    .refine((file) => file, "Proof of sale image is required.")
+    .refine((file) => !file || file.size <= MAX_FILE_SIZE, `Max file size is 2MB.`)
+    .refine((file) => !file || ACCEPTED_IMAGE_TYPES.includes(file.type), ".jpg, .jpeg, .png and .webp files are accepted."),
+  saleValue: z.coerce.number().min(1, "Sale value is required."),
+});
 
 const profileFormSchema = z.object({
   name: z.string().min(2, "Artist name must be at least 2 characters.").max(50, "Artist name must not be longer than 50 characters."),
@@ -50,6 +63,7 @@ const profileFormSchema = z.object({
         .refine((files) => !files || files.every(file => file.size <= MAX_FILE_SIZE), `Max file size is 2MB.`)
         .refine((files) => !files || files.every(file => ACCEPTED_IMAGE_TYPES.includes(file.type)), ".jpg, .jpeg, .png and .webp files are accepted.")
   })),
+  previouslySoldArtworks: z.array(previouslySoldArtworkSchema),
   twitter: z.string().url().optional().or(z.literal('')),
   instagram: z.string().url().optional().or(z.literal('')),
   linkedin: z.string().url().optional().or(z.literal('')),
@@ -76,6 +90,7 @@ export default function CreateArtistProfilePage() {
       style: "",
       awards: [],
       exhibitions: [],
+      previouslySoldArtworks: [],
       twitter: "",
       instagram: "",
       linkedin: "",
@@ -85,6 +100,8 @@ export default function CreateArtistProfilePage() {
   
   const { fields: awardFields, append: appendAward, remove: removeAward } = useFieldArray({ control: form.control, name: "awards" });
   const { fields: exhibitionFields, append: appendExhibition, remove: removeExhibition } = useFieldArray({ control: form.control, name: "exhibitions" });
+  const { fields: soldFields, append: appendSold, remove: removeSold } = useFieldArray({ control: form.control, name: "previouslySoldArtworks" });
+
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -248,6 +265,37 @@ export default function CreateArtistProfilePage() {
                   ))}
                 </div>
                 <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendExhibition({ value: '', images: [] })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Exhibition </Button>
+              </FormItem>
+
+              <FormItem>
+                <FormLabel>Previously Sold Artworks</FormLabel>
+                 <FormDescription>Showcase your sales history to build credibility. This is optional.</FormDescription>
+                <div className="space-y-4">
+                  {soldFields.map((field, index) => (
+                    <Card key={field.id} className="p-4 bg-muted/50">
+                       <div className="flex items-start gap-4">
+                        <div className="flex-1 space-y-4">
+                          <FormField control={form.control} name={`previouslySoldArtworks.${index}.name`} render={({ field }) => (
+                            <FormItem><FormLabel className="text-xs">Artwork Name</FormLabel><FormControl><Input placeholder="e.g., Celestial Bloom" {...field} /></FormControl><FormMessage /></FormItem>
+                          )}/>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField control={form.control} name={`previouslySoldArtworks.${index}.artworkImage`} render={({ field: { onChange, ...rest }}) => (
+                                <FormItem><FormLabel className="text-xs">Artwork Image</FormLabel><FormControl><Input type="file" className="text-xs" accept="image/*" onChange={(e) => onChange(e.target.files?.[0])} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                            <FormField control={form.control} name={`previouslySoldArtworks.${index}.proofOfSaleImage`} render={({ field: { onChange, ...rest }}) => (
+                                <FormItem><FormLabel className="text-xs">Proof of Sale</FormLabel><FormControl><Input type="file" className="text-xs" accept="image/*" onChange={(e) => onChange(e.target.files?.[0])} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                          </div>
+                           <FormField control={form.control} name={`previouslySoldArtworks.${index}.saleValue`} render={({ field }) => (
+                            <FormItem><FormLabel className="text-xs">Sale Value (₹)</FormLabel><div className="relative"><DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><FormControl><Input type="number" className="pl-8" placeholder="50000" {...field} /></FormControl></div><FormMessage /></FormItem>
+                          )}/>
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeSold(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendSold({ name: '', saleValue: 0 })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Sold Artwork </Button>
               </FormItem>
 
               <FormItem>

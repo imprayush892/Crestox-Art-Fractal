@@ -8,7 +8,7 @@ import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, que
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser, PrivateHolding, PublicHolding, CollectorInfo, Award, Exhibition } from '@/lib/data';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser, PrivateHolding, PublicHolding, CollectorInfo, Award, Exhibition, PreviouslySoldArtwork } from '@/lib/data';
 import type { EvaluationResult, ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
@@ -297,7 +297,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const createArtistProfile = async (profileData: CreateArtistProfileData) => {
     if (!db || !user) throw new Error("User not authenticated or database not available.");
     
-    const { avatar, awards, exhibitions, ...restOfProfileData } = profileData;
+    const { avatar, awards, exhibitions, previouslySoldArtworks, ...restOfProfileData } = profileData;
     let avatarUrl = '';
     
     const artistRef = doc(firestoreCollection(db, 'artists'));
@@ -312,7 +312,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     }
 
     const processedAwards = await Promise.all(
-        awards.map(async (award) => {
+        (awards || []).map(async (award) => {
             if (award.image instanceof File) {
                 const storageRef = ref(storage, `achievements/${artistId}/awards/${uuidv4()}`);
                 await uploadBytes(storageRef, award.image);
@@ -324,7 +324,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     );
 
     const processedExhibitions = await Promise.all(
-        exhibitions.map(async (exhibition) => {
+        (exhibitions || []).map(async (exhibition) => {
             if (exhibition.images && exhibition.images.length > 0) {
                 const imageUrls = await Promise.all(
                     exhibition.images.filter(img => img instanceof File).map(async (img) => {
@@ -339,12 +339,26 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         })
     );
     
+    const processedSoldArtworks = await Promise.all(
+        (previouslySoldArtworks || []).map(async (artwork) => {
+            const artworkImageUrl = artwork.artworkImage instanceof File ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${artistId}/${uuidv4()}`), artwork.artworkImage).then(s => s.ref)) : '';
+            const proofImageUrl = artwork.proofOfSaleImage instanceof File ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${artistId}/${uuidv4()}`), artwork.proofOfSaleImage).then(s => s.ref)) : '';
+            return {
+                name: artwork.name,
+                saleValue: artwork.saleValue,
+                artworkImage: artworkImageUrl,
+                proofOfSaleImage: proofImageUrl,
+            };
+        })
+    );
+
     const newArtistData: Omit<Artist, 'id'> = {
         ...restOfProfileData,
         userId: user.uid,
         avatar: avatarUrl,
         awards: processedAwards,
         exhibitions: processedExhibitions,
+        previouslySoldArtworks: processedSoldArtworks,
         fractalPrice: 0,
         priceHistory: [],
         totalPortfolioValue: 0,
@@ -372,7 +386,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const updateArtistProfile = async (profileData: Partial<CreateArtistProfileData>) => {
       if (!db || !artistProfile || !user) throw new Error("Artist profile not found or database not available.");
       
-      const { avatar, awards, exhibitions, ...restOfProfileData } = profileData;
+      const { avatar, awards, exhibitions, previouslySoldArtworks, ...restOfProfileData } = profileData;
       const dataToUpdate: { [key: string]: any } = { ...restOfProfileData };
 
       if (avatar instanceof File) {
@@ -416,6 +430,25 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             return { value: exhibition.value, images: [] };
           })
         );
+      }
+
+      if (previouslySoldArtworks) {
+          dataToUpdate.previouslySoldArtworks = await Promise.all(
+              previouslySoldArtworks.map(async (artwork) => {
+                  const artworkImageUrl = artwork.artworkImage instanceof File
+                      ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${artistProfile.id}/${uuidv4()}`), artwork.artworkImage).then(s => s.ref))
+                      : artwork.artworkImage;
+                  const proofImageUrl = artwork.proofOfSaleImage instanceof File
+                      ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${artistProfile.id}/${uuidv4()}`), artwork.proofOfSaleImage).then(s => s.ref))
+                      : artwork.proofOfSaleImage;
+                  return {
+                      name: artwork.name,
+                      saleValue: artwork.saleValue,
+                      artworkImage: artworkImageUrl,
+                      proofOfSaleImage: proofImageUrl,
+                  };
+              })
+          );
       }
       
       const artistRef = doc(db, "artists", artistProfile.id);

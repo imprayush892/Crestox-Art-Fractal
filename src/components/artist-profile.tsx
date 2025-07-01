@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap, DollarSign, History } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
@@ -250,11 +250,12 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
       </div>
       
       <Tabs defaultValue="artworks" className="mb-12">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-5">
           <TabsTrigger value="artworks"><Palette className="mr-2" />Artworks</TabsTrigger>
           <TabsTrigger value="analytics"><TrendingUp className="mr-2" />Analytics</TabsTrigger>
-          <TabsTrigger value="collectors"><Users className="mr-2" />Collectors</TabsTrigger>
           <TabsTrigger value="achievements"><Award className="mr-2" />Achievements</TabsTrigger>
+          <TabsTrigger value="sold"><History className="mr-2" />Previously Sold</TabsTrigger>
+          <TabsTrigger value="collectors"><Users className="mr-2" />Collectors</TabsTrigger>
         </TabsList>
         <TabsContent value="artworks" className="mt-6">
             <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8 space-y-8">
@@ -410,9 +411,6 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                 </Card>
             </div>
         </TabsContent>
-         <TabsContent value="collectors" className="mt-6">
-            <ArtistCollectorsList artistId={artist.id} />
-        </TabsContent>
         <TabsContent value="achievements" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 <Card>
@@ -434,7 +432,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                         alt={`Image for ${award.value}`} 
                                                         width={500}
                                                         height={300}
-                                                        layout="responsive"
+                                                        className="w-full h-auto object-cover"
                                                         data-ai-hint="award certificate" 
                                                     />
                                                 </div>
@@ -462,22 +460,24 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                     <div key={i} className="break-inside-avoid">
                                         <Card className="bg-muted/50 overflow-hidden">
                                             {ex.images && ex.images.length > 0 && (
-                                                <div className={cn(
-                                                    "grid gap-px border-b",
-                                                    ex.images.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                                                )}>
-                                                    {ex.images.map((img, imgIdx) => (
-                                                        <div key={imgIdx}>
-                                                            <Image 
-                                                                src={img} 
-                                                                alt={`Image for ${ex.value}`} 
-                                                                width={300} 
-                                                                height={300} 
-                                                                layout="responsive"
-                                                                data-ai-hint="exhibition photo" 
-                                                            />
-                                                        </div>
-                                                    ))}
+                                                <div className="border-b bg-black/10">
+                                                    <div className={cn(
+                                                        "grid gap-px",
+                                                        ex.images.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                                                    )}>
+                                                        {ex.images.map((img, imgIdx) => (
+                                                            <div key={imgIdx}>
+                                                                <Image 
+                                                                    src={img} 
+                                                                    alt={`Image for ${ex.value}`} 
+                                                                    width={300} 
+                                                                    height={300} 
+                                                                    className="w-full h-auto object-cover"
+                                                                    data-ai-hint="exhibition photo" 
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                             <div className="p-4">
@@ -491,6 +491,37 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     </CardContent>
                 </Card>
             </div>
+        </TabsContent>
+         <TabsContent value="sold" className="mt-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl">Sales History</CardTitle>
+                    <CardDescription>A showcase of artworks previously sold by the artist.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {artist.previouslySoldArtworks && artist.previouslySoldArtworks.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {artist.previouslySoldArtworks.map((artwork, i) => (
+                                <Card key={i} className="overflow-hidden">
+                                    <div className="grid grid-cols-2 gap-px bg-border">
+                                        <Image src={artwork.artworkImage} alt={artwork.name} width={400} height={400} className="w-full h-auto object-cover" data-ai-hint="artwork" />
+                                        <Image src={artwork.proofOfSaleImage} alt={`Proof of sale for ${artwork.name}`} width={400} height={400} className="w-full h-auto object-cover" data-ai-hint="document proof" />
+                                    </div>
+                                    <div className="p-4">
+                                        <p className="font-semibold">{artwork.name}</p>
+                                        <p className="text-sm text-muted-foreground">Sold for <span className="font-medium text-primary">₹{artwork.saleValue.toLocaleString()}</span></p>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground py-8 text-center">No sales history provided.</p>
+                    )}
+                </CardContent>
+            </Card>
+        </TabsContent>
+         <TabsContent value="collectors" className="mt-6">
+            <ArtistCollectorsList artistId={artist.id} />
         </TabsContent>
       </Tabs>
     </>

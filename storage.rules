@@ -2,7 +2,7 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
+
     // Allow public read access to all files in the 'public' folder.
     // This is useful for assets like the company wordmark.
     match /public/{allPaths=**} {
@@ -22,7 +22,7 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
+
     // Achievement images (awards, exhibitions) can be read by anyone.
     // Writes are restricted to the authenticated artist who owns the profile.
     match /achievements/{artistId}/{allPaths=**} {
@@ -30,5 +30,13 @@ service firebase.storage {
       allow write: if request.auth != null; // Simplified: any authenticated user can write for now.
                                              // In production, you'd add a rule to check if request.auth.uid matches the artist's userId.
     }
+
+    // Previously sold artwork images can be read by anyone.
+    // Writes are restricted to the authenticated artist.
+    match /previouslySold/{artistId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
   }
 }

@@ -28,6 +28,13 @@ export interface Exhibition {
   images?: string[];
 }
 
+export interface PreviouslySoldArtwork {
+  name: string;
+  artworkImage: string;
+  proofOfSaleImage: string;
+  saleValue: number;
+}
+
 export interface Artist {
   id: string;
   userId?: string;
@@ -41,6 +48,7 @@ export interface Artist {
   style?: string;
   awards: Award[];
   exhibitions: Exhibition[];
+  previouslySoldArtworks?: PreviouslySoldArtwork[];
   twitter?: string;
   instagram?: string;
   linkedin?: string;
@@ -208,10 +216,11 @@ export const editArtworkFormSchema = z.object({
 
 export type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
 
-export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'awards' | 'exhibitions' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'totalPortfolioValue' | 'kFactor' | 'totalScoreWeightedValuation' | 'sumOfScoresSquared'> & { 
+export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'awards' | 'exhibitions' | 'previouslySoldArtworks' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'totalPortfolioValue' | 'kFactor' | 'totalScoreWeightedValuation' | 'sumOfScoresSquared'> & { 
   avatar: File | string | null;
   awards: { value: string; image?: File | string | null }[];
   exhibitions: { value: string; images?: (File | string | null)[] }[];
+  previouslySoldArtworks: { name: string; artworkImage: File | string | null; proofOfSaleImage: File | string | null; saleValue: number }[];
 };
 
 export type NewArtworkData = {
