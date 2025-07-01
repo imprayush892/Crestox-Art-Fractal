@@ -18,6 +18,16 @@ export interface ArtworkSize {
   unit: 'in' | 'cm' | 'ft' | 'px';
 }
 
+export interface Award {
+  value: string;
+  image?: string;
+}
+
+export interface Exhibition {
+  value: string;
+  images?: string[];
+}
+
 export interface Artist {
   id: string;
   userId?: string;
@@ -29,8 +39,8 @@ export interface Artist {
   university?: string;
   website?: string;
   style?: string;
-  awards: string[];
-  exhibitions: string[];
+  awards: Award[];
+  exhibitions: Exhibition[];
   twitter?: string;
   instagram?: string;
   linkedin?: string;
@@ -198,7 +208,11 @@ export const editArtworkFormSchema = z.object({
 
 export type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
 
-export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'totalPortfolioValue' | 'kFactor' | 'totalScoreWeightedValuation' | 'sumOfScoresSquared'> & { avatar: File | string | null };
+export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'awards' | 'exhibitions' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'totalPortfolioValue' | 'kFactor' | 'totalScoreWeightedValuation' | 'sumOfScoresSquared'> & { 
+  avatar: File | string | null;
+  awards: { value: string; image?: File | string | null }[];
+  exhibitions: { value: string; images?: (File | string | null)[] }[];
+};
 
 export type NewArtworkData = {
     title: string;
@@ -244,12 +258,12 @@ const artistMessages = [
 const locations = ['Berlin, Germany', 'Tokyo, Japan', 'New York, USA', 'London, UK', 'Virtual Realm', 'Cyber City', 'The Void'];
 const styles = ['Generative', 'Abstract', 'Algorithmic', 'Surreal', 'Minimalist', 'Glitch Art'];
 const awardsData = [
-    'Winner of the 2023 Algorithmic Art Prize.',
-    'Recipient of the "Innovator in Code" grant.',
+    { value: 'Winner of the 2023 Algorithmic Art Prize.' },
+    { value: 'Recipient of the "Innovator in Code" grant.' },
 ];
 const exhibitionsData = [
-    'Featured in the "Digital Dreams" exhibition at the Modern Art Gallery.',
-    'Solo show at The Techne Art Center, 2024.'
+    { value: 'Featured in the "Digital Dreams" exhibition at the Modern Art Gallery.' },
+    { value: 'Solo show at The Techne Art Center, 2024.' },
 ];
 
 const fractalAdjectives = ['Quantum', 'Cosmic', 'Galactic', 'Ephemeral', 'Crystalline', 'Solar', 'Veridian', 'Abyssal', 'Axiomatic', 'Digital', 'Chromatic', 'Ethereal', 'Chaotic', 'Frozen', 'Celestial', 'Prismatic', 'Lucid', 'Obsidian', 'Golden', 'Silent', 'Pulsing', 'Nebulous', 'Luminous', 'Woven', 'Glimmering'];
@@ -345,6 +359,7 @@ const tempArtists = (() => {
             bio: getRandom(bios),
             artistMessage: getRandom(artistMessages),
             location: getRandom(locations),
+            university: 'University of Digital Arts',
             website: `https://example.com/${slug}`,
             style: `${getRandom(styles)}, ${getRandom(styles)}`,
             awards: [getRandom(awardsData)],

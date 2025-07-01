@@ -19,14 +19,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef, useEffect } from 'react';
-import { Loader2, User, PlusCircle, Trash2, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Loader2, User, PlusCircle, Trash2, Twitter, Instagram, Linkedin, Upload, Image as ImageIcon } from 'lucide-react';
 import type { Artist } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Card } from './ui/card';
+import Image from 'next/image';
 
 interface ArtistSettingsFormProps {
   artist: Artist;
 }
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 const profileFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters.").max(50),
@@ -37,8 +41,14 @@ const profileFormSchema = z.object({
   university: z.string().max(100).optional(),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   style: z.string().max(100).optional(),
-  awards: z.array(z.object({ value: z.string().min(1, "Award cannot be empty.") })),
-  exhibitions: z.array(z.object({ value: z.string().min(1, "Exhibition cannot be empty.") })),
+  awards: z.array(z.object({ 
+      value: z.string().min(1, "Award cannot be empty."),
+      image: z.any().optional()
+  })),
+  exhibitions: z.array(z.object({ 
+      value: z.string().min(1, "Exhibition cannot be empty."),
+      images: z.array(z.any()).max(2, "Maximum of 2 images per exhibition.").optional()
+  })),
   twitter: z.string().url().optional().or(z.literal('')),
   instagram: z.string().url().optional().or(z.literal('')),
   linkedin: z.string().url().optional().or(z.literal('')),
@@ -51,26 +61,10 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(artist.avatar);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     mode: "onChange",
-    defaultValues: {
-      name: artist.name || "",
-      bio: artist.bio || "",
-      artistMessage: artist.artistMessage || "",
-      avatar: artist.avatar || "",
-      location: artist.location || "",
-      university: artist.university || "",
-      website: artist.website || "",
-      style: artist.style || "",
-      awards: artist.awards?.map(value => ({ value })) || [],
-      exhibitions: artist.exhibitions?.map(value => ({ value })) || [],
-      twitter: artist.twitter || "",
-      instagram: artist.instagram || "",
-      linkedin: artist.linkedin || "",
-    },
   });
   
   useEffect(() => {
@@ -83,8 +77,8 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
       university: artist.university || "",
       website: artist.website || "",
       style: artist.style || "",
-      awards: artist.awards?.map(value => ({ value })) || [],
-      exhibitions: artist.exhibitions?.map(value => ({ value })) || [],
+      awards: artist.awards?.map(award => ({ value: award.value, image: award.image })) || [],
+      exhibitions: artist.exhibitions?.map(ex => ({ value: ex.value, images: ex.images })) || [],
       twitter: artist.twitter || "",
       instagram: artist.instagram || "",
       linkedin: artist.linkedin || "",
@@ -95,22 +89,6 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
   const { fields: awardFields, append: appendAward, remove: removeAward } = useFieldArray({ control: form.control, name: "awards" });
   const { fields: exhibitionFields, append: appendExhibition, remove: removeExhibition } = useFieldArray({ control: form.control, name: "exhibitions" });
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-          if (file.size > 2 * 1024 * 1024) { // 2MB limit
-            toast({ variant: 'destructive', title: 'Image too large', description: 'Please upload an image smaller than 2MB.'});
-            return;
-          }
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              setAvatarPreview(reader.result as string);
-              form.setValue('avatar', reader.result as string, { shouldDirty: true });
-          };
-          reader.readAsDataURL(file);
-      }
-  };
-
   async function onSubmit(data: ProfileFormValues) {
     if (!updateArtistProfile) {
         toast({ variant: 'destructive', title: 'Error', description: 'Update function not available.'});
@@ -118,12 +96,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
     }
     setIsSubmitting(true);
     try {
-      await updateArtistProfile({
-        ...data,
-        avatar: data.avatar || '',
-        awards: data.awards.map(item => item.value),
-        exhibitions: data.exhibitions.map(item => item.value),
-      });
+      await updateArtistProfile(data);
       toast({
         title: "Profile Updated!",
         description: "Your changes have been saved successfully.",
@@ -148,7 +121,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
         <FormField
             control={form.control}
             name="avatar"
-            render={() => (
+            render={({ field }) => (
                 <FormItem>
                     <FormLabel>Avatar</FormLabel>
                     <div className="flex items-center gap-6">
@@ -157,23 +130,23 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
                             <AvatarFallback><User className="w-10 h-10" /></AvatarFallback>
                         </Avatar>
                         <FormControl>
-                            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                                Upload Image
-                            </Button>
+                            <Input
+                                type="file"
+                                className="hidden"
+                                id="avatar-update-upload"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      field.onChange(file);
+                                      setAvatarPreview(URL.createObjectURL(file));
+                                    }
+                                }}
+                                accept="image/png, image/jpeg"
+                              />
                         </FormControl>
-                        <Controller
-                          name="avatar"
-                          control={form.control}
-                          render={() => (
-                            <Input 
-                              type="file" 
-                              className="hidden" 
-                              ref={fileInputRef} 
-                              onChange={handleAvatarChange}
-                              accept="image/png, image/jpeg"
-                            />
-                          )}
-                        />
+                         <Button type="button" variant="outline" onClick={() => document.getElementById('avatar-update-upload')?.click()}>
+                            Change Image
+                          </Button>
                     </div>
                     <FormDescription>
                         Update your public avatar. Use a square image (PNG/JPG, max 2MB) for best results.
@@ -183,77 +156,36 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
             )}
         />
         
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Artist Name / Pseudonym</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Aether Synthesis" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="bio"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Artist Bio</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Tell us a little bit about yourself and your art..."
-                  className="resize-y min-h-[120px]"
-                  {...field}
-                />
-              </FormControl>
-               <FormDescription>
-                Share your story, your process, and what inspires you.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="artistMessage"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Message to Your Collectors</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Write a personal message that will be shared with people who collect your art..."
-                  className="resize-y min-h-[120px]"
-                  {...field}
-                />
-              </FormControl>
-                <FormDescription>
-                This message is exclusive to your fractal holders and will appear on their Certificate of Holding.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Artist Name / Pseudonym</FormLabel><FormControl><Input placeholder="e.g., Aether Synthesis" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+        <FormField control={form.control} name="bio" render={({ field }) => (<FormItem><FormLabel>Artist Bio</FormLabel><FormControl><Textarea placeholder="Tell us a little bit about yourself and your art..." className="resize-y min-h-[120px]" {...field} /></FormControl><FormDescription>Share your story, your process, and what inspires you.</FormDescription><FormMessage /></FormItem>)}/>
+        <FormField control={form.control} name="artistMessage" render={({ field }) => (<FormItem><FormLabel>Message to Your Collectors</FormLabel><FormControl><Textarea placeholder="Write a personal message that will be shared with people who collect your art..." className="resize-y min-h-[120px]" {...field} /></FormControl><FormDescription>This message is exclusive to your fractal holders and will appear on their Certificate of Holding.</FormDescription><FormMessage /></FormItem>)}/>
 
         <FormItem>
             <FormLabel>Awards</FormLabel>
-            <div className="space-y-2">
+            <div className="space-y-4">
                 {awardFields.map((field, index) => (
-                    <Card key={field.id} className="p-3 flex items-center justify-between">
-                        <FormField
-                            control={form.control}
-                            name={`awards.${index}.value`}
-                            render={({ field }) => (
-                                <FormItem className="flex-1">
-                                    <FormControl><Input placeholder="e.g., Digital Art Prize 2024" {...field} className="border-none shadow-none focus-visible:ring-0" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeAward(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    <Card key={field.id} className="p-4 bg-muted/50">
+                        <div className="flex items-start gap-4">
+                            <div className="flex-1 space-y-2">
+                                <FormField control={form.control} name={`awards.${index}.value`} render={({ field }) => (
+                                  <FormItem><FormControl><Input placeholder="e.g., Digital Art Prize 2024" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <div className="flex items-center gap-2">
+                                  {form.watch(`awards.${index}.image`) && (
+                                    <Image src={typeof form.watch(`awards.${index}.image`) === 'string' ? form.watch(`awards.${index}.image`) as string : URL.createObjectURL(form.watch(`awards.${index}.image`))} alt="preview" width={64} height={64} className="rounded-md object-cover h-16 w-16" />
+                                  )}
+                                  <FormField control={form.control} name={`awards.${index}.image`} render={({ field: { onChange, value, ...rest }}) => (
+                                      <FormItem className="flex-grow">
+                                        <FormControl>
+                                          <Input type="file" className="text-xs" accept="image/*" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />
+                                        </FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                  )}/>
+                                </div>
+                            </div>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeAward(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
                     </Card>
                 ))}
             </div>
@@ -262,97 +194,51 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
 
         <FormItem>
             <FormLabel>Exhibitions</FormLabel>
-            <div className="space-y-2">
+            <div className="space-y-4">
                 {exhibitionFields.map((field, index) => (
-                    <Card key={field.id} className="p-3 flex items-center justify-between">
-                        <FormField
-                            control={form.control}
-                            name={`exhibitions.${index}.value`}
-                            render={({ field }) => (
-                                <FormItem className="flex-1">
-                                    <FormControl><Input placeholder="e.g., 'Future Visions' at Modern Gallery" {...field} className="border-none shadow-none focus-visible:ring-0" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeExhibition(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    <Card key={field.id} className="p-4 bg-muted/50">
+                        <div className="flex items-start gap-4">
+                            <div className="flex-1 space-y-2">
+                                <FormField control={form.control} name={`exhibitions.${index}.value`} render={({ field }) => (
+                                  <FormItem><FormControl><Input placeholder="e.g., 'Future Visions' at Modern Gallery" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <div className="flex items-start gap-2">
+                                  <div className="flex gap-2">
+                                    {form.watch(`exhibitions.${index}.images`)?.map((img, imgIndex) => (
+                                      <Image key={imgIndex} src={typeof img === 'string' ? img : URL.createObjectURL(img)} alt="preview" width={64} height={64} className="rounded-md object-cover h-16 w-16" />
+                                    ))}
+                                  </div>
+                                  <FormField control={form.control} name={`exhibitions.${index}.images`} render={({ field: { onChange, value, ...rest } }) => (
+                                    <FormItem className="flex-grow">
+                                      <FormControl>
+                                        <Input type="file" multiple className="text-xs" accept="image/*" onChange={(e) => onChange(Array.from(e.target.files || []).slice(0,2))} {...rest} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}/>
+                                </div>
+                            </div>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeExhibition(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
                     </Card>
                 ))}
             </div>
-            <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendExhibition({ value: '' })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Exhibition </Button>
+            <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendExhibition({ value: '', images: [] })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Exhibition </Button>
         </FormItem>
 
         <FormItem>
           <FormLabel>Social Links</FormLabel>
             <div className="space-y-4">
-                <FormField control={form.control} name="twitter" render={({ field }) => (
-                    <FormItem><div className="flex items-center gap-2"><Twitter className="h-5 w-5 text-muted-foreground" /><FormControl><Input placeholder="https://twitter.com/..." {...field} /></FormControl></div><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="instagram" render={({ field }) => (
-                    <FormItem><div className="flex items-center gap-2"><Instagram className="h-5 w-5 text-muted-foreground" /><FormControl><Input placeholder="https://instagram.com/..." {...field} /></FormControl></div><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="linkedin" render={({ field }) => (
-                    <FormItem><div className="flex items-center gap-2"><Linkedin className="h-5 w-5 text-muted-foreground" /><FormControl><Input placeholder="https://linkedin.com/in/..." {...field} /></FormControl></div><FormMessage /></FormItem>
-                )} />
+                <FormField control={form.control} name="twitter" render={({ field }) => ( <FormItem><div className="flex items-center gap-2"><Twitter className="h-5 w-5 text-muted-foreground" /><FormControl><Input placeholder="https://twitter.com/..." {...field} /></FormControl></div><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="instagram" render={({ field }) => (<FormItem><div className="flex items-center gap-2"><Instagram className="h-5 w-5 text-muted-foreground" /><FormControl><Input placeholder="https://instagram.com/..." {...field} /></FormControl></div><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="linkedin" render={({ field }) => (<FormItem><div className="flex items-center gap-2"><Linkedin className="h-5 w-5 text-muted-foreground" /><FormControl><Input placeholder="https://linkedin.com/in/..." {...field} /></FormControl></div><FormMessage /></FormItem>)}/>
             </div>
         </FormItem>
 
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Berlin, Germany" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="university"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>University (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., National Institute of Design" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="website"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Website / Portfolio Link</FormLabel>
-              <FormControl>
-                <Input placeholder="https://your-portfolio.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="style"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Artistic Style</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Generative, Abstract, Algorithmic" {...field} />
-              </FormControl>
-              <FormDescription>
-                Comma-separated keywords describing your art.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location</FormLabel><FormControl><Input placeholder="e.g., Berlin, Germany" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+        <FormField control={form.control} name="university" render={({ field }) => (<FormItem><FormLabel>University (Optional)</FormLabel><FormControl><Input placeholder="e.g., National Institute of Design" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+        <FormField control={form.control} name="website" render={({ field }) => (<FormItem><FormLabel>Website / Portfolio Link</FormLabel><FormControl><Input placeholder="https://your-portfolio.com" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+        <FormField control={form.control} name="style" render={({ field }) => (<FormItem><FormLabel>Artistic Style</FormLabel><FormControl><Input placeholder="e.g., Generative, Abstract, Algorithmic" {...field} /></FormControl><FormDescription> Comma-separated keywords describing your art. </FormDescription><FormMessage /></FormItem>)}/>
 
         <Button type="submit" disabled={isSubmitting || !form.formState.isDirty}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

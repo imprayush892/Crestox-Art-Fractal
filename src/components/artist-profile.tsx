@@ -18,6 +18,7 @@ import { InvestmentDialog } from './investment-dialog';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { ArtistCollectorsList } from './artist-collectors-list';
+import Image from 'next/image';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -419,8 +420,17 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     </CardHeader>
                     <CardContent>
                         {artist.awards.length > 0 ? (
-                            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                                {artist.awards.map((award, i) => <li key={i}>{award}</li>)}
+                            <ul className="space-y-4">
+                                {artist.awards.map((award, i) => (
+                                    <li key={i} className="text-muted-foreground">
+                                        <p>{award.value}</p>
+                                        {award.image && (
+                                            <div className="mt-2 relative w-full h-40">
+                                              <Image src={award.image} alt={`Image for ${award.value}`} layout="fill" className="rounded-md object-cover" data-ai-hint="award certificate" />
+                                            </div>
+                                        )}
+                                    </li>
+                                ))}
                             </ul>
                         ) : <p className="text-sm text-muted-foreground">No awards listed.</p>}
                     </CardContent>
@@ -433,8 +443,21 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     </CardHeader>
                     <CardContent>
                         {artist.exhibitions.length > 0 ? (
-                             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                                {artist.exhibitions.map((ex, i) => <li key={i}>{ex}</li>)}
+                             <ul className="space-y-4">
+                                {artist.exhibitions.map((ex, i) => (
+                                    <li key={i} className="text-muted-foreground">
+                                        <p>{ex.value}</p>
+                                        {ex.images && ex.images.length > 0 && (
+                                            <div className="flex gap-2 mt-2">
+                                                {ex.images.map((img, imgIdx) => (
+                                                  <div key={imgIdx} className="relative w-1/2 h-32">
+                                                    <Image src={img} alt={`Image for ${ex.value}`} layout="fill" className="rounded-md object-cover" data-ai-hint="exhibition photo" />
+                                                  </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </li>
+                                ))}
                             </ul>
                         ) : <p className="text-sm text-muted-foreground">No exhibitions listed.</p>}
                     </CardContent>

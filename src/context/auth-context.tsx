@@ -8,7 +8,7 @@ import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, que
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser, PrivateHolding, PublicHolding, CollectorInfo } from '@/lib/data';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser, PrivateHolding, PublicHolding, CollectorInfo, Award, Exhibition } from '@/lib/data';
 import type { EvaluationResult, ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
@@ -297,34 +297,54 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const createArtistProfile = async (profileData: CreateArtistProfileData) => {
     if (!db || !user) throw new Error("User not authenticated or database not available.");
     
-    const { avatar: avatarData, ...restOfProfileData } = profileData;
+    const { avatar, awards, exhibitions, ...restOfProfileData } = profileData;
     let avatarUrl = '';
     
-    if (avatarData) {
-        if (avatarData instanceof File) {
-            try {
-                const avatarRef = ref(storage, `avatars/${user.uid}/${avatarData.name}`);
-                await uploadBytes(avatarRef, avatarData);
-                avatarUrl = await getDownloadURL(avatarRef);
-            } catch (error) {
-                throw new Error(handleAuthError(error));
-            }
-        } else if (typeof avatarData === 'string' && avatarData.startsWith('data:image')) {
-            try {
-                const avatarRef = ref(storage, `avatars/${user.uid}/profile.jpg`);
-                await uploadString(avatarRef, avatarData, 'data_url');
-                avatarUrl = await getDownloadURL(avatarRef);
-            } catch (error) {
-                throw new Error(handleAuthError(error));
-            }
-        }
-    }
-    
     const artistRef = doc(firestoreCollection(db, 'artists'));
+    const artistId = artistRef.id;
+    
+    if (avatar instanceof File) {
+      try {
+        const avatarRef = ref(storage, `avatars/${user.uid}/profile.jpg`);
+        await uploadBytes(avatarRef, avatar);
+        avatarUrl = await getDownloadURL(avatarRef);
+      } catch (error) { throw new Error(handleAuthError(error)); }
+    }
+
+    const processedAwards = await Promise.all(
+        awards.map(async (award) => {
+            if (award.image instanceof File) {
+                const storageRef = ref(storage, `achievements/${artistId}/awards/${uuidv4()}`);
+                await uploadBytes(storageRef, award.image);
+                const imageUrl = await getDownloadURL(storageRef);
+                return { value: award.value, image: imageUrl };
+            }
+            return { value: award.value };
+        })
+    );
+
+    const processedExhibitions = await Promise.all(
+        exhibitions.map(async (exhibition) => {
+            if (exhibition.images && exhibition.images.length > 0) {
+                const imageUrls = await Promise.all(
+                    exhibition.images.filter(img => img instanceof File).map(async (img) => {
+                        const storageRef = ref(storage, `achievements/${artistId}/exhibitions/${uuidv4()}`);
+                        await uploadBytes(storageRef, img as File);
+                        return getDownloadURL(storageRef);
+                    })
+                );
+                return { value: exhibition.value, images: imageUrls };
+            }
+            return { value: exhibition.value };
+        })
+    );
+    
     const newArtistData: Omit<Artist, 'id'> = {
         ...restOfProfileData,
         userId: user.uid,
         avatar: avatarUrl,
+        awards: processedAwards,
+        exhibitions: processedExhibitions,
         fractalPrice: 0,
         priceHistory: [],
         totalPortfolioValue: 0,
@@ -335,6 +355,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         totalScoreWeightedValuation: 0,
         sumOfScoresSquared: 0,
     };
+
     try {
         await setDoc(artistRef, newArtistData);
         await updateDoc(doc(db, "users", user.uid), {
@@ -351,34 +372,50 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const updateArtistProfile = async (profileData: Partial<CreateArtistProfileData>) => {
       if (!db || !artistProfile || !user) throw new Error("Artist profile not found or database not available.");
       
-      const { avatar, ...restOfProfileData } = profileData;
-      const dataToUpdate: { [key: string]: any } = {
-        ...restOfProfileData,
-      };
+      const { avatar, awards, exhibitions, ...restOfProfileData } = profileData;
+      const dataToUpdate: { [key: string]: any } = { ...restOfProfileData };
 
-      if (profileData.awards) {
-        dataToUpdate.awards = profileData.awards;
-      }
-      if (profileData.exhibitions) {
-        dataToUpdate.exhibitions = profileData.exhibitions;
-      }
-
-      if (avatar && avatar instanceof File) {
+      if (avatar instanceof File) {
           try {
-              const avatarRef = ref(storage, `avatars/${artistProfile.id}/${avatar.name}`);
+              const avatarRef = ref(storage, `avatars/${user.uid}/profile.jpg`);
               await uploadBytes(avatarRef, avatar);
               dataToUpdate.avatar = await getDownloadURL(avatarRef);
-          } catch (error) {
-              throw new Error(handleAuthError(error));
-          }
-      } else if (typeof avatar === 'string' && avatar.startsWith('data:image')) {
-         try {
-            const avatarRef = ref(storage, `avatars/${artistProfile.id}/profile.jpg`);
-            await uploadString(avatarRef, avatar, 'data_url');
-            dataToUpdate.avatar = await getDownloadURL(avatarRef);
-        } catch (error) {
-            throw new Error(handleAuthError(error));
-        }
+          } catch (error) { throw new Error(handleAuthError(error)); }
+      }
+
+      if (awards) {
+        dataToUpdate.awards = await Promise.all(
+          awards.map(async (award) => {
+            if (award.image instanceof File) {
+              const storageRef = ref(storage, `achievements/${artistProfile.id}/awards/${uuidv4()}`);
+              await uploadBytes(storageRef, award.image);
+              const imageUrl = await getDownloadURL(storageRef);
+              return { value: award.value, image: imageUrl };
+            }
+            return { value: award.value, image: award.image || undefined };
+          })
+        );
+      }
+      
+      if (exhibitions) {
+        dataToUpdate.exhibitions = await Promise.all(
+          exhibitions.map(async (exhibition) => {
+            if (exhibition.images && exhibition.images.length > 0) {
+              const imageUrls = await Promise.all(
+                exhibition.images.map(async (img) => {
+                  if (img instanceof File) {
+                    const storageRef = ref(storage, `achievements/${artistProfile.id}/exhibitions/${uuidv4()}`);
+                    await uploadBytes(storageRef, img);
+                    return getDownloadURL(storageRef);
+                  }
+                  return img; // It's already a URL string
+                })
+              );
+              return { value: exhibition.value, images: imageUrls.filter(Boolean) as string[] };
+            }
+            return { value: exhibition.value, images: [] };
+          })
+        );
       }
       
       const artistRef = doc(db, "artists", artistProfile.id);
