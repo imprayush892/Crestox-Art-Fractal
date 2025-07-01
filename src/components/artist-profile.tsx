@@ -64,7 +64,10 @@ function SoldArtworkCard({ artwork }: SoldArtworkCardProps) {
                     alt={artwork.name} 
                     width={400} 
                     height={400} 
-                    className="w-full h-full object-cover transition-opacity duration-300"
+                    className={cn(
+                        "w-full h-full transition-opacity duration-300",
+                        currentIndex === 0 ? 'object-cover' : 'object-contain'
+                    )}
                     data-ai-hint={currentIndex === 0 ? "artwork" : "document proof"}
                     key={`${artwork.name}-${currentIndex}`}
                 />
