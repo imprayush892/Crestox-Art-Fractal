@@ -117,7 +117,15 @@ export default function CreateArtistProfilePage() {
     }
     setIsSubmitting(true);
     try {
-      await createArtistProfile(data);
+      const profileDataForApi: CreateArtistProfileData = {
+        ...data,
+        previouslySoldArtworks: data.previouslySoldArtworks.map(art => ({
+          ...art,
+          artworkImage: art.artworkImage || null,
+          proofOfSaleImage: art.proofOfSaleImage || null,
+        })),
+      };
+      await createArtistProfile(profileDataForApi);
       toast({
         title: "Profile Created!",
         description: "Welcome to the Crestox artist community.",
