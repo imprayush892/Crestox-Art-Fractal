@@ -1,4 +1,3 @@
-
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -55,7 +54,7 @@ export function Header() {
   const closeMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <Link href="/" className="mr-6 flex items-center gap-2">
           <Image src={monogramUrl} alt="Crestox Logo" width={56} height={56} className="h-14 w-14" data-ai-hint="logo monogram" />
@@ -64,19 +63,19 @@ export function Header() {
         <div className="hidden md:flex flex-1 items-center justify-between">
           <nav className="flex items-center gap-6 text-sm">
             {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+              <Link key={link.href} href={link.href} className="transition-colors text-foreground/60 hover:text-primary">
                 {link.label}
               </Link>
             ))}
             {isLoggedIn && (
               <>
                 {loggedInCollectorLinks.map((link) => (
-                  <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+                  <Link key={link.href} href={link.href} className="transition-colors text-foreground/60 hover:text-primary">
                     {link.label}
                   </Link>
                 ))}
                 {loggedInArtistLinks.map((link) => (
-                  <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+                  <Link key={link.href} href={link.href} className="transition-colors text-foreground/60 hover:text-primary">
                     {link.label}
                   </Link>
                 ))}

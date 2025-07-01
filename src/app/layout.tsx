@@ -5,6 +5,7 @@ import { Footer } from '@/components/footer';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/context/auth-context';
 import { getInitialArtists, getInitialFractals } from '@/lib/server-data';
+import { PageTransition } from '@/components/page-transition';
 
 export const metadata: Metadata = {
   title: 'Crestox - Digital Fractal Art Marketplace',
@@ -30,7 +31,11 @@ export default async function RootLayout({
         <AuthProvider initialArtists={initialArtists} initialFractals={initialFractals}>
           <div className="flex min-h-screen flex-col bg-transparent">
             <Header />
-            <main className="flex-1">{children}</main>
+            <main className="flex-1">
+              <PageTransition>
+                {children}
+              </PageTransition>
+            </main>
             <Footer />
           </div>
           <Toaster />
