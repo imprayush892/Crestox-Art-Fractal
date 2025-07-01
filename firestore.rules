@@ -1,68 +1,61 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
+  
     function isAuthenticated() {
       return request.auth != null;
     }
-
+    
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    // PUBLIC DATA
     match /artists/{artistId} {
       allow read: if true;
-      // Allow any authenticated user to update artist data like price and counts
-      // as part of a transaction. Artist can create/delete their own profile.
-      allow update: if isAuthenticated();
-      allow create, delete: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-    }
-
-    match /fractals/{fractalId} {
-      allow read: if true;
-      // Only the artist who owns the artwork can modify it.
-      allow write: if isAuthenticated() && get(/databases/$(database)/documents/artists/$(request.resource.data.artistId)).data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Artist can update their own profile.
+      // A buyer can update market-related fields during a purchase.
+      allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
+                       (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().subsetOf(['fractalPrice', 'priceHistory', 'availableEditions']));
     }
     
-    match /resaleListings/{listingId} {
+    match /fractals/{fractalId} {
       allow read: if true;
-      // Any authenticated user can create a listing.
-      // Only the listing owner can update it (e.g., to cancel).
-      // The purchase transaction also needs to update it.
-      allow create: if isAuthenticated() && request.resource.data.resellerId == request.auth.uid;
-      allow update: if isAuthenticated();
+      // Artist can write to their own fractals.
+      allow write: if isAuthenticated() && get(/databases/$(database)/documents/artists/$(resource.data.artistId)).data.userId == request.auth.uid;
     }
 
-    // USER DATA
-    match /users/{userId} {
+    match /resaleListings/{listingId} {
       allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.resellerId == request.auth.uid;
+      // Owner can update. Buyer can update specific fields for a sale.
+      allow update: if (isAuthenticated() && resource.data.resellerId == request.auth.uid) ||
+                       (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'status', 'holdingIds']));
+    }
+    
+    match /users/{userId} {
+      allow read: if isAuthenticated();
       allow create: if isOwner(userId);
-      // Allow a user to update their own document.
-      // ALSO, allow any authenticated user to update ANOTHER user's document
-      // IF AND ONLY IF the only field being changed is 'walletBalance'.
-      // This is crucial for the marketplace transaction to credit the seller.
-      allow update: if isOwner(userId) || (
-        isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance'])
-      );
-      
-      // PRIVATE HOLDINGS (only owner can access)
-      match /privateHoldings/{holdingId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      // PUBLIC HOLDINGS
+      // Owner can update. Buyer can only update walletBalance.
+      allow update: if isOwner(userId) || 
+                       (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
+              
       match /holdings/{holdingId} {
-        // Owner can read their holdings.
-        allow read: if isOwner(userId);
-        // Allow creating for self.
+        allow read: if isAuthenticated();
         allow create: if isOwner(userId);
-        // Allow deleting for anyone authenticated (as part of a sale).
-        allow delete: if isAuthenticated();
-        // Allow owner to update status (e.g., from 'owned' to 'listed').
+        // A user can update their own holding (e.g., to mark it as listed).
         allow update: if isOwner(userId);
+        // SECURITY NOTE: Any authenticated user can delete a holding.
+        // This is necessary for the client-side purchase transaction to work
+        // but should be moved to a Cloud Function in a production app.
+        allow delete: if isAuthenticated();
+      }
+      
+      match /privateHoldings/{holdingId} {
+        allow read, create, update: if isOwner(userId);
+        // SECURITY NOTE: Same as public holdings. Required for client-side transaction.
+        allow delete: if isAuthenticated();
       }
     }
   }
