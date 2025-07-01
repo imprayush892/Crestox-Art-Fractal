@@ -24,6 +24,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Loader2, PlusCircle, Trash2, Twitter, Instagram, Linkedin, User, Upload, Image as ImageIcon, DollarSign } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
+import type { CreateArtistProfileData } from '@/lib/data';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -295,7 +296,7 @@ export default function CreateArtistProfilePage() {
                     </Card>
                   ))}
                 </div>
-                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendSold({ name: '', saleValue: 0 })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Sold Artwork </Button>
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendSold({ name: '', saleValue: 0, artworkImage: null, proofOfSaleImage: null })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Sold Artwork </Button>
               </FormItem>
 
               <FormItem>
