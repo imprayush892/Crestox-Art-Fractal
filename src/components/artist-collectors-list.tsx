@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -45,15 +46,16 @@ export function ArtistCollectorsList({ artistId }: ArtistCollectorsListProps) {
             } catch (err) {
                 console.error("Failed to fetch collectors:", err);
                 const errorMessage = (err as Error).message || "An unknown error occurred.";
-                
-                if (errorMessage.toLowerCase().includes("permission-denied") || errorMessage.toLowerCase().includes("requires an index")) {
-                     setError("Could not load collectors. This is likely due to a missing database index. Please open the browser's developer console (F12), look for a Firestore error message, and click the link to create the required index in your Firebase console.");
-                } else if (errorMessage.toLowerCase().includes("not authenticated")) {
-                    // This case should be handled by the isLoggedIn check, but as a fallback:
+                const lowerCaseMessage = errorMessage.toLowerCase();
+
+                // Firestore often masks a "missing index" error with a "permission-denied" error for collectionGroup queries.
+                // We'll give the user the most likely solution.
+                if (lowerCaseMessage.includes("permission-denied") || lowerCaseMessage.includes("insufficient permissions") || lowerCaseMessage.includes("requires an index")) {
+                     setError("Could not load collectors. This is likely due to a missing database index. Please open the browser's developer console (F12), find the detailed Firebase error message (it will be red), and click the link inside it to create the required index in your Firebase console.");
+                } else if (lowerCaseMessage.includes("not authenticated")) {
                     setError("You must be logged in to view collectors.");
-                }
-                 else {
-                    setError("An error occurred while fetching the list of collectors.");
+                } else {
+                    setError(`An error occurred while fetching the list of collectors: ${errorMessage}`);
                 }
             } finally {
                 setIsFetching(false);
