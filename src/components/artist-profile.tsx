@@ -157,12 +157,6 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                         <span>{artist.university}</span>
                     </div>
                 )}
-                {artist.style && (
-                    <div className="flex items-center gap-2">
-                        <Palette className="w-4 h-4" />
-                        <span>{artist.style}</span>
-                    </div>
-                )}
                 {artist.website && (
                     <a href={artist.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-primary hover:underline">
                         <LinkIcon className="w-4 h-4" />
@@ -173,6 +167,12 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                  {artist.instagram && <a href={artist.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Instagram className="w-5 h-5"/></a>}
                  {artist.linkedin && <a href={artist.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Linkedin className="w-5 h-5"/></a>}
               </div>
+              {artist.style && (
+                <div className="mt-4 flex justify-center md:justify-start items-center gap-2 text-muted-foreground">
+                    <Palette className="w-4 h-4" />
+                    <span className="text-sm">{artist.style}</span>
+                </div>
+              )}
               <p className="mt-4 max-w-2xl text-lg text-foreground/80">{artist.bio}</p>
             </div>
         </div>
