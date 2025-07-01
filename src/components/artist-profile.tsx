@@ -310,6 +310,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 tickFormatter={(value) => format(new Date(value), "MMM yy")}
                                             />
                                             <YAxis
+                                                width={80}
                                                 tickLine={false}
                                                 axisLine={false}
                                                 tickMargin={8}
@@ -358,6 +359,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 tickFormatter={(value) => format(new Date(value), "MMM yy")}
                                             />
                                             <YAxis
+                                                width={80}
                                                 tickLine={false}
                                                 axisLine={false}
                                                 tickMargin={8}
