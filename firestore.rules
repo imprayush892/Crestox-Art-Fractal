@@ -1,8 +1,8 @@
-rules_version = '2';
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -11,49 +11,61 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    match /users/{userId} {
-      // Any authenticated user can view public user profiles.
-      allow read: if isAuthenticated();
-      // A user can only create their own document.
-      allow create: if isOwner(userId);
-      // A user can update their own document. Another user can ONLY update walletBalance during a sale.
-      allow update: if isOwner(userId) || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
-      
-      match /holdings/{holdingId} {
-        // A user can only manage their own holdings.
-        allow read, create, update: if isOwner(userId);
-        // Any authenticated user can be part of a transaction that deletes a holding (i.e., a sale).
-        allow delete: if isAuthenticated();
-      }
-
-      match /privateHoldings/{holdingId} {
-         // A user can only manage their own private holdings.
-        allow list, create, update: if isOwner(userId);
-        // Any authenticated user can get/delete a specific holding as part of a transaction.
-        allow get, delete: if isAuthenticated();
-      }
-    }
-
+    // --- PUBLIC DATA ---
+    // Anyone can read artists and fractals
     match /artists/{artistId} {
-      allow read: if true;
-      // An authenticated user can create an artist profile linked to their user ID.
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      // Any authenticated user can perform marketplace updates on an artist's profile.
-      allow update: if isAuthenticated();
+      allow get, list: if true;
+      // Allow any authenticated user to perform the necessary updates for purchases.
+      // This is simplified for the client-side transaction model.
+      allow update: if isAuthenticated(); 
     }
-    
+
     match /fractals/{fractalId} {
-      allow read: if true;
-      // Any authenticated user (specifically, the artist owner) can create or update artwork.
+      allow get, list: if true;
+      allow write: if false; // Artworks created via transactions, not directly
+    }
+
+    // --- MARKETPLACE DATA ---
+    // Anyone can see listings, but only authenticated users can create/update them
+    match /resaleListings/{listingId} {
+      allow get, list: if true;
       allow create, update: if isAuthenticated();
     }
 
-    match /resaleListings/{listingId} {
-      allow read: if true;
-      // The reseller must be the one creating the listing.
-      allow create: if isAuthenticated() && request.resource.data.resellerId == request.auth.uid;
-      // Any authenticated user can update a listing (i.e., a buyer taking shares).
-      allow update: if isAuthenticated();
+    // Rule for collectionGroup query on 'holdings' to get collector lists
+    match /{path=**}/holdings/{holdingId} {
+      allow list: if isAuthenticated();
+    }
+
+    // --- USER DATA ---
+    match /users/{userId} {
+      // Anyone can read a user's public profile
+      allow get, list: if true; 
+      // Only the owner can create their profile or update anything other than their wallet
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || 
+                     (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
+      allow delete: if false; // Users can't delete their accounts this way
+      
+      // Public Holdings - these are linked to a specific user
+      match /holdings/{holdingId} {
+        allow get: if isAuthenticated(); // Covered by collectionGroup rule, but explicit is good
+        allow create, update: if isOwner(userId);
+        // An authenticated user (the buyer) needs to be able to delete another user's (the seller's) holding
+        allow delete: if isAuthenticated();
+      }
+
+      // Private Holdings - these contain sensitive purchase data
+      match /privateHoldings/{holdingId} {
+        // THIS IS THE KEY FIX: A buyer needs to be able to 'get' the seller's private holding doc during the transaction
+        allow get: if isAuthenticated();
+        // Only the owner can list their own private holdings
+        allow list: if isOwner(userId);
+        // Only the owner can create/update their own private holdings
+        allow create, update: if isOwner(userId);
+        // An authenticated user (the buyer) needs to be able to delete another user's (the seller's) private holding
+        allow delete: if isAuthenticated();
+      }
     }
   }
 }
