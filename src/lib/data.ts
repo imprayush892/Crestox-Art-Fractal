@@ -217,7 +217,7 @@ export const editArtworkFormSchema = z.object({
 export type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
 
 export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'awards' | 'exhibitions' | 'previouslySoldArtworks' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'totalPortfolioValue' | 'kFactor' | 'totalScoreWeightedValuation' | 'sumOfScoresSquared'> & { 
-  avatar: File | string | null;
+  avatar?: File | string | null;
   awards: { value: string; image?: File | string | null }[];
   exhibitions: { value: string; images?: (File | string | null)[] }[];
   previouslySoldArtworks: { name: string; artworkImage: File | string | null; proofOfSaleImage: File | string | null; saleValue: number }[];
