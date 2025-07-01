@@ -253,15 +253,15 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
             )}
         </TabsContent>
         <TabsContent value="analytics" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                <Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                <Card className="flex flex-col">
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl">Portfolio Snapshot</CardTitle>
                         <CardDescription>Breakdown of graded artworks in this collection.</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-grow">
                     {portfolioSnapshotData.length > 0 ? (
-                            <ChartContainer config={{ count: { label: "Artworks", color: "hsl(var(--primary))" } }} className="h-[250px] w-full">
+                            <ChartContainer config={{ count: { label: "Artworks", color: "hsl(var(--primary))" } }} className="h-full min-h-[250px] w-full">
                                 <BarChart data={portfolioSnapshotData} accessibilityLayer>
                                     <CartesianGrid vertical={false} />
                                     <XAxis dataKey="grade" tickLine={false} tickMargin={10} axisLine={false} stroke="#888888" fontSize={12} />
@@ -274,29 +274,29 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                 </BarChart>
                             </ChartContainer>
                         ) : (
-                            <div className="col-span-full text-center py-8 h-[250px] flex items-center justify-center">
+                            <div className="col-span-full text-center py-8 h-full min-h-[250px] flex items-center justify-center">
                                 <p className="text-muted-foreground">No graded artworks in this portfolio yet.</p>
                             </div>
                         )}
                     </CardContent>
                 </Card>
-                <Card>
-                    <Tabs defaultValue="fractal-value">
+                <Card className="flex flex-col">
+                    <Tabs defaultValue="fractal-value" className="flex flex-col flex-grow">
                         <CardHeader className="p-4 sm:p-6">
                             <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="fractal-value">Fractal Value</TabsTrigger>
                                 <TabsTrigger value="total-valuation">Total Valuation</TabsTrigger>
                             </TabsList>
                         </CardHeader>
-                        <CardContent className="p-0">
-                            <TabsContent value="fractal-value" className="mt-0">
+                        <CardContent className="p-0 flex-grow flex">
+                            <TabsContent value="fractal-value" className="mt-0 w-full flex flex-col">
                             <CardDescription className="px-4 sm:px-6 mb-4 text-sm">
                                     Historical value of one fractal from {artist.name}'s portfolio.
                                 </CardDescription>
-                                <div className="p-4 pt-0 sm:p-6 sm:pt-0">
+                                <div className="p-4 pt-0 sm:p-6 sm:pt-0 flex-grow">
                                     <ChartContainer 
                                         config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
-                                        className="h-[250px] w-full"
+                                        className="h-full min-h-[250px] w-full"
                                     >
                                         <LineChart data={fractalPriceHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -335,14 +335,14 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                     </ChartContainer>
                                 </div>
                             </TabsContent>
-                            <TabsContent value="total-valuation" className="mt-0">
+                            <TabsContent value="total-valuation" className="mt-0 w-full flex flex-col">
                                 <CardDescription className="px-4 sm:px-6 mb-4 text-sm">
                                     Historical total valuation of {artist.name}'s entire collection.
                                 </CardDescription>
-                                <div className="p-4 pt-0 sm:p-6 sm:pt-0">
+                                <div className="p-4 pt-0 sm:p-6 sm:pt-0 flex-grow">
                                     <ChartContainer 
                                         config={{ value: { label: "Value", color: "hsl(var(--accent-foreground))" } }} 
-                                        className="h-[250px] w-full"
+                                        className="h-full min-h-[250px] w-full"
                                     >
                                         <LineChart data={totalValueHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
