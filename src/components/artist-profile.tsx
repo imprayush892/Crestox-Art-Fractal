@@ -414,7 +414,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
             <ArtistCollectorsList artistId={artist.id} />
         </TabsContent>
         <TabsContent value="achievements" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl flex items-center gap-2">
@@ -423,15 +423,26 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     </CardHeader>
                     <CardContent>
                         {artist.awards.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="columns-1 sm:columns-2 gap-6 space-y-6">
                                 {artist.awards.map((award, i) => (
-                                    <div key={i} className="flex flex-col items-center text-center gap-2">
-                                        {award.image && (
-                                        <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
-                                            <Image src={award.image} alt={`Image for ${award.value}`} layout="fill" className="object-cover" data-ai-hint="award certificate" />
-                                        </div>
-                                        )}
-                                        <p className="text-sm text-foreground/80 font-medium mt-1">{award.value}</p>
+                                    <div key={i} className="break-inside-avoid">
+                                        <Card className="bg-muted/50 overflow-hidden">
+                                            {award.image && (
+                                                <div className="border-b">
+                                                    <Image 
+                                                        src={award.image} 
+                                                        alt={`Image for ${award.value}`} 
+                                                        width={500}
+                                                        height={300}
+                                                        layout="responsive"
+                                                        data-ai-hint="award certificate" 
+                                                    />
+                                                </div>
+                                            )}
+                                            <div className="p-4">
+                                                <p className="text-sm text-foreground/80 font-medium">{award.value}</p>
+                                            </div>
+                                        </Card>
                                     </div>
                                 ))}
                             </div>
@@ -446,23 +457,34 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     </CardHeader>
                     <CardContent>
                         {artist.exhibitions.length > 0 ? (
-                            <div className="space-y-6">
+                            <div className="columns-1 sm:columns-2 gap-6 space-y-6">
                                 {artist.exhibitions.map((ex, i) => (
-                                <div key={i}>
-                                    <p className="font-medium text-foreground">{ex.value}</p>
-                                    {ex.images && ex.images.length > 0 && (
-                                    <div className={cn(
-                                        "grid gap-2 mt-2",
-                                        ex.images.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                                    )}>
-                                        {ex.images.map((img, imgIdx) => (
-                                        <div key={imgIdx} className="relative aspect-video w-full overflow-hidden rounded-lg border">
-                                            <Image src={img} alt={`Image for ${ex.value}`} layout="fill" className="object-cover" data-ai-hint="exhibition photo" />
-                                        </div>
-                                        ))}
+                                    <div key={i} className="break-inside-avoid">
+                                        <Card className="bg-muted/50 overflow-hidden">
+                                            {ex.images && ex.images.length > 0 && (
+                                                <div className={cn(
+                                                    "grid gap-px border-b",
+                                                    ex.images.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                                                )}>
+                                                    {ex.images.map((img, imgIdx) => (
+                                                        <div key={imgIdx}>
+                                                            <Image 
+                                                                src={img} 
+                                                                alt={`Image for ${ex.value}`} 
+                                                                width={300} 
+                                                                height={300} 
+                                                                layout="responsive"
+                                                                data-ai-hint="exhibition photo" 
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div className="p-4">
+                                                <p className="text-sm text-foreground/80 font-medium">{ex.value}</p>
+                                            </div>
+                                        </Card>
                                     </div>
-                                    )}
-                                </div>
                                 ))}
                             </div>
                         ) : <p className="text-sm text-muted-foreground">No exhibitions listed.</p>}
