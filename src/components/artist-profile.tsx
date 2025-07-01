@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import type { Artist, Fractal } from '@/lib/data';
@@ -30,7 +29,7 @@ const formatLargeNumber = (value: number): string => {
         return `${(value / 1000000).toFixed(1)}M`;
     }
     if (value >= 1000) {
-        return `${Math.round(value / 1000)}k`;
+        return `${(value / 1000).toFixed(0)}k`;
     }
     return value.toString();
 };
@@ -311,7 +310,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                         config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
                                         className="h-full min-h-[250px] w-full"
                                     >
-                                        <LineChart data={fractalPriceHistory} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                                        <LineChart data={fractalPriceHistory}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                             <XAxis
                                                 dataKey="date"
@@ -321,6 +320,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 tickFormatter={(value) => format(new Date(value), "MMM yy")}
                                             />
                                             <YAxis
+                                                width={60}
                                                 tickLine={false}
                                                 axisLine={false}
                                                 tickMargin={8}
@@ -359,7 +359,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                         config={{ value: { label: "Value", color: "hsl(var(--accent-foreground))" } }} 
                                         className="h-full min-h-[250px] w-full"
                                     >
-                                        <LineChart data={totalValueHistory} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                                        <LineChart data={totalValueHistory}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                             <XAxis
                                                 dataKey="date"
@@ -369,6 +369,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 tickFormatter={(value) => format(new Date(value), "MMM yy")}
                                             />
                                             <YAxis
+                                                width={60}
                                                 tickLine={false}
                                                 axisLine={false}
                                                 tickMargin={8}
