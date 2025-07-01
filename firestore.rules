@@ -2,7 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
+    
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -11,61 +11,49 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // --- User Data ---
     match /users/{userId} {
-      // Allow user to write to their own data
-      allow write: if isOwner(userId);
-      // Allow user to read their own full document
-      allow get: if isOwner(userId);
-      // Allow any authenticated user to read public-facing user profiles (via a query on the 'users' collection)
-      allow list: if isAuthenticated();
-
-      // Allow any authenticated user to update ONLY the walletBalance of another user
-      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']);
-
+      // Any authenticated user can view public user profiles.
+      allow read: if isAuthenticated();
+      // A user can only create their own document.
+      allow create: if isOwner(userId);
+      // A user can update their own document. Another user can ONLY update walletBalance during a sale.
+      allow update: if isOwner(userId) || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
+      
       match /holdings/{holdingId} {
-        // Owner can do anything.
-        allow read, write: if isOwner(userId);
-        
-        // Any authenticated user can get a single public holding (for transaction verification) and delete it.
-        allow get, delete: if isAuthenticated();
+        // A user can only manage their own holdings.
+        allow read, create, update: if isOwner(userId);
+        // Any authenticated user can be part of a transaction that deletes a holding (i.e., a sale).
+        allow delete: if isAuthenticated();
       }
 
       match /privateHoldings/{holdingId} {
-        // Owner can write and list their private holdings.
-        allow write, list: if isOwner(userId);
-        
-        // Any authenticated user can GET or DELETE a specific private holding doc.
-        // This is required for the marketplace purchase transaction to verify and transfer ownership.
-        // Listing all private holdings remains restricted to the owner.
+         // A user can only manage their own private holdings.
+        allow list, create, update: if isOwner(userId);
+        // Any authenticated user can get/delete a specific holding as part of a transaction.
         allow get, delete: if isAuthenticated();
       }
     }
 
-    // --- Artists & Fractals (Public) ---
     match /artists/{artistId} {
       allow read: if true;
-      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fractalPrice', 'priceHistory', 'availableEditions', 'totalPortfolioValueHistory']);
-      allow create: if isAuthenticated();
+      // An authenticated user can create an artist profile linked to their user ID.
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Any authenticated user can perform marketplace updates on an artist's profile.
+      allow update: if isAuthenticated();
     }
     
     match /fractals/{fractalId} {
-        allow read: if true;
-        // Only allow creation/updates by authenticated users. More specific rules can be added if needed.
-        allow create, update: if isAuthenticated();
+      allow read: if true;
+      // Any authenticated user (specifically, the artist owner) can create or update artwork.
+      allow create, update: if isAuthenticated();
     }
 
-    // --- Resale Listings (Public) ---
     match /resaleListings/{listingId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'status', 'holdingIds']);
-    }
-
-    // --- Collection Group Queries ---
-    match /{path=**}/holdings/{holdingId} {
-      // Allow authenticated users to perform collection group queries on 'holdings'
-      allow list: if isAuthenticated();
+      // The reseller must be the one creating the listing.
+      allow create: if isAuthenticated() && request.resource.data.resellerId == request.auth.uid;
+      // Any authenticated user can update a listing (i.e., a buyer taking shares).
+      allow update: if isAuthenticated();
     }
   }
 }
