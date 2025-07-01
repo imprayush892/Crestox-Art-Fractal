@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Artist, Fractal } from '@/lib/data';
+import type { Artist, Fractal, PreviouslySoldArtwork } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FractalCard } from '@/components/fractal-card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from 'recharts';
@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap, DollarSign, History } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap, DollarSign, History, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
@@ -36,6 +36,67 @@ const formatLargeNumber = (value: number): string => {
     return value.toString();
 };
 
+interface SoldArtworkCardProps {
+    artwork: PreviouslySoldArtwork;
+}
+
+function SoldArtworkCard({ artwork }: SoldArtworkCardProps) {
+    const images = [artwork.artworkImage, artwork.proofOfSaleImage];
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    const goToPrevious = () => {
+        const isFirst = currentIndex === 0;
+        const newIndex = isFirst ? images.length - 1 : currentIndex - 1;
+        setCurrentIndex(newIndex);
+    };
+
+    const goToNext = () => {
+        const isLast = currentIndex === images.length - 1;
+        const newIndex = isLast ? 0 : currentIndex + 1;
+        setCurrentIndex(newIndex);
+    };
+
+    return (
+        <Card className="overflow-hidden">
+            <div className="relative group aspect-square">
+                <Image 
+                    src={images[currentIndex]} 
+                    alt={artwork.name} 
+                    width={400} 
+                    height={400} 
+                    className="w-full h-full object-cover transition-opacity duration-300"
+                    data-ai-hint={currentIndex === 0 ? "artwork" : "document proof"}
+                    key={`${artwork.name}-${currentIndex}`}
+                />
+
+                <Button onClick={goToPrevious} size="icon" variant="ghost" className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 text-white hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ChevronLeft />
+                </Button>
+                <Button onClick={goToNext} size="icon" variant="ghost" className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 text-white hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ChevronRight />
+                </Button>
+
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    {images.map((_, index) => (
+                        <button 
+                            key={index} 
+                            onClick={() => setCurrentIndex(index)} 
+                            className={cn(
+                                "w-2.5 h-2.5 rounded-full transition-colors", 
+                                currentIndex === index ? "bg-white" : "bg-white/50 hover:bg-white/75"
+                            )}
+                            aria-label={`View image ${index + 1}`}
+                        />
+                    ))}
+                </div>
+            </div>
+            <div className="p-4">
+                <p className="font-semibold">{artwork.name}</p>
+                <p className="text-sm text-muted-foreground">Sold for <span className="font-medium text-primary">₹{artwork.saleValue.toLocaleString()}</span></p>
+            </div>
+        </Card>
+    );
+}
 
 export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
   const { 
@@ -502,16 +563,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     {artist.previouslySoldArtworks && artist.previouslySoldArtworks.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {artist.previouslySoldArtworks.map((artwork, i) => (
-                                <Card key={i} className="overflow-hidden">
-                                    <div className="grid grid-cols-2 gap-px bg-border">
-                                        <Image src={artwork.artworkImage} alt={artwork.name} width={400} height={400} className="w-full h-auto object-cover" data-ai-hint="artwork" />
-                                        <Image src={artwork.proofOfSaleImage} alt={`Proof of sale for ${artwork.name}`} width={400} height={400} className="w-full h-auto object-cover" data-ai-hint="document proof" />
-                                    </div>
-                                    <div className="p-4">
-                                        <p className="font-semibold">{artwork.name}</p>
-                                        <p className="text-sm text-muted-foreground">Sold for <span className="font-medium text-primary">₹{artwork.saleValue.toLocaleString()}</span></p>
-                                    </div>
-                                </Card>
+                                <SoldArtworkCard key={i} artwork={artwork} />
                             ))}
                         </div>
                     ) : (
