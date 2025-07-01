@@ -38,6 +38,7 @@ const profileFormSchema = z.object({
   avatar: z.any().optional(),
   artistMessage: z.string().max(1000, "Message must be at most 1000 characters.").optional(),
   location: z.string().max(100).optional(),
+  university: z.string().max(100).optional(),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   style: z.string().max(100).optional(),
   awards: z.array(z.object({ value: z.string().min(1, "Award cannot be empty.") })),
@@ -71,6 +72,7 @@ export default function CreateArtistProfilePage() {
       bio: "",
       artistMessage: "",
       location: "",
+      university: "",
       website: "",
       style: "",
       awards: [],
@@ -349,6 +351,19 @@ export default function CreateArtistProfilePage() {
                     <FormLabel>Location</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., Berlin, Germany" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="university"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>University (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., National Institute of Design" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

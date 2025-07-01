@@ -34,6 +34,7 @@ const profileFormSchema = z.object({
   artistMessage: z.string().max(1000, "Message must be at most 1000 characters.").optional(),
   avatar: z.any().optional(),
   location: z.string().max(100).optional(),
+  university: z.string().max(100).optional(),
   website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   style: z.string().max(100).optional(),
   awards: z.array(z.object({ value: z.string().min(1, "Award cannot be empty.") })),
@@ -61,6 +62,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
       artistMessage: artist.artistMessage || "",
       avatar: artist.avatar || "",
       location: artist.location || "",
+      university: artist.university || "",
       website: artist.website || "",
       style: artist.style || "",
       awards: artist.awards?.map(value => ({ value })) || [],
@@ -78,6 +80,7 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
       artistMessage: artist.artistMessage || "",
       avatar: artist.avatar || "",
       location: artist.location || "",
+      university: artist.university || "",
       website: artist.website || "",
       style: artist.style || "",
       awards: artist.awards?.map(value => ({ value })) || [],
@@ -307,7 +310,19 @@ export function ArtistSettingsForm({ artist }: ArtistSettingsFormProps) {
             </FormItem>
           )}
         />
-
+        <FormField
+          control={form.control}
+          name="university"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>University (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., National Institute of Design" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="website"

@@ -26,6 +26,7 @@ export interface Artist {
   bio: string;
   artistMessage?: string;
   location?: string;
+  university?: string;
   website?: string;
   style?: string;
   awards: string[];

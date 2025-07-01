@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
@@ -149,6 +149,12 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4" />
                         <span>{artist.location}</span>
+                    </div>
+                )}
+                {artist.university && (
+                    <div className="flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4" />
+                        <span>{artist.university}</span>
                     </div>
                 )}
                 {artist.style && (
@@ -310,7 +316,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                         config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
                                         className="h-full min-h-[250px] w-full"
                                     >
-                                        <LineChart data={fractalPriceHistory}>
+                                        <LineChart data={fractalPriceHistory} margin={{left: 12}}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                             <XAxis
                                                 dataKey="date"
@@ -320,7 +326,6 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 tickFormatter={(value) => format(new Date(value), "MMM yy")}
                                             />
                                             <YAxis
-                                                width={60}
                                                 tickLine={false}
                                                 axisLine={false}
                                                 tickMargin={8}
@@ -359,7 +364,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                         config={{ value: { label: "Value", color: "hsl(var(--accent-foreground))" } }} 
                                         className="h-full min-h-[250px] w-full"
                                     >
-                                        <LineChart data={totalValueHistory}>
+                                        <LineChart data={totalValueHistory} margin={{left: 12}}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                             <XAxis
                                                 dataKey="date"
@@ -369,7 +374,6 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 tickFormatter={(value) => format(new Date(value), "MMM yy")}
                                             />
                                             <YAxis
-                                                width={60}
                                                 tickLine={false}
                                                 axisLine={false}
                                                 tickMargin={8}
