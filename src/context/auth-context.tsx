@@ -245,7 +245,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   }, [user?.uid]);
   
   const getCollectorsForArtist = async (artistId: string) => {
-      if (!db) throw new Error("Database not available");
+      if (!db || !user) throw new Error("Not authenticated.");
       const holdingsQuery = query(
           collectionGroup(db, 'holdings'),
           where('artistId', '==', artistId)

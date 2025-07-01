@@ -1,0 +1,71 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper Functions ---
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // --- Public Collections ---
+    // Anyone can read public data.
+    match /artists/{artistId} {
+      allow read: if true;
+      // Any authenticated user can update artist fields during a transaction.
+      allow update: if isAuthenticated();
+    }
+
+    match /fractals/{fractalId} {
+      allow read: if true;
+      // Only the artist can create or update their own artwork.
+      allow create, update: if isAuthenticated() && request.resource.data.artistId == request.auth.uid;
+    }
+
+    match /resaleListings/{listingId} {
+      allow read: if true;
+      // Any authenticated user can create or update a listing.
+      allow create, update: if isAuthenticated();
+    }
+
+    // --- User Data ---
+    match /users/{userId} {
+      // An authenticated user can read public user profiles.
+      allow get, list: if isAuthenticated();
+      
+      // A user can create their own document on signup.
+      allow create: if isOwner(userId);
+      
+      // A user can update their own document. Another user can ONLY update the walletBalance.
+      allow update: if isOwner(userId) ||
+                       (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
+
+      // --- User Subcollections ---
+      // Publicly viewable holdings for a user.
+      match /holdings/{holdingId} {
+        // Allow any authenticated user to read (get and list) holdings.
+        allow read: if isAuthenticated();
+        // Only the owner can create or update their own holdings.
+        allow create, update: if isOwner(userId);
+        // Any authenticated user can delete a holding (for transaction purposes).
+        allow delete: if isAuthenticated();
+      }
+
+      // Private data for a holding, including purchase price.
+      match /privateHoldings/{holdingId} {
+        // Only the owner can list their own private holdings.
+        allow list: if isOwner(userId);
+        // Any authenticated user can get a specific private holding (for verification).
+        allow get: if isAuthenticated();
+        // Only the owner can create or update their own private holdings.
+        allow create, update: if isOwner(userId);
+        // Any authenticated user can delete a private holding (for transaction purposes).
+        allow delete: if isAuthenticated();
+      }
+    }
+  }
+}

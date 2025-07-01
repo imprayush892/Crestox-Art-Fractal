@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -7,8 +6,10 @@ import type { CollectorInfo, PublicUser } from '@/lib/data';
 import { CollectorCard } from './collector-card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
-
+import { AlertTriangle, Users } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 
 interface ArtistCollectorsListProps {
     artistId: string;
@@ -20,20 +21,23 @@ interface CollectorStats {
 }
 
 export function ArtistCollectorsList({ artistId }: ArtistCollectorsListProps) {
-    const { getCollectorsForArtist, allUsers, resaleListings } = useAuth();
+    const { getCollectorsForArtist, allUsers, resaleListings, isLoggedIn, isLoading: isAuthLoading } = useAuth();
     const [collectors, setCollectors] = useState<CollectorInfo[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isFetching, setIsFetching] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const usersMap = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
 
     useEffect(() => {
-        if (!artistId) {
+        if (isAuthLoading) return; // Wait until auth state is confirmed
+
+        if (!artistId || !isLoggedIn) {
+            setIsFetching(false);
             return;
         }
 
         const fetchCollectors = async () => {
-            setIsLoading(true);
+            setIsFetching(true);
             setError(null);
             try {
                 const data = await getCollectorsForArtist(artistId);
@@ -44,16 +48,20 @@ export function ArtistCollectorsList({ artistId }: ArtistCollectorsListProps) {
                 
                 if (errorMessage.toLowerCase().includes("permission-denied") || errorMessage.toLowerCase().includes("requires an index")) {
                      setError("Could not load collectors. This is likely due to a missing database index. Please open the browser's developer console (F12), look for a Firestore error message, and click the link to create the required index in your Firebase console.");
-                } else {
+                } else if (errorMessage.toLowerCase().includes("not authenticated")) {
+                    // This case should be handled by the isLoggedIn check, but as a fallback:
+                    setError("You must be logged in to view collectors.");
+                }
+                 else {
                     setError("An error occurred while fetching the list of collectors.");
                 }
             } finally {
-                setIsLoading(false);
+                setIsFetching(false);
             }
         };
 
         fetchCollectors();
-    }, [artistId, getCollectorsForArtist]);
+    }, [artistId, getCollectorsForArtist, isLoggedIn, isAuthLoading]);
 
     const collectorsWithStats = useMemo(() => {
         return collectors.map(collector => {
@@ -77,9 +85,7 @@ export function ArtistCollectorsList({ artistId }: ArtistCollectorsListProps) {
         }).filter(Boolean) as { user: PublicUser, stats: CollectorStats, ownedCount: number }[];
     }, [collectors, usersMap, resaleListings, artistId]);
 
-    const isStillLoadingProfiles = !isLoading && collectors.length > 0 && collectorsWithStats.length === 0;
-
-    if (isLoading || isStillLoadingProfiles) {
+    if (isAuthLoading || (isLoggedIn && isFetching)) {
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[...Array(3)].map((_, i) => (
@@ -95,6 +101,32 @@ export function ArtistCollectorsList({ artistId }: ArtistCollectorsListProps) {
         );
     }
     
+    if (!isLoggedIn) {
+         return (
+            <Card className="text-center p-8">
+                <CardHeader>
+                    <div className="mx-auto bg-muted rounded-full h-16 w-16 flex items-center justify-center mb-4">
+                        <Users className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <CardTitle>View the Collector Community</CardTitle>
+                    <CardDescription>
+                        Log in or create an account to see who has collected work from this artist.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex justify-center gap-4">
+                        <Button asChild>
+                            <Link href="/login">Log In</Link>
+                        </Button>
+                        <Button variant="outline" asChild>
+                            <Link href="/signup">Sign Up</Link>
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
     if (error) {
         return (
             <Alert variant="destructive">
