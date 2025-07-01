@@ -311,7 +311,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                         config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
                                         className="h-full min-h-[250px] w-full"
                                     >
-                                        <LineChart data={fractalPriceHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                                        <LineChart data={fractalPriceHistory} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                             <XAxis
                                                 dataKey="date"
@@ -324,7 +324,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 tickLine={false}
                                                 axisLine={false}
                                                 tickMargin={8}
-                                                tickFormatter={(value) => `₹${(value as number).toLocaleString()}`}
+                                                tickFormatter={(value) => `₹${formatLargeNumber(value as number)}`}
                                             />
                                             <Tooltip
                                                 cursor={{
@@ -359,7 +359,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                         config={{ value: { label: "Value", color: "hsl(var(--accent-foreground))" } }} 
                                         className="h-full min-h-[250px] w-full"
                                     >
-                                        <LineChart data={totalValueHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                                        <LineChart data={totalValueHistory} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                             <XAxis
                                                 dataKey="date"
