@@ -58,7 +58,7 @@ function SoldArtworkCard({ artwork }: SoldArtworkCardProps) {
 
     return (
         <Card className="overflow-hidden">
-            <div className="relative group aspect-[4/5]">
+            <div className="relative group aspect-[4/5] bg-muted/20">
                 <Image 
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -66,7 +66,7 @@ function SoldArtworkCard({ artwork }: SoldArtworkCardProps) {
                     alt={artwork.name} 
                     className={cn(
                         "w-full h-full transition-opacity duration-300",
-                        currentIndex === 0 ? 'object-cover' : 'object-contain'
+                        'object-contain'
                     )}
                     data-ai-hint={currentIndex === 0 ? "artwork" : "document proof"}
                     key={`${artwork.name}-${currentIndex}`}
