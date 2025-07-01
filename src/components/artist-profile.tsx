@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { ArtistCollectorsList } from './artist-collectors-list';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -317,7 +318,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                         config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
                                         className="h-full min-h-[250px] w-full"
                                     >
-                                        <LineChart data={fractalPriceHistory} margin={{left: 12}}>
+                                        <LineChart data={fractalPriceHistory} margin={{left: -10}}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                             <XAxis
                                                 dataKey="date"
@@ -331,6 +332,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 axisLine={false}
                                                 tickMargin={8}
                                                 tickFormatter={(value) => `₹${formatLargeNumber(value as number)}`}
+                                                width={60}
                                             />
                                             <Tooltip
                                                 cursor={{
@@ -365,7 +367,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                         config={{ value: { label: "Value", color: "hsl(var(--accent-foreground))" } }} 
                                         className="h-full min-h-[250px] w-full"
                                     >
-                                        <LineChart data={totalValueHistory} margin={{left: 12}}>
+                                        <LineChart data={totalValueHistory} margin={{left: -10}}>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                             <XAxis
                                                 dataKey="date"
@@ -379,6 +381,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 axisLine={false}
                                                 tickMargin={8}
                                                 tickFormatter={(value) => `₹${formatLargeNumber(value as number)}`}
+                                                width={60}
                                             />
                                             <Tooltip
                                                 cursor={{
@@ -420,18 +423,18 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     </CardHeader>
                     <CardContent>
                         {artist.awards.length > 0 ? (
-                            <ul className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {artist.awards.map((award, i) => (
-                                    <li key={i} className="text-muted-foreground">
-                                        <p>{award.value}</p>
+                                    <div key={i} className="flex flex-col items-center text-center gap-2">
                                         {award.image && (
-                                            <div className="mt-2 relative w-full h-40">
-                                              <Image src={award.image} alt={`Image for ${award.value}`} layout="fill" className="rounded-md object-cover" data-ai-hint="award certificate" />
-                                            </div>
+                                        <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
+                                            <Image src={award.image} alt={`Image for ${award.value}`} layout="fill" className="object-cover" data-ai-hint="award certificate" />
+                                        </div>
                                         )}
-                                    </li>
+                                        <p className="text-sm text-foreground/80 font-medium mt-1">{award.value}</p>
+                                    </div>
                                 ))}
-                            </ul>
+                            </div>
                         ) : <p className="text-sm text-muted-foreground">No awards listed.</p>}
                     </CardContent>
                 </Card>
@@ -443,22 +446,25 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     </CardHeader>
                     <CardContent>
                         {artist.exhibitions.length > 0 ? (
-                             <ul className="space-y-4">
+                            <div className="space-y-6">
                                 {artist.exhibitions.map((ex, i) => (
-                                    <li key={i} className="text-muted-foreground">
-                                        <p>{ex.value}</p>
-                                        {ex.images && ex.images.length > 0 && (
-                                            <div className="flex gap-2 mt-2">
-                                                {ex.images.map((img, imgIdx) => (
-                                                  <div key={imgIdx} className="relative w-1/2 h-32">
-                                                    <Image src={img} alt={`Image for ${ex.value}`} layout="fill" className="rounded-md object-cover" data-ai-hint="exhibition photo" />
-                                                  </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </li>
+                                <div key={i}>
+                                    <p className="font-medium text-foreground">{ex.value}</p>
+                                    {ex.images && ex.images.length > 0 && (
+                                    <div className={cn(
+                                        "grid gap-2 mt-2",
+                                        ex.images.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                                    )}>
+                                        {ex.images.map((img, imgIdx) => (
+                                        <div key={imgIdx} className="relative aspect-video w-full overflow-hidden rounded-lg border">
+                                            <Image src={img} alt={`Image for ${ex.value}`} layout="fill" className="object-cover" data-ai-hint="exhibition photo" />
+                                        </div>
+                                        ))}
+                                    </div>
+                                    )}
+                                </div>
                                 ))}
-                            </ul>
+                            </div>
                         ) : <p className="text-sm text-muted-foreground">No exhibitions listed.</p>}
                     </CardContent>
                 </Card>
