@@ -16,6 +16,38 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatDistanceToNow } from 'date-fns';
 import { ArtistCard } from './artist-card';
 import { HoldingCertificateDialog } from './holding-certificate-dialog';
+import { Skeleton } from './ui/skeleton';
+
+const HoldingCardSkeleton = () => (
+    <Card className="flex flex-col">
+        <CardHeader className="flex-row items-center gap-4">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <div>
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-24 mt-2" />
+            </div>
+        </CardHeader>
+        <CardContent className="grid gap-4 flex-grow">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <Skeleton className="h-4 w-2/4" />
+                <Skeleton className="h-4 w-1/4" />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <Skeleton className="h-4 w-2/4" />
+                <Skeleton className="h-4 w-1/4" />
+            </div>
+        </CardContent>
+        <CardFooter className="flex-col items-start w-full">
+            <Skeleton className="h-4 w-full mb-4" />
+            <div className="flex justify-between items-center w-full gap-2">
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-9 w-full" />
+            </div>
+            <Skeleton className="h-4 w-1/3 mt-4" />
+        </CardFooter>
+    </Card>
+);
+
 
 export function CollectionClient() {
   const { 
@@ -152,7 +184,7 @@ export function CollectionClient() {
     setIsCancelling(null);
   }
 
-  if (isLoading) {
+  if (isLoading && !user) {
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
             <div className="flex flex-col items-center gap-4">
@@ -223,7 +255,13 @@ export function CollectionClient() {
             </TabsList>
             
             <TabsContent value="holdings" className="mt-6">
-                {sortedArtistHoldings.length > 0 ? (
+                {isLoading ? (
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <HoldingCardSkeleton />
+                        <HoldingCardSkeleton />
+                        <HoldingCardSkeleton />
+                    </div>
+                ) : sortedArtistHoldings.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {sortedArtistHoldings.map(({ artist, ownedCount, listedCount }) => {
                         const allFractalsForArtist = collectionByArtist[artist.id] || [];

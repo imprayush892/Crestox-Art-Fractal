@@ -42,7 +42,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
   const [maxAvailable, setMaxAvailable] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { user, executeFractalPurchase, resaleListings, artists, collection } = useAuth();
+  const { user, executeFractalPurchase, resaleListings, artists } = useAuth();
   const { toast } = useToast();
 
   const currentArtist = useMemo(() => {
@@ -51,13 +51,13 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
   }, [artists, artist]);
 
   useEffect(() => {
-    if (isOpen && currentArtist) {
+    if (isOpen && currentArtist && user) {
       const activeResaleListings = resaleListings.filter(l => l.artistId === currentArtist.id && isValidListing(l));
       const availableFromResale = activeResaleListings.reduce((sum, l) => sum + l.quantity, 0);
       const availableFromArtist = currentArtist.availableEditions;
       const totalAvailable = availableFromResale + availableFromArtist;
 
-      const currentUserHoldings = collection.filter(f => f.artistId === currentArtist.id).length;
+      const currentUserHoldings = user.holdingsByArtist?.[currentArtist.id] || 0;
       const holdingLimit = currentArtist.totalEditions > 0 ? Math.floor(currentArtist.totalEditions * 0.1) : 0;
       const purchaseLimit = Math.max(0, holdingLimit - currentUserHoldings);
 
@@ -70,7 +70,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
         setQuantity(1);
       }
     }
-  }, [isOpen, currentArtist, resaleListings, quantity, collection]);
+  }, [isOpen, currentArtist, resaleListings, quantity, user]);
 
 
   useEffect(() => {
@@ -226,7 +226,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
           <DialogClose asChild>
             <Button type="button" variant="secondary" disabled={isLoading}> Cancel </Button>
           </DialogClose>
-          <Button type="button" onClick={handleConfirm} disabled={!user || user.walletBalance < totalPayable || quantity === 0 || isLoading}>
+          <Button type="button" onClick={handleConfirm} disabled={!user || user.walletBalance < totalPayable || quantity === 0 || isLoading || maxAvailable === 0}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
             Confirm Collection
           </Button>

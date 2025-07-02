@@ -24,6 +24,7 @@ export interface User {
   email: string | null;
   walletBalance: number;
   watchlist: string[];
+  holdingsByArtist?: { [key: string]: number; };
 }
 
 export interface ArtistProfile extends Artist {
@@ -272,7 +273,15 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const newUser = userCredential.user;
-      const profileData: User = { uid: newUser.uid, firstName, lastName, email: newUser.email, walletBalance: 50000, watchlist: [] };
+      const profileData: User = { 
+        uid: newUser.uid, 
+        firstName, 
+        lastName, 
+        email: newUser.email, 
+        walletBalance: 50000, 
+        watchlist: [],
+        holdingsByArtist: {} 
+      };
       await setDoc(doc(db, "users", newUser.uid), profileData);
       setUser(profileData);
       toast({ title: "Account Created!", description: "Welcome to Crestox. You've been credited with 50,000 CreCoins." });
@@ -674,10 +683,33 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     }
 
     await runTransaction(db, async (transaction) => {
-        const docRefs = new Map<string, DocumentReference>();
-        docRefs.set('buyer', doc(db, "users", user.uid));
-        docRefs.set(`artist_${artistId}`, doc(db, "artists", artistId));
+        const buyerRef = doc(db, "users", user.uid);
+        const artistRef = doc(db, "artists", artistId);
 
+        const [buyerSnap, artistSnap] = await Promise.all([
+            transaction.get(buyerRef),
+            transaction.get(artistRef)
+        ]);
+        
+        if (!buyerSnap.exists()) throw new Error("Buyer user document not found.");
+        if (!artistSnap.exists()) throw new Error("Artist document not found.");
+
+        const buyerData = buyerSnap.data() as User;
+        const artistData = artistSnap.data() as Artist;
+
+        if (buyerData.walletBalance < totalPayable) {
+            throw new Error("Insufficient funds. Your balance may have changed.");
+        }
+
+        const holdingLimit = artistData.totalEditions > 0 ? Math.floor(artistData.totalEditions * 0.1) : 0;
+        const currentUserHoldings = buyerData.holdingsByArtist?.[artistId] || 0;
+        const purchaseQuantity = orderBreakdown.reduce((sum, item) => sum + item.quantity, 0);
+
+        if (currentUserHoldings + purchaseQuantity > holdingLimit) {
+            throw new Error(`This purchase would exceed the ${holdingLimit} fractal limit (10%) for this artist.`);
+        }
+        
+        const docRefs = new Map<string, DocumentReference>();
         for (const item of orderBreakdown) {
             if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
                 if (!docRefs.has(`seller_${item.resellerId}`)) {
@@ -691,22 +723,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         
         const docSnaps = new Map<string, DocumentSnapshot>();
         const readPromises: Promise<DocumentSnapshot>[] = [];
-        for (const ref of docRefs.values()) {
-            readPromises.push(transaction.get(ref));
-        }
+        for (const ref of docRefs.values()) { readPromises.push(transaction.get(ref)); }
         const snapshots = await Promise.all(readPromises);
         
         let i = 0;
-        for (const key of docRefs.keys()) {
-            docSnaps.set(key, snapshots[i++]);
-        }
+        for (const key of docRefs.keys()) { docSnaps.set(key, snapshots[i++]); }
         
-        const buyerSnap = docSnaps.get('buyer');
-        const buyerData = buyerSnap?.data() as User;
-        if (!buyerSnap?.exists() || buyerData.walletBalance < totalPayable) {
-            throw new Error("Insufficient funds or user not found.");
-        }
-
         const holdingRefsToRead: DocumentReference[] = [];
         const listingIdToHoldingIds = new Map<string, string[]>();
 
@@ -741,15 +763,27 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         }
 
         // 1. Debit the buyer
-        transaction.update(docRefs.get('buyer')!, { walletBalance: buyerData.walletBalance - totalPayable });
+        transaction.update(buyerRef, { 
+            walletBalance: buyerData.walletBalance - totalPayable,
+            [`holdingsByArtist.${artistId}`]: currentUserHoldings + purchaseQuantity
+        });
         
         // 2. Process Reseller transactions
         for (const item of orderBreakdown) {
             if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
                 const sellerRef = docRefs.get(`seller_${item.resellerId}`)!;
-                const sellerData = docSnaps.get(`seller_${item.resellerId}`)!.data() as User;
+                const sellerSnap = docSnaps.get(`seller_${item.resellerId}`)!;
+                if (!sellerSnap.exists()) throw new Error("Seller not found");
+
+                const sellerData = sellerSnap.data() as User;
                 const proceeds = (item.quantity * item.price) * 0.98; // 2% platform fee
-                transaction.update(sellerRef, { walletBalance: sellerData.walletBalance + proceeds });
+
+                const sellerHoldingsCount = sellerData.holdingsByArtist?.[artistId] || 0;
+
+                transaction.update(sellerRef, { 
+                    walletBalance: sellerData.walletBalance + proceeds,
+                    [`holdingsByArtist.${artistId}`]: Math.max(0, sellerHoldingsCount - item.quantity)
+                });
                 
                 const listingRef = docRefs.get(`listing_${item.listingId}`)!;
                 const listingData = docSnaps.get(`listing_${item.listingId}`)!.data() as ResaleListing;
@@ -792,9 +826,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             }
         }
 
-        // 4. Perform a single, combined update on the Artist document
-        const artistData = docSnaps.get(`artist_${artistId}`)!.data() as Artist;
-        const totalQuantityTraded = orderBreakdown.reduce((sum, item) => sum + item.quantity, 0);
         const quantityFromArtist = orderBreakdown
             .filter(item => item.source === 'ARTIST')
             .reduce((sum, item) => sum + item.quantity, 0);
@@ -803,7 +834,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             throw new Error("Not enough fractals available from artist.");
         }
         
-        const newFractalPrice = applyPriceImpact(artistData.fractalPrice, totalQuantityTraded, artistData.totalEditions, true);
+        const newFractalPrice = applyPriceImpact(artistData.fractalPrice, purchaseQuantity, artistData.totalEditions, true);
         
         const artistUpdate: Record<string, any> = {
             fractalPrice: newFractalPrice,
@@ -814,7 +845,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             artistUpdate.availableEditions = artistData.availableEditions - quantityFromArtist;
         }
         
-        transaction.update(docRefs.get(`artist_${artistId}`)!, artistUpdate);
+        transaction.update(artistRef, artistUpdate);
     });
     toast({ title: "Collection Successful!", description: `You have collected ${orderBreakdown.reduce((sum, item) => sum + item.quantity, 0)} fractal(s).` });
   };
