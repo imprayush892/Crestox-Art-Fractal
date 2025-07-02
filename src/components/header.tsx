@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -58,7 +59,6 @@ export function Header() {
       <div className="container flex h-16 items-center">
         <Link href="/" className="mr-6 flex items-center gap-2">
           <Image src={monogramUrl} alt="Crestox Logo" width={56} height={56} className="h-14 w-14" data-ai-hint="logo monogram" />
-          <span className="font-bold text-lg font-headline">Crestox</span>
         </Link>
         <div className="hidden md:flex flex-1 items-center justify-between">
           <nav className="flex items-center gap-6 text-sm">
@@ -127,7 +127,6 @@ export function Header() {
                 <div className="flex items-center justify-between border-b p-4">
                     <Link href="/" onClick={closeMenu} className="flex items-center gap-2">
                       <Image src={monogramUrl} alt="Crestox Logo" width={56} height={56} className="h-14 w-14" data-ai-hint="logo monogram" />
-                      <span className="font-bold font-headline">Crestox</span>
                     </Link>
                     <SheetClose asChild>
                        <Button variant="ghost" size="icon">
