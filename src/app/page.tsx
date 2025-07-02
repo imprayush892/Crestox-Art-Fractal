@@ -68,8 +68,8 @@ export default function Home() {
       opacity: 1,
       y: 0,
       transition: {
-        delay: i * 0.02,
-        duration: 0.3,
+        delay: i * 0.01,
+        duration: 0.2,
         ease: 'easeOut'
       },
     }),
