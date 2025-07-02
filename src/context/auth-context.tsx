@@ -91,15 +91,6 @@ const sanitizeArtist = (artist: Artist): Artist => ({
   availableEditions: Number(artist.availableEditions || 0),
 });
 
-const applyPriceImpact = (currentPrice: number, tradeQty: number, totalShares: number, isBuy: boolean): number => {
-    if (totalShares <= 0 || tradeQty <= 0) return currentPrice;
-    const fraction = tradeQty / totalShares;
-    const beta = 1.118;
-    const exponent = beta * Math.sqrt(fraction);
-    const impactFactor = isBuy ? Math.exp(exponent) : Math.exp(-exponent);
-    return currentPrice * impactFactor;
-};
-
 export function AuthProvider({ children, initialArtists, initialFractals }: { children: ReactNode, initialArtists: Artist[], initialFractals: Fractal[] }) {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
@@ -503,6 +494,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
     const heroImageUrl = imageUrls[artworkData.heroImageIndex > -1 ? artworkData.heroImageIndex : 0];
 
+    // Pre-fetch all existing fractals for the artist OUTSIDE the transaction
+    const artistFractalsQuery = query(firestoreCollection(db, "fractals"), where("artistId", "==", artistProfile.id));
+    const artistFractalsSnap = await getDocs(artistFractalsQuery);
+    const allExistingFractals = artistFractalsSnap.docs.map(doc => doc.data() as Fractal);
+
     await runTransaction(db, async (transaction) => {
         const artistRef = doc(db, "artists", artistProfile.id);
         const artistSnap = await transaction.get(artistRef);
@@ -512,8 +508,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         
         const { length, breadth, height, unit } = artworkData;
         const artworkSize = { length, breadth, unit, ...(height && { height }) };
+        
+        const new_Vi = Number(finalPrice) || 0;
+        const new_Si = Number(evaluationResult.evaluation.finalScore) || 0;
+        const new_Fi = parseInt(String(artworkData.editionsToIssue), 10) || 0;
 
-        const newFractalData: Partial<Fractal> = {
+        const newFractalData: Fractal = {
             id: newFractalId,
             artistId: artistProfile.id,
             title: artworkData.title,
@@ -522,8 +522,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             artworkSize,
             images: imageUrls,
             heroImage: heroImageUrl,
-            price: Number(finalPrice) || 0,
-            priceHistory: [{ date: new Date().toISOString(), price: Number(finalPrice) || 0 }],
+            price: new_Vi,
+            priceHistory: [{ date: new Date().toISOString(), price: new_Vi }],
             artistMinEstimate: artworkData.minEstimatedValue,
             artistMaxEstimate: artworkData.maxEstimatedValue,
             width: 600, 
@@ -534,31 +534,26 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             timeEffort: artworkData.timeEffort || "",
             biographicalContext: artworkData.biographicalContext || "",
             commissionPatronage: artworkData.commissionPatronage || "",
-            aiScore: Number(evaluationResult.evaluation.finalScore) || 0,
+            aiScore: new_Si,
             aiScorecard: evaluationResult.evaluation.breakdown,
             valuationBreakdown: evaluationResult.evaluation.valuationBreakdown,
             crestoxPriceRange: evaluationResult.evaluation.crestoxPriceRange,
+            editions: new_Fi,
+            editionsAvailable: new_Fi,
+            ...(shouldApplyGrade && { crestoxGrade: evaluationResult.evaluation.grade }),
         };
-
-        if (shouldApplyGrade) {
-            newFractalData.crestoxGrade = evaluationResult.evaluation.grade;
-        }
         
-        const new_Vi = Number(finalPrice) || 0;
-        const new_Si = Number(evaluationResult.evaluation.finalScore) || 0;
-        const new_Fi = parseInt(String(artworkData.editionsToIssue), 10) || 0;
+        // Combine existing fractals with the new one to recalculate aggregates
+        const allFractalsForCalc = [...allExistingFractals, newFractalData];
+
+        const V_new = allFractalsForCalc.reduce((sum, f) => sum + (f.price || 0), 0);
+        const F_new = allFractalsForCalc.reduce((sum, f) => sum + (f.editions || 0), 0);
+        const sum_SiVi_new = allFractalsForCalc.reduce((sum, f) => sum + ((f.aiScore || 0) * (f.price || 0)), 0);
+        const sum_S_squared_new = allFractalsForCalc.reduce((sum, f) => sum + Math.pow(f.aiScore || 0, 2), 0);
         
-        const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
-        const F_old = parseInt(String(currentArtistData.totalEditions), 10) || 0;
-        const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation) || 0;
-        const available_F_old = parseInt(String(currentArtistData.availableEditions), 10) || 0;
-
-        const V_new = V_old + new_Vi;
-        const F_new = F_old + new_Fi;
-        const available_F_new = available_F_old + new_Fi;
-        const sum_SiVi_new = sum_SiVi_old + (new_Si * new_Vi);
-
+        const k_new = sum_SiVi_new > 0 ? V_new / sum_SiVi_new : 0;
         const P_new = F_new > 0 ? V_new / F_new : 0;
+        const available_F_new = currentArtistData.availableEditions + new_Fi;
 
         const newFractalRef = doc(db, "fractals", newFractalId);
         transaction.set(newFractalRef, newFractalData);
@@ -568,17 +563,15 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             totalEditions: F_new,
             availableEditions: available_F_new,
             fractalPrice: P_new,
+            kFactor: k_new,
             totalScoreWeightedValuation: sum_SiVi_new,
+            sumOfScoresSquared: sum_S_squared_new,
             priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_new }),
             totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_new })
         });
     }).catch(error => {
       console.error("Add artwork transaction failed: ", error);
-      toast({
-        variant: "destructive",
-        title: "Database Error",
-        description: handleAuthError(error),
-      });
+      toast({ variant: "destructive", title: "Database Error", description: handleAuthError(error) });
       throw error;
     });
   };
@@ -596,37 +589,26 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       const artistMin = Number(artworkData.minEstimatedValue || 0);
       const artistMax = Number(artworkData.maxEstimatedValue || 0);
       const artistPrice = (artistMin + artistMax) / 2;
-      const finalPrice = useCrestoxPrice ? crestoxPrice : artistPrice;
+      const v_new = useCrestoxPrice ? crestoxPrice : artistPrice;
+      const s_new = Number(evaluation.finalScore) || 0;
+      const f_portfolio_new = parseInt(String(artworkData.editionsToIssue), 10) || 0;
       const shouldApplyGrade = useCrestoxPrice || artistPrice <= crestoxPrice;
+      
+      // Pre-fetch all fractals for the artist OUTSIDE the transaction
+      const artistFractalsQuery = query(firestoreCollection(db, "fractals"), where("artistId", "==", artistProfile.id));
+      const artistFractalsSnap = await getDocs(artistFractalsQuery);
+      const allExistingFractals = artistFractalsSnap.docs.map(doc => ({id: doc.id, ...doc.data()} as Fractal));
+      const oldFractalData = allExistingFractals.find(f => f.id === artworkId);
+      if (!oldFractalData) throw new Error("Original artwork data not found.");
+      
+      const f_old = oldFractalData.editions || 0;
 
       await runTransaction(db, async (transaction) => {
           const artistRef = doc(db, "artists", artistProfile.id);
           const fractalRef = doc(db, "fractals", artworkId);
-          const [artistSnap, fractalSnap] = await Promise.all([transaction.get(artistRef), transaction.get(fractalRef)]);
-          
-          if (!artistSnap.exists() || !fractalSnap.exists()) throw new Error("Artist or Fractal not found.");
-
+          const artistSnap = await transaction.get(artistRef);
+          if (!artistSnap.exists()) throw new Error("Artist not found.");
           const currentArtistData = artistSnap.data() as Artist;
-          const oldFractalData = fractalSnap.data() as Fractal;
-
-          const v_old = Number(oldFractalData.price) || 0;
-          const s_old = Number(oldFractalData.aiScore) || 0;
-          const v_new = Number(finalPrice) || 0;
-          const s_new = Number(evaluation.finalScore) || 0;
-          
-          const V_old = Number(currentArtistData.totalPortfolioValue) || 0;
-          const F_old = parseInt(String(currentArtistData.totalEditions), 10) || 0;
-          const sum_SiVi_old = Number(currentArtistData.totalScoreWeightedValuation) || 0;
-          const available_F_old = parseInt(String(currentArtistData.availableEditions), 10) || 0;
-
-          const f_portfolio_new = parseInt(String(artworkData.editionsToIssue), 10) || 0;
-
-          const V_final = V_old - v_old + v_new;
-          const F_final = F_old + f_portfolio_new;
-          const available_F_final = available_F_old + f_portfolio_new;
-          const sum_SiVi_final = sum_SiVi_old - (s_old * v_old) + (s_new * v_new);
-
-          const P_final = F_final > 0 ? V_final / F_final : 0;
           
           const { length, breadth, height, unit, ...restOfArtworkData } = artworkData;
           const artworkSize = { length, breadth, unit, ...(height && { height }) };
@@ -642,22 +624,36 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               artistMinEstimate: artworkData.minEstimatedValue,
               artistMaxEstimate: artworkData.maxEstimatedValue,
               crestoxPriceRange: evaluation.crestoxPriceRange,
+              editions: f_old + f_portfolio_new,
           };
-
           if (shouldApplyGrade) {
               fractalUpdateData.crestoxGrade = evaluation.grade;
           } else {
-              fractalUpdateData.crestoxGrade = null; // Use null for explicit removal
+              fractalUpdateData.crestoxGrade = null;
           }
           
           transaction.update(fractalRef, fractalUpdateData);
+
+          // Create the new list of all fractals for recalculation
+          const updatedFractalList = allExistingFractals.map(f => f.id === artworkId ? {...f, ...fractalUpdateData} : f);
+
+          const V_final = updatedFractalList.reduce((sum, f) => sum + (f.price || 0), 0);
+          const F_final = updatedFractalList.reduce((sum, f) => sum + (f.editions || 0), 0);
+          const sum_SiVi_final = updatedFractalList.reduce((sum, f) => sum + ((f.aiScore || 0) * (f.price || 0)), 0);
+          const sum_S_squared_final = updatedFractalList.reduce((sum, f) => sum + Math.pow(f.aiScore || 0, 2), 0);
+
+          const k_final = sum_SiVi_final > 0 ? V_final / sum_SiVi_final : 0;
+          const P_final = F_final > 0 ? V_final / F_final : 0;
+          const available_F_final = currentArtistData.availableEditions + f_portfolio_new;
 
           transaction.update(artistRef, {
               totalPortfolioValue: V_final,
               totalEditions: F_final,
               availableEditions: available_F_final,
               fractalPrice: P_final,
+              kFactor: k_final,
               totalScoreWeightedValuation: sum_SiVi_final,
+              sumOfScoresSquared: sum_S_squared_final,
               priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_final }),
               totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_final })
           });
@@ -693,6 +689,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     if (user.walletBalance < totalPayable) {
         throw new Error("Insufficient CreCoin balance.");
     }
+    
+    // Pre-fetch all fractals for the artist OUTSIDE the transaction
+    const artistFractalsQuery = query(firestoreCollection(db, "fractals"), where("artistId", "==", artistId));
+    const artistFractalsSnap = await getDocs(artistFractalsQuery);
+    const allArtistFractals = artistFractalsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Fractal));
+
 
     await runTransaction(db, async (transaction) => {
         const buyerRef = doc(db, "users", user.uid);
@@ -721,142 +723,133 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             throw new Error(`This purchase would exceed the ${holdingLimit} fractal limit (10%) for this artist.`);
         }
         
-        const docRefs = new Map<string, DocumentReference>();
+        // --- PRE-FETCH RESELLER DATA (outside main loop)
+        const resellerRefs = new Map<string, DocumentReference>();
+        const listingRefs = new Map<string, DocumentReference>();
         for (const item of orderBreakdown) {
-            if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
-                if (!docRefs.has(`seller_${item.resellerId}`)) {
-                    docRefs.set(`seller_${item.resellerId}`, doc(db, "users", item.resellerId));
-                }
-                if (!docRefs.has(`listing_${item.listingId}`)) {
-                    docRefs.set(`listing_${item.listingId}`, doc(db, "resaleListings", item.listingId));
-                }
+          if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
+            if (!resellerRefs.has(item.resellerId)) {
+              resellerRefs.set(item.resellerId, doc(db, "users", item.resellerId));
             }
+            if (!listingRefs.has(item.listingId)) {
+              listingRefs.set(item.listingId, doc(db, "resaleListings", item.listingId));
+            }
+          }
         }
-        
-        const docSnaps = new Map<string, DocumentSnapshot>();
-        const readPromises: Promise<DocumentSnapshot>[] = [];
-        for (const ref of docRefs.values()) { readPromises.push(transaction.get(ref)); }
-        const snapshots = await Promise.all(readPromises);
-        
-        let i = 0;
-        for (const key of docRefs.keys()) { docSnaps.set(key, snapshots[i++]); }
-        
-        const holdingRefsToRead: DocumentReference[] = [];
-        const listingIdToHoldingIds = new Map<string, string[]>();
+        const resellerSnaps = new Map<string, DocumentSnapshot>();
+        const listingSnaps = new Map<string, DocumentSnapshot>();
+        for(const [id, ref] of resellerRefs) { resellerSnaps.set(id, await transaction.get(ref)); }
+        for(const [id, ref] of listingRefs) { listingSnaps.set(id, await transaction.get(ref)); }
+        // --- END PRE-FETCH
 
-        for (const item of orderBreakdown) {
-            if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
-                const listingSnap = docSnaps.get(`listing_${item.listingId}`);
-                if (!listingSnap?.exists()) throw new Error(`Listing ${item.listingId} not found.`);
-                
-                const listingData = listingSnap.data() as ResaleListing;
-                if (listingData.status !== 'active' || listingData.quantity < item.quantity) {
-                    throw new Error(`Listing for ${artistId} is not active or has insufficient quantity.`);
-                }
-                if (!listingData.holdingIds || !Array.isArray(listingData.holdingIds) || listingData.holdingIds.length < item.quantity) {
-                    throw new Error(`Listing ${listingData.id} has insufficient holdings for this sale.`);
-                }
-                const holdingsToTransfer = listingData.holdingIds.slice(0, item.quantity);
-                listingIdToHoldingIds.set(listingData.id, holdingsToTransfer);
-                for (const holdingId of holdingsToTransfer) {
-                    holdingRefsToRead.push(doc(db, `users/${item.resellerId}/holdings/${holdingId}`));
-                    holdingRefsToRead.push(doc(db, `users/${item.resellerId}/privateHoldings/${holdingId}`));
-                }
-            }
-        }
-        
-        if (holdingRefsToRead.length > 0) {
-            const holdingSnaps = await Promise.all(holdingRefsToRead.map(ref => transaction.get(ref)));
-            for(const snap of holdingSnaps) {
-                if (!snap.exists()) {
-                    throw new Error(`A holding document (${snap.ref.path}) required for the sale does not exist.`);
+        let newFractalPrice = artistData.fractalPrice;
+        let newTotalPortfolioValue = artistData.totalPortfolioValue;
+
+        // Part 1: Apply market impact if buying from artist
+        const quantityFromArtist = orderBreakdown
+            .filter(item => item.source === 'ARTIST')
+            .reduce((sum, item) => sum + item.quantity, 0);
+
+        if (quantityFromArtist > 0) {
+            const P_current = artistData.fractalPrice;
+            const F_total = artistData.totalEditions;
+
+            if (F_total > 0) {
+                // ArtFractalValueChange model
+                const fraction = quantityFromArtist / F_total;
+                const beta = 0.4472;
+                const impactFactor = Math.exp(beta * Math.sqrt(fraction));
+                const P_new = P_current * impactFactor;
+                newFractalPrice = P_new;
+
+                // ArtFractalPro reverse mechanism
+                const delta_P = P_new - P_current;
+                const delta_Veff = delta_P * F_total;
+                const k = artistData.kFactor;
+                const sum_S_squared = artistData.sumOfScoresSquared;
+
+                if (k > 0 && sum_S_squared > 0) {
+                    const c = delta_Veff / (k * sum_S_squared);
+                    let calculatedNewPortfolioValue = 0;
+
+                    for (const fractal of allArtistFractals) {
+                        const Vi_current = fractal.price;
+                        const Si = fractal.aiScore || 0;
+                        const delta_Vi = c * Si;
+                        const Vi_new = Vi_current + delta_Vi;
+
+                        calculatedNewPortfolioValue += Vi_new;
+                        
+                        const fractalRef = doc(db, "fractals", fractal.id);
+                        transaction.update(fractalRef, {
+                            price: Vi_new,
+                            priceHistory: arrayUnion({ date: new Date().toISOString(), price: Vi_new }),
+                        });
+                    }
+                    newTotalPortfolioValue = calculatedNewPortfolioValue;
                 }
             }
         }
 
-        // 1. Debit the buyer
+        // 2. Process wallet transfers and holding movements
         transaction.update(buyerRef, { 
             walletBalance: buyerData.walletBalance - totalPayable,
             [`holdingsByArtist.${artistId}`]: currentUserHoldings + purchaseQuantity
         });
-        
-        // 2. Process Reseller transactions
-        for (const item of orderBreakdown) {
-            if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
-                const sellerRef = docRefs.get(`seller_${item.resellerId}`)!;
-                const sellerSnap = docSnaps.get(`seller_${item.resellerId}`)!;
-                if (!sellerSnap.exists()) throw new Error("Seller not found");
 
+        for (const item of orderBreakdown) {
+            // Create new holdings for the buyer for every item in the breakdown
+            for (let j = 0; j < item.quantity; j++) {
+              const newHoldingId = uuidv4();
+              const newPublicHoldingRef = doc(db, `users/${user.uid}/holdings/${newHoldingId}`);
+              transaction.set(newPublicHoldingRef, { artistId, purchaseDate: new Date().toISOString(), status: 'owned' });
+              const newPrivateHoldingRef = doc(db, `users/${user.uid}/privateHoldings/${newHoldingId}`);
+              transaction.set(newPrivateHoldingRef, { purchasePrice: item.price, serialNumber: uuidv4() });
+            }
+
+            if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
+                const sellerRef = resellerRefs.get(item.resellerId)!;
+                const sellerSnap = resellerSnaps.get(item.resellerId)!;
+                if (!sellerSnap.exists()) throw new Error("Seller not found");
+                
                 const sellerData = sellerSnap.data() as User;
                 const proceeds = (item.quantity * item.price) * 0.98; // 2% platform fee
-
                 const sellerHoldingsCount = sellerData.holdingsByArtist?.[artistId] || 0;
-
                 transaction.update(sellerRef, { 
                     walletBalance: sellerData.walletBalance + proceeds,
                     [`holdingsByArtist.${artistId}`]: Math.max(0, sellerHoldingsCount - item.quantity)
                 });
                 
-                const listingRef = docRefs.get(`listing_${item.listingId}`)!;
-                const listingData = docSnaps.get(`listing_${item.listingId}`)!.data() as ResaleListing;
-                
+                const listingRef = listingRefs.get(item.listingId)!;
+                const listingSnap = listingSnaps.get(item.listingId)!;
+                if (!listingSnap.exists()) throw new Error(`Listing ${item.listingId} not found.`);
+                const listingData = listingSnap.data() as ResaleListing;
+
                 const newQuantity = listingData.quantity - item.quantity;
                 transaction.update(listingRef, {
                     quantity: newQuantity,
                     holdingIds: listingData.holdingIds.slice(item.quantity),
                     status: newQuantity === 0 ? 'completed' : 'active',
                 });
-
-                const holdingsForListing = listingIdToHoldingIds.get(item.listingId)!;
-                for (const holdingId of holdingsForListing) {
+                
+                const holdingsToTransfer = listingData.holdingIds.slice(0, item.quantity);
+                for (const holdingId of holdingsToTransfer) {
                     transaction.delete(doc(db, `users/${item.resellerId}/holdings/${holdingId}`));
                     transaction.delete(doc(db, `users/${item.resellerId}/privateHoldings/${holdingId}`));
                 }
             }
         }
-
-        // 3. Create new holdings for the buyer
-        for (const item of orderBreakdown) {
-            for (let j = 0; j < item.quantity; j++) {
-                const newHoldingId = uuidv4();
-                
-                const newPublicHoldingRef = doc(db, `users/${user.uid}/holdings/${newHoldingId}`);
-                const newPublicData: PublicHolding = {
-                    fractalId: "portfolio-fractal", 
-                    artistId, 
-                    purchaseDate: new Date().toISOString(),
-                    status: 'owned',
-                };
-                transaction.set(newPublicHoldingRef, newPublicData);
-
-                const newPrivateHoldingRef = doc(db, `users/${user.uid}/privateHoldings/${newHoldingId}`);
-                const newPrivateData: PrivateHolding = {
-                    purchasePrice: item.price,
-                    serialNumber: uuidv4(),
-                };
-                transaction.set(newPrivateHoldingRef, newPrivateData);
-            }
-        }
-
-        const quantityFromArtist = orderBreakdown
-            .filter(item => item.source === 'ARTIST')
-            .reduce((sum, item) => sum + item.quantity, 0);
-
-        if (quantityFromArtist > 0 && artistData.availableEditions < quantityFromArtist) {
-            throw new Error("Not enough fractals available from artist.");
-        }
         
-        const newFractalPrice = applyPriceImpact(artistData.fractalPrice, purchaseQuantity, artistData.totalEditions, true);
-        
+        // 3. Atomically update the artist document
         const artistUpdate: Record<string, any> = {
             fractalPrice: newFractalPrice,
-            priceHistory: arrayUnion({ date: new Date().toISOString(), price: newFractalPrice })
+            totalPortfolioValue: newTotalPortfolioValue,
+            priceHistory: arrayUnion({ date: new Date().toISOString(), price: newFractalPrice }),
+            totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: newTotalPortfolioValue })
         };
-        
         if (quantityFromArtist > 0) {
             artistUpdate.availableEditions = artistData.availableEditions - quantityFromArtist;
         }
-        
         transaction.update(artistRef, artistUpdate);
     });
     toast({ title: "Collection Successful!", description: `You have collected ${orderBreakdown.reduce((sum, item) => sum + item.quantity, 0)} fractal(s).` });
