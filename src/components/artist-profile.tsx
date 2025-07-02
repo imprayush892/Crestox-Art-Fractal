@@ -199,7 +199,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
         isOpen={isCollecting}
         onClose={() => setIsCollecting(false)}
       />
-      <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12 mb-12">
+      <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
         <div className="lg:col-span-3 flex flex-col items-center md:items-start">
             <Avatar className="w-32 h-32 md:w-40 md:h-40 border-4 border-primary shadow-lg">
               <AvatarImage src={artist.avatar} alt={artist.name} data-ai-hint="artist avatar"/>
@@ -345,7 +345,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                 <BarChart data={portfolioSnapshotData} accessibilityLayer>
                                     <CartesianGrid vertical={false} />
                                     <XAxis dataKey="grade" tickLine={false} tickMargin={10} axisLine={false} stroke="#888888" fontSize={12} />
-                                    <YAxis allowDecimals={false} stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis allowDecimals={false} stroke="#888888" fontSize={12} tickLine={false} axisLine={false} width={80} />
                                     <Tooltip
                                         cursor={{ fill: 'hsl(var(--muted))' }}
                                         content={<ChartTooltipContent indicator="dot" />}
@@ -394,7 +394,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 axisLine={false}
                                                 tickMargin={8}
                                                 tickFormatter={(value) => `₹${formatLargeNumber(value as number)}`}
-                                                width={60}
+                                                width={80}
                                             />
                                             <Tooltip
                                                 cursor={{
@@ -404,6 +404,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 }}
                                                 content={<ChartTooltipContent
                                                     formatter={(value) => `₹${(value as number).toLocaleString()}`}
+                                                    labelFormatter={(value) => format(new Date(value), "PP")}
                                                     indicator="dot"
                                                 />}
                                             />
@@ -443,7 +444,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 axisLine={false}
                                                 tickMargin={8}
                                                 tickFormatter={(value) => `₹${formatLargeNumber(value as number)}`}
-                                                width={60}
+                                                width={80}
                                             />
                                             <Tooltip
                                                 cursor={{
@@ -453,6 +454,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                 }}
                                                 content={<ChartTooltipContent
                                                     formatter={(value) => `₹${(value as number).toLocaleString()}`}
+                                                    labelFormatter={(value) => format(new Date(value), "PP")}
                                                     indicator="dot"
                                                 />}
                                             />

@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -56,7 +57,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <Link href="/" className="mr-6 flex items-center gap-2">
-          <Image src={monogramUrl} alt="Crestox Logo" width={56} height={56} className="h-14 w-14" data-ai-hint="logo monogram" />
+          <Image src={monogramUrl} alt="Crestox Logo" width={56} height={56} className="h-10 w-10 md:h-14 md:w-14" data-ai-hint="logo monogram" />
         </Link>
         <div className="hidden md:flex flex-1 items-center justify-between">
           <nav className="flex items-center gap-6 text-sm">
@@ -124,7 +125,7 @@ export function Header() {
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between border-b p-4">
                     <Link href="/" onClick={closeMenu} className="flex items-center gap-2">
-                      <Image src={monogramUrl} alt="Crestox Logo" width={56} height={56} className="h-14 w-14" data-ai-hint="logo monogram" />
+                      <Image src={monogramUrl} alt="Crestox Logo" width={56} height={56} className="h-10 w-10" data-ai-hint="logo monogram" />
                     </Link>
                     <SheetClose asChild>
                        <Button variant="ghost" size="icon">

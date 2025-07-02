@@ -101,7 +101,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
             )}
           </div>
          
-            <h2 className="font-headline text-3xl font-bold mb-6">Artwork Value History</h2>
+            <h2 className="font-headline text-2xl md:text-3xl font-bold mb-6">Artwork Value History</h2>
             <Card>
               <CardHeader>
                   <CardTitle>Value Over Time</CardTitle>
@@ -119,13 +119,14 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                               tickLine={false}
                               axisLine={false}
                               tickMargin={8}
-                              tickFormatter={(value) => format(new Date(value), "MMM yy")}
+                              tickFormatter={(value) => format(new Date(value), "MMM d")}
                           />
                           <YAxis
                               tickLine={false}
                               axisLine={false}
                               tickMargin={8}
                               tickFormatter={(value) => `₹${(value as number).toLocaleString()}`}
+                              width={80}
                           />
                           <Tooltip
                               cursor={{
@@ -135,6 +136,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                               }}
                               content={<ChartTooltipContent
                                   formatter={(value) => `₹${(value as number).toLocaleString()}`}
+                                  labelFormatter={(value) => format(new Date(value), "PP")}
                                   indicator="dot"
                               />}
                           />
