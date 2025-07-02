@@ -405,7 +405,7 @@ export default function CreateArtworkPage() {
       <div className="container py-12 flex justify-center">
         <Card className="w-full max-w-3xl">
           <CardHeader>
-            <CardTitle className="font-headline text-3xl">Add New Artwork</CardTitle>
+            <CardTitle className="font-headline text-2xl md:text-3xl">Add New Artwork</CardTitle>
             <CardDescription>
               Upload a new artwork. This will be added to your public portfolio and will be evaluated by our AI assistant to provide a quality grade and price suggestion.
             </CardDescription>
@@ -622,7 +622,7 @@ export default function CreateArtworkPage() {
                       />
                     <FormItem>
                       <FormLabel>Artwork Size</FormLabel>
-                      <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                           <FormField control={form.control} name="length" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="Length" {...field}/></FormControl><FormMessage /></FormItem>)} />
                           <FormField control={form.control} name="breadth" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="Breadth" {...field}/></FormControl><FormMessage /></FormItem>)} />
                           <FormField control={form.control} name="height" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="Height (Opt.)" {...field}/></FormControl><FormMessage /></FormItem>)} />
@@ -671,7 +671,7 @@ export default function CreateArtworkPage() {
                       />
                     </div>
                     
-                    <div className="flex items-end gap-4">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
                         <FormField
                             control={form.control}
                             name="editionsToIssue"
@@ -686,7 +686,7 @@ export default function CreateArtworkPage() {
                                 </FormItem>
                             )}
                         />
-                        <div className="w-[200px] flex-shrink-0">
+                        <div className="w-full sm:w-[200px] flex-shrink-0">
                             <Card className="bg-muted/50 p-3">
                                 <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3" /> Est. Price Per Fractal</p>
                                 <p className="font-bold text-lg text-primary">

@@ -311,7 +311,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
       </div>
       
       <Tabs defaultValue="artworks" className="mb-12">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
           <TabsTrigger value="artworks"><Palette className="mr-2" />Artworks</TabsTrigger>
           <TabsTrigger value="analytics"><TrendingUp className="mr-2" />Analytics</TabsTrigger>
           <TabsTrigger value="achievements"><Award className="mr-2" />Achievements</TabsTrigger>

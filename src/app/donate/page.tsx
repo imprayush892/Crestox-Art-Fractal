@@ -54,7 +54,7 @@ export default function DonatePage() {
         </div>
 
         <Tabs defaultValue="what-why-how" className="w-full">
-            <TabsList className="grid w-full grid-cols-1 md:grid-cols-5">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
                 <TabsTrigger value="what-why-how">Crestox</TabsTrigger>
                 <TabsTrigger value="partners">Founding Partners</TabsTrigger>
                 <TabsTrigger value="advisory">Advisory Board</TabsTrigger>

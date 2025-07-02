@@ -329,41 +329,43 @@ export function CollectionClient() {
             <TabsContent value="listed" className="mt-6">
                 {userActiveListings.length > 0 ? (
                    <Card>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Artist</TableHead>
-                                <TableHead>Qty</TableHead>
-                                <TableHead>Price Range</TableHead>
-                                <TableHead>Current Price</TableHead>
-                                <TableHead>Ends In</TableHead>
-                                <TableHead className="text-right">Action</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {userActiveListings.map(listing => {
-                                const artist = artistMap.get(listing.artistId);
-                                const currentPrice = calculateCurrentResalePrice(listing);
-                                const endDate = new Date(new Date(listing.listingTimestamp).getTime() + listing.periodSeconds * 1000);
+                    <div className="w-full overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Artist</TableHead>
+                                    <TableHead>Qty</TableHead>
+                                    <TableHead>Price Range</TableHead>
+                                    <TableHead>Current Price</TableHead>
+                                    <TableHead>Ends In</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {userActiveListings.map(listing => {
+                                    const artist = artistMap.get(listing.artistId);
+                                    const currentPrice = calculateCurrentResalePrice(listing);
+                                    const endDate = new Date(new Date(listing.listingTimestamp).getTime() + listing.periodSeconds * 1000);
 
-                                return (
-                                    <TableRow key={listing.id}>
-                                        <TableCell className="font-medium">{artist?.name || 'Unknown Artist'}</TableCell>
-                                        <TableCell>{listing.quantity}</TableCell>
-                                        <TableCell>₹{listing.minPrice.toFixed(2)} - ₹{listing.initialPrice.toFixed(2)}</TableCell>
-                                        <TableCell className="font-semibold">₹{currentPrice.toFixed(2)}</TableCell>
-                                        <TableCell>{formatDistanceToNow(endDate, { addSuffix: true })}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="outline" size="sm" onClick={() => handleCancelListing(listing.id)} disabled={isCancelling === listing.id}>
-                                              {isCancelling === listing.id && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                                              Cancel
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                )
-                            })}
-                        </TableBody>
-                    </Table>
+                                    return (
+                                        <TableRow key={listing.id}>
+                                            <TableCell className="font-medium">{artist?.name || 'Unknown Artist'}</TableCell>
+                                            <TableCell>{listing.quantity}</TableCell>
+                                            <TableCell>₹{listing.minPrice.toFixed(2)} - ₹{listing.initialPrice.toFixed(2)}</TableCell>
+                                            <TableCell className="font-semibold">₹{currentPrice.toFixed(2)}</TableCell>
+                                            <TableCell>{formatDistanceToNow(endDate, { addSuffix: true })}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="outline" size="sm" onClick={() => handleCancelListing(listing.id)} disabled={isCancelling === listing.id}>
+                                                  {isCancelling === listing.id && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                                  Cancel
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
                     </Card>
                 ) : (
                     <div className="text-center py-16 border-2 border-dashed rounded-lg">

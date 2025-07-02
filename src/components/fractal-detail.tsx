@@ -152,7 +152,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
         </div>
         <div className="lg:col-span-2">
           <div className="sticky top-24">
-            <h1 className="font-headline text-4xl font-bold">{fractal.title}</h1>
+            <h1 className="font-headline text-3xl md:text-4xl font-bold">{fractal.title}</h1>
             
             {artist && (
               <div className="mt-4">

@@ -87,7 +87,7 @@ export default function PortfolioPage() {
               <AvatarFallback>{artistProfile.name.substring(0, 2)}</AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="font-headline text-4xl font-bold">{artistProfile.name}</h1>
+              <h1 className="font-headline text-3xl md:text-4xl font-bold">{artistProfile.name}</h1>
               <p className="text-muted-foreground">Your Artist Dashboard</p>
             </div>
           </div>
@@ -202,6 +202,7 @@ export default function PortfolioPage() {
                       </Button>
                   </CardHeader>
                   <CardContent>
+                    <div className="w-full overflow-x-auto">
                       <Table>
                           <TableHeader>
                               <TableRow>
@@ -251,6 +252,7 @@ export default function PortfolioPage() {
                               )}
                           </TableBody>
                       </Table>
+                      </div>
                   </CardContent>
               </Card>
           </TabsContent>
