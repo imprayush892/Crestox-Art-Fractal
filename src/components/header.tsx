@@ -1,4 +1,3 @@
-
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -33,8 +32,7 @@ export function Header() {
   const router = useRouter();
 
   const navLinks = [
-    { href: '/explore', label: 'Explore Art' },
-    { href: '/artists', label: 'Artists' },
+    { href: '/explore', label: 'Explore' },
     { href: '/suggestions', label: 'AI Curator' },
   ];
 

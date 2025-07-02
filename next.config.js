@@ -27,6 +27,15 @@ const nextConfig = {
       bodySizeLimit: '20mb',
     },
   },
+  async redirects() {
+    return [
+      {
+        source: '/artists',
+        destination: '/explore',
+        permanent: true,
+      },
+    ]
+  },
 };
 
 module.exports = nextConfig;
