@@ -38,6 +38,7 @@ interface AuthContextType {
   allUsers: PublicUser[];
   isLoggedIn: boolean;
   isLoading: boolean;
+  isCollectionLoading: boolean;
   artists: Artist[];
   fractals: Fractal[];
   collection: OwnedFractal[];
@@ -104,6 +105,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const [user, setUser] = useState<User | null>(null);
   const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCollectionLoading, setIsCollectionLoading] = useState(true);
   const [artists, setArtists] = useState<Artist[]>(initialArtists.map(sanitizeArtist));
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
@@ -178,6 +180,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       let allUsersUnsub = () => {};
       
       if (user?.uid) {
+          setIsCollectionLoading(true);
           const userRef = doc(db, 'users', user.uid);
           userUnsub = onSnapshot(userRef, (docSnap) => {
               if (docSnap.exists()){
@@ -198,19 +201,27 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           holdingsUnsub = onSnapshot(publicHoldingsRef, async (publicSnapshot) => {
               const publicHoldings = publicSnapshot.docs.map(d => ({ id: d.id, ...d.data() })) as (PublicHolding & {id: string})[];
               
-              const fullCollection: OwnedFractal[] = [];
-              for (const publicDoc of publicHoldings) {
+              const privateHoldingPromises = publicHoldings.map(publicDoc => {
                   const privateDocRef = doc(db, 'users', user.uid, 'privateHoldings', publicDoc.id);
-                  const privateDocSnap = await getDoc(privateDocRef);
+                  return getDoc(privateDocRef);
+              });
+
+              const privateHoldingSnaps = await Promise.all(privateHoldingPromises);
+
+              const fullCollection = publicHoldings.map((publicDoc, index) => {
+                  const privateDocSnap = privateHoldingSnaps[index];
                   if (privateDocSnap.exists()) {
                       const privateData = privateDocSnap.data() as PrivateHolding;
-                      fullCollection.push({
+                      return {
                           ...publicDoc,
                           ...privateData
-                      });
+                      };
                   }
-              }
+                  return null;
+              }).filter((item): item is OwnedFractal => item !== null);
+              
               setCollection(fullCollection);
+              setIsCollectionLoading(false);
           });
           
           const allUsersQuery = query(firestoreCollection(db, 'users'));
@@ -232,6 +243,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           setArtistProfile(null);
           setCollection([]);
           setAllUsers([]);
+          setIsCollectionLoading(false);
       }
 
       return () => {
@@ -705,7 +717,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         const currentUserHoldings = buyerData.holdingsByArtist?.[artistId] || 0;
         const purchaseQuantity = orderBreakdown.reduce((sum, item) => sum + item.quantity, 0);
 
-        if (currentUserHoldings + purchaseQuantity > holdingLimit) {
+        if (holdingLimit > 0 && currentUserHoldings + purchaseQuantity > holdingLimit) {
             throw new Error(`This purchase would exceed the ${holdingLimit} fractal limit (10%) for this artist.`);
         }
         
@@ -973,6 +985,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     allUsers,
     isLoggedIn: !!user,
     isLoading,
+    isCollectionLoading,
     artists,
     fractals,
     collection,

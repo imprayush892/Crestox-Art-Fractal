@@ -60,6 +60,7 @@ export function CollectionClient() {
     resaleListings,
     watchlist,
     cancelListing,
+    isCollectionLoading,
   } = useAuth();
   const router = useRouter();
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
@@ -184,7 +185,7 @@ export function CollectionClient() {
     setIsCancelling(null);
   }
 
-  if (isLoading && !user) {
+  if (isLoading) {
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
             <div className="flex flex-col items-center gap-4">
@@ -255,7 +256,7 @@ export function CollectionClient() {
             </TabsList>
             
             <TabsContent value="holdings" className="mt-6">
-                {isLoading ? (
+                {isCollectionLoading ? (
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <HoldingCardSkeleton />
                         <HoldingCardSkeleton />
