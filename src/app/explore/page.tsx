@@ -19,7 +19,7 @@ export default function ExplorePage() {
 
       <Tabs defaultValue="artwork" className="w-full">
         <div className="flex justify-center mb-8">
-            <TabsList>
+            <TabsList className="grid w-full max-w-sm grid-cols-2">
                 <TabsTrigger value="artwork">Artwork</TabsTrigger>
                 <TabsTrigger value="artists">Artists</TabsTrigger>
             </TabsList>
