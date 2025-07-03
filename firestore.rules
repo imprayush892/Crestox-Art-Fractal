@@ -3,65 +3,42 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-    function isAuthenticated() {
-      return request.auth != null;
+    match /users/{userId} {
+      allow read;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      
+      match /privateHoldings/{holdingId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /holdings/{holdingId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // --- Collection Group Rule for 'holdings' ---
-    // This rule is required for the "Collectors" tab query to work.
-    // It allows any authenticated user to query across all 'holdings' collections.
-    match /{path=**}/holdings/{holdingId} {
-      allow read: if isAuthenticated();
-      // Transactions require buyers to delete seller's holdings.
-      allow delete: if isAuthenticated();
-    }
-
-    // --- Public Collections ---
     match /artists/{artistId} {
-      allow read: if true;
-      // Artists can create their own profile. Authenticated users (buyers) can update price during transactions.
-      allow create, update: if isAuthenticated();
+      allow read;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && get(/databases/$(database)/documents/artists/$(artistId)).data.userId == request.auth.uid;
     }
 
     match /fractals/{fractalId} {
-      allow read: if true;
-      // Artists create/update their own fractals.
-      allow create, update: if isAuthenticated();
+      allow read;
+      allow create: if request.auth != null 
+                    && get(/databases/$(database)/documents/artists/$(request.resource.data.artistId)).data.userId == request.auth.uid;
+      allow update: if request.auth != null 
+                    && get(/databases/$(database)/documents/artists/$(resource.data.artistId)).data.userId == request.auth.uid;
     }
-
+    
     match /resaleListings/{listingId} {
-      allow read: if true;
-      // Users create/update their own listings.
-      allow create, update: if isAuthenticated();
+      allow read;
+      allow create: if request.auth != null && request.resource.data.resellerId == request.auth.uid;
+      allow update: if request.auth != null;
     }
 
-    // --- User Data ---
-    match /users/{userId} {
-      // Public user profiles are readable by authenticated users.
-      allow get, list: if isAuthenticated();
-      // Users create their own doc on signup.
-      allow create: if isOwner(userId);
-      // Users update their own doc, or others can update walletBalance for a sale.
-      allow update: if isOwner(userId) ||
-                     (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance']));
-
-      // --- User-Specific Subcollections ---
-      // Write rules for direct path access. Read rules are handled by the collection group rule above.
-      match /holdings/{holdingId} {
-        allow create, update: if isOwner(userId);
-        // Delete is handled by collection group rule.
-      }
-
-      // Private data is only accessible to the owner, except for transaction verification/cleanup.
-      match /privateHoldings/{holdingId} {
-        allow list, create, update: if isOwner(userId);
-        allow get, delete: if isAuthenticated();
-      }
+    match /{path=**}/holdings/{holdingId} {
+       allow read: if request.auth != null;
     }
   }
 }
