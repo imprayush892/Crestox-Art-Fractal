@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Palette, Star, DollarSign, Search, TrendingUp, ArrowRightLeft } from 'lucide-react';
+import React from 'react';
 
 const foundersData = [
   {
@@ -38,6 +40,104 @@ const TabContentWrapper = ({ children, className }: { children: React.ReactNode,
     </div>
 );
 
+
+const HowItWorksDiagram = () => {
+    const artistSteps = [
+      {
+        icon: Palette,
+        title: 'List Artwork',
+        description:
+          'Upload your portfolio with high-quality images and detailed descriptions of your artistic journey.',
+      },
+      {
+        icon: Star,
+        title: 'Get Rated',
+        description:
+          'Our expert panel evaluates your work based on artistic potential, technique, and market trends.',
+      },
+      {
+        icon: DollarSign,
+        title: 'Raise Funds',
+        description:
+          'Once approved, investors can purchase shares in your portfolio, providing you with capital to grow.',
+      },
+    ];
+
+    const investorSteps = [
+      {
+        icon: Search,
+        title: 'Browse',
+        description:
+          'Explore hundreds of curated artist portfolios with expert ratings and performance data.',
+      },
+      {
+        icon: TrendingUp,
+        title: 'Invest',
+        description:
+          'Purchase shares starting at just $50 in portfolios that match your investment strategy.',
+      },
+      {
+        icon: ArrowRightLeft,
+        title: 'Trade Shares',
+        description:
+          'Buy and sell shares on our secondary market as portfolio values appreciate over time.',
+      },
+    ];
+
+    const StepCard = ({ icon: Icon, title, description, step, gradient }: { icon: React.ElementType, title: string, description: string, step: number, gradient: string }) => (
+      <div className="flex items-start gap-4">
+        <div className={`flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center ${gradient} shadow-lg`}>
+          <Icon className="w-8 h-8 text-white" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold bg-primary-foreground/10 text-primary-foreground rounded-full inline-block px-3 py-1 mb-2">Step {step}</p>
+          <h4 className="text-lg font-bold text-white">{title}</h4>
+          <p className="mt-1 text-primary-foreground/80 text-sm leading-relaxed">{description}</p>
+        </div>
+      </div>
+    );
+
+    return (
+        <div className="w-full max-w-5xl mx-auto p-8 md:p-12 rounded-lg bg-primary text-primary-foreground mt-6">
+            <div className="text-center mb-12">
+                <h2 className="font-headline text-4xl font-bold">How Crestox Works</h2>
+                <p className="mt-2 text-lg text-primary-foreground/80 max-w-2xl mx-auto">
+                    A simple, transparent process that connects emerging artists with investors worldwide
+                </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-12">
+                <div className="space-y-8">
+                    <h3 className="font-headline text-2xl font-bold text-center md:text-left">For Artists</h3>
+                    {artistSteps.map((step, index) => (
+                        <StepCard
+                            key={index}
+                            step={index + 1}
+                            icon={step.icon}
+                            title={step.title}
+                            description={step.description}
+                            gradient="bg-gradient-to-br from-yellow-400 to-orange-500"
+                        />
+                    ))}
+                </div>
+                <div className="space-y-8">
+                    <h3 className="font-headline text-2xl font-bold text-center md:text-left">For Investors</h3>
+                    {investorSteps.map((step, index) => (
+                        <StepCard
+                            key={index}
+                            step={index + 1}
+                            icon={step.icon}
+                            title={step.title}
+                            description={step.description}
+                            gradient="bg-gradient-to-br from-blue-400 to-indigo-600"
+                        />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 export default function DonatePage() {
   const founders = foundersData.map((founder) => ({
       ...founder,
@@ -63,14 +163,7 @@ export default function DonatePage() {
             </TabsList>
 
             <TabsContent value="what-why-how">
-                <TabContentWrapper>
-                    <h2 className="font-headline text-3xl font-bold mb-4">What, Why, and How</h2>
-                    <div className="space-y-4 text-foreground/80">
-                        <p><strong>What:</strong> Crestox is a pioneering platform designed to democratize the art market through fractional ownership and AI-powered valuation. We transform individual artworks into a portfolio of collectible "fractals," making high-value art accessible to everyone.</p>
-                        <p><strong>Why:</strong> The traditional art world can be opaque and exclusive. We believe in transparency, accessibility, and empowering both artists and collectors. By breaking down barriers, we unlock new opportunities for investment, appreciation, and community building around art.</p>
-                        <p><strong>How:</strong> Artists list their work on our platform, where it undergoes a rigorous evaluation by our proprietary AI to establish a fair market valuation and quality grade. This valuation determines the price of the artwork's fractals, which can then be bought, sold, and traded by collectors on our marketplace.</p>
-                    </div>
-                </TabContentWrapper>
+              <HowItWorksDiagram />
             </TabsContent>
 
             <TabsContent value="partners">
