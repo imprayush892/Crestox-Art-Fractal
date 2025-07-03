@@ -326,7 +326,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     const processedAwards = await Promise.all(
         (awards || []).map(async (award) => {
             if (award.image instanceof File) {
-                const storageRef = ref(storage, `achievements/${artistId}/awards/${uuidv4()}`);
+                const storageRef = ref(storage, `achievements/${user.uid}/awards/${uuidv4()}`);
                 await uploadBytes(storageRef, award.image);
                 const imageUrl = await getDownloadURL(storageRef);
                 return { value: award.value, image: imageUrl };
@@ -340,7 +340,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             if (exhibition.images && exhibition.images.length > 0) {
                 const imageUrls = await Promise.all(
                     exhibition.images.filter(img => img instanceof File).map(async (img) => {
-                        const storageRef = ref(storage, `achievements/${artistId}/exhibitions/${uuidv4()}`);
+                        const storageRef = ref(storage, `achievements/${user.uid}/exhibitions/${uuidv4()}`);
                         await uploadBytes(storageRef, img as File);
                         return getDownloadURL(storageRef);
                     })
@@ -353,8 +353,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     
     const processedSoldArtworks = await Promise.all(
         (previouslySoldArtworks || []).map(async (artwork) => {
-            const artworkImageUrl = artwork.artworkImage instanceof File ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${artistId}/${uuidv4()}`), artwork.artworkImage).then(s => s.ref)) : '';
-            const proofImageUrl = artwork.proofOfSaleImage instanceof File ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${artistId}/${uuidv4()}`), artwork.proofOfSaleImage).then(s => s.ref)) : '';
+            const artworkImageUrl = artwork.artworkImage instanceof File ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${user.uid}/${uuidv4()}`), artwork.artworkImage).then(s => s.ref)) : '';
+            const proofImageUrl = artwork.proofOfSaleImage instanceof File ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${user.uid}/${uuidv4()}`), artwork.proofOfSaleImage).then(s => s.ref)) : '';
             return {
                 name: artwork.name,
                 saleValue: artwork.saleValue,
@@ -413,7 +413,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         dataToUpdate.awards = await Promise.all(
           awards.map(async (award) => {
             if (award.image instanceof File) {
-              const storageRef = ref(storage, `achievements/${artistProfile.id}/awards/${uuidv4()}`);
+              const storageRef = ref(storage, `achievements/${user.uid}/awards/${uuidv4()}`);
               await uploadBytes(storageRef, award.image);
               const imageUrl = await getDownloadURL(storageRef);
               return { value: award.value, image: imageUrl };
@@ -430,7 +430,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               const imageUrls = await Promise.all(
                 exhibition.images.map(async (img) => {
                   if (img instanceof File) {
-                    const storageRef = ref(storage, `achievements/${artistProfile.id}/exhibitions/${uuidv4()}`);
+                    const storageRef = ref(storage, `achievements/${user.uid}/exhibitions/${uuidv4()}`);
                     await uploadBytes(storageRef, img);
                     return getDownloadURL(storageRef);
                   }
@@ -448,10 +448,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           dataToUpdate.previouslySoldArtworks = await Promise.all(
               previouslySoldArtworks.map(async (artwork) => {
                   const artworkImageUrl = artwork.artworkImage instanceof File
-                      ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${artistProfile.id}/${uuidv4()}`), artwork.artworkImage).then(s => s.ref))
+                      ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${user.uid}/${uuidv4()}`), artwork.artworkImage).then(s => s.ref))
                       : artwork.artworkImage;
                   const proofImageUrl = artwork.proofOfSaleImage instanceof File
-                      ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${artistProfile.id}/${uuidv4()}`), artwork.proofOfSaleImage).then(s => s.ref))
+                      ? await getDownloadURL(await uploadBytes(ref(storage, `previouslySold/${user.uid}/${uuidv4()}`), artwork.proofOfSaleImage).then(s => s.ref))
                       : artwork.proofOfSaleImage;
                   return {
                       name: artwork.name,
