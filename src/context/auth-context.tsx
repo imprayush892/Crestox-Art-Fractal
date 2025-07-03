@@ -98,7 +98,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCollectionLoading, setIsCollectionLoading] = useState(true);
-  const [isArtist, setIsArtist] = useState(false);
   const [artists, setArtists] = useState<Artist[]>(initialArtists.map(sanitizeArtist));
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
@@ -185,10 +184,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           artistUnsub = onSnapshot(artistQuery, (snapshot) => {
               if (!snapshot.empty) {
                   setArtistProfile({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ArtistProfile);
-                  setIsArtist(true);
               } else {
                   setArtistProfile(null);
-                  setIsArtist(false);
               }
           });
           
@@ -239,7 +236,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           setCollection([]);
           setAllUsers([]);
           setIsCollectionLoading(false);
-          setIsArtist(false);
       }
 
       return () => {
@@ -965,7 +961,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     isLoggedIn: !!user,
     isLoading,
     isCollectionLoading,
-    isArtist,
+    isArtist: !!artistProfile,
     artists,
     fractals,
     collection,
