@@ -43,6 +43,19 @@ const TabContentWrapper = ({ children, className }: { children: React.ReactNode,
     </div>
 );
 
+const InfoCard = ({ icon: Icon, title, description, step }: { icon: React.ElementType, title: string, description: string, step?: number }) => (
+    <div className="flex flex-col items-center p-4 text-center">
+        <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
+            <Icon className="w-10 h-10 text-primary" />
+        </div>
+        {step && (
+            <p className="text-xs font-semibold bg-primary/10 text-primary rounded-full inline-block px-3 py-1 mb-2">Step {step}</p>
+        )}
+        <h3 className="font-bold text-xl">{title}</h3>
+        <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{description}</p>
+    </div>
+);
+
 const WhatIsCrestoxDiagram = () => (
     <div className="w-full max-w-5xl mx-auto p-8 md:p-12 rounded-lg bg-card text-card-foreground border mt-6">
         <div className="text-center mb-12">
@@ -51,28 +64,22 @@ const WhatIsCrestoxDiagram = () => (
                 A revolutionary platform democratizing art investment.
             </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div className="flex flex-col items-center p-4">
-                <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
-                    <GalleryVertical className="w-10 h-10 text-primary" />
-                </div>
-                <h3 className="font-bold text-xl">Art Portfolio Tokenization</h3>
-                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">We transform an artist's entire body of work into a single, investable asset represented by digital tokens called 'Fractals'.</p>
-            </div>
-            <div className="flex flex-col items-center p-4">
-                <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
-                    <Users className="w-10 h-10 text-primary" />
-                </div>
-                <h3 className="font-bold text-xl">Fractional Ownership</h3>
-                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">Investors can buy and sell Fractals, making it possible to own a piece of a valuable art portfolio without purchasing an entire artwork.</p>
-            </div>
-            <div className="flex flex-col items-center p-4">
-                <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
-                    <ArrowRightLeft className="w-10 h-10 text-primary" />
-                </div>
-                <h3 className="font-bold text-xl">A Liquid Art Market</h3>
-                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">Our platform provides a dynamic secondary market for trading Fractals, unlocking the value of art and providing liquidity.</p>
-            </div>
+        <div className="grid md:grid-cols-3 gap-8">
+            <InfoCard 
+                icon={GalleryVertical}
+                title="Art Portfolio Tokenization"
+                description="We transform an artist's entire body of work into a single, investable asset represented by digital tokens called 'Fractals'."
+            />
+             <InfoCard 
+                icon={Users}
+                title="Fractional Ownership"
+                description="Investors can buy and sell Fractals, making it possible to own a piece of a valuable art portfolio without purchasing an entire artwork."
+            />
+             <InfoCard 
+                icon={ArrowRightLeft}
+                title="A Liquid Art Market"
+                description="Our platform provides a dynamic secondary market for trading Fractals, unlocking the value of art and providing liquidity."
+            />
         </div>
     </div>
 );
@@ -120,48 +127,34 @@ const WhyCrestoxDiagram = () => {
       },
     ];
 
-    const BenefitCard = ({ icon: Icon, title, description, gradient }: { icon: React.ElementType, title: string, description: string, gradient: string }) => (
-      <div className="flex items-start gap-4">
-        <div className={`flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center ${gradient} shadow-lg`}>
-          <Icon className="w-8 h-8 text-white" />
-        </div>
-        <div>
-          <h4 className="text-lg font-bold text-white">{title}</h4>
-          <p className="mt-1 text-primary-foreground/80 text-sm leading-relaxed">{description}</p>
-        </div>
-      </div>
-    );
-
     return (
-        <div className="w-full max-w-5xl mx-auto p-8 md:p-12 rounded-lg bg-primary text-primary-foreground mt-6">
+        <div className="w-full max-w-5xl mx-auto p-8 md:p-12 rounded-lg bg-card text-card-foreground border mt-6">
             <div className="text-center mb-12">
                 <h2 className="font-headline text-4xl font-bold">Why Crestox?</h2>
-                <p className="mt-2 text-lg text-primary-foreground/80 max-w-2xl mx-auto">
+                <p className="mt-2 text-lg text-muted-foreground max-w-2xl mx-auto">
                     A win-win ecosystem for creators and collectors.
                 </p>
             </div>
             <div className="grid md:grid-cols-2 gap-12">
                 <div className="space-y-8">
-                    <h3 className="font-headline text-2xl font-bold text-center md:text-left">For Artists</h3>
+                    <h3 className="font-headline text-2xl font-bold text-center">For Artists</h3>
                     {artistBenefits.map((benefit, index) => (
-                        <BenefitCard
+                        <InfoCard
                             key={index}
                             icon={benefit.icon}
                             title={benefit.title}
                             description={benefit.description}
-                            gradient="bg-gradient-to-br from-yellow-400 to-orange-500"
                         />
                     ))}
                 </div>
                 <div className="space-y-8">
-                    <h3 className="font-headline text-2xl font-bold text-center md:text-left">For Investors</h3>
+                    <h3 className="font-headline text-2xl font-bold text-center">For Investors</h3>
                     {investorBenefits.map((benefit, index) => (
-                        <BenefitCard
+                        <InfoCard
                             key={index}
                             icon={benefit.icon}
                             title={benefit.title}
                             description={benefit.description}
-                            gradient="bg-gradient-to-br from-blue-400 to-indigo-600"
                         />
                     ))}
                 </div>
@@ -214,51 +207,36 @@ const HowItWorksDiagram = () => {
       },
     ];
 
-    const StepCard = ({ icon: Icon, title, description, step, gradient }: { icon: React.ElementType, title: string, description: string, step: number, gradient: string }) => (
-      <div className="flex items-start gap-4">
-        <div className={`flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center ${gradient} shadow-lg`}>
-          <Icon className="w-8 h-8 text-white" />
-        </div>
-        <div>
-          <p className="text-xs font-semibold bg-primary-foreground/10 text-primary-foreground rounded-full inline-block px-3 py-1 mb-2">Step {step}</p>
-          <h4 className="text-lg font-bold text-white">{title}</h4>
-          <p className="mt-1 text-primary-foreground/80 text-sm leading-relaxed">{description}</p>
-        </div>
-      </div>
-    );
-
     return (
-        <div className="w-full max-w-5xl mx-auto p-8 md:p-12 rounded-lg bg-primary text-primary-foreground mt-6">
+        <div className="w-full max-w-5xl mx-auto p-8 md:p-12 rounded-lg bg-card text-card-foreground border mt-6">
             <div className="text-center mb-12">
                 <h2 className="font-headline text-4xl font-bold">How Crestox Works</h2>
-                <p className="mt-2 text-lg text-primary-foreground/80 max-w-2xl mx-auto">
+                <p className="mt-2 text-lg text-muted-foreground max-w-2xl mx-auto">
                     A simple, transparent process that connects emerging artists with investors worldwide
                 </p>
             </div>
             <div className="grid md:grid-cols-2 gap-12">
                 <div className="space-y-8">
-                    <h3 className="font-headline text-2xl font-bold text-center md:text-left">For Artists</h3>
+                    <h3 className="font-headline text-2xl font-bold text-center">For Artists</h3>
                     {artistSteps.map((step, index) => (
-                        <StepCard
+                        <InfoCard
                             key={index}
                             step={index + 1}
                             icon={step.icon}
                             title={step.title}
                             description={step.description}
-                            gradient="bg-gradient-to-br from-yellow-400 to-orange-500"
                         />
                     ))}
                 </div>
                 <div className="space-y-8">
-                    <h3 className="font-headline text-2xl font-bold text-center md:text-left">For Investors</h3>
+                    <h3 className="font-headline text-2xl font-bold text-center">For Investors</h3>
                     {investorSteps.map((step, index) => (
-                        <StepCard
+                        <InfoCard
                             key={index}
                             step={index + 1}
                             icon={step.icon}
                             title={step.title}
                             description={step.description}
-                            gradient="bg-gradient-to-br from-blue-400 to-indigo-600"
                         />
                     ))}
                 </div>
