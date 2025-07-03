@@ -36,7 +36,6 @@ export function Footer() {
           <nav className="flex flex-wrap justify-center gap-4 md:gap-6">
             <Link href="#" className="text-sm text-muted-foreground hover:text-primary">Terms of Service</Link>
             <Link href="#" className="text-sm text-muted-foreground hover:text-primary">Privacy Policy</Link>
-            <Link href="/donate" className="text-sm text-muted-foreground hover:text-primary">Donate to Crestox</Link>
           </nav>
         </div>
       </div>

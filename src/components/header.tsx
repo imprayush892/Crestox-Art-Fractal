@@ -1,4 +1,3 @@
-
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -28,7 +27,7 @@ const getPublicUrl = (path: string) => {
 const monogramUrl = getPublicUrl('public/assets/crestox-monogram.png');
 
 export function Header() {
-  const { user, isLoggedIn, logout, artistProfile, isLoading } = useAuth();
+  const { user, isLoggedIn, logout, artistProfile, isLoading, isArtist } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
@@ -73,13 +72,16 @@ export function Header() {
                     {link.label}
                   </Link>
                 ))}
-                {loggedInArtistLinks.map((link) => (
+                {isArtist && loggedInArtistLinks.map((link) => (
                   <Link key={link.href} href={link.href} className="transition-colors text-foreground/60 hover:text-primary">
                     {link.label}
                   </Link>
                 ))}
               </>
             )}
+             <Link href="/donate" className="transition-colors text-foreground/60 hover:text-primary">
+                Donate to Crestox
+              </Link>
           </nav>
           <div className="flex items-center gap-4">
             {isLoading ? (
@@ -147,13 +149,16 @@ export function Header() {
                           {link.label}
                         </Link>
                       ))}
-                      {loggedInArtistLinks.map((link) => (
+                      {isArtist && loggedInArtistLinks.map((link) => (
                         <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
                           {link.label}
                         </Link>
                       ))}
                     </>
                   )}
+                  <Link href="/donate" onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
+                    Donate to Crestox
+                  </Link>
                 </nav>
                 <div className="mt-auto border-t p-4">
                  {isLoading ? (
