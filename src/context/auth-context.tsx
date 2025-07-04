@@ -25,6 +25,11 @@ export interface User {
   walletBalance: number;
   watchlist: string[];
   holdingsByArtist?: { [key: string]: number; };
+  artistProfile?: {
+    id: string;
+    name: string;
+    avatar: string;
+  }
 }
 
 export interface ArtistProfile extends Artist {
@@ -180,14 +185,19 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               }
           });
 
-          const artistQuery = query(firestoreCollection(db, 'artists'), where('userId', '==', user.uid));
-          artistUnsub = onSnapshot(artistQuery, (snapshot) => {
-              if (!snapshot.empty) {
-                  setArtistProfile({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ArtistProfile);
+          if (user.artistProfile?.id) {
+            const artistRef = doc(db, 'artists', user.artistProfile.id);
+            artistUnsub = onSnapshot(artistRef, (docSnap) => {
+              if (docSnap.exists()) {
+                setArtistProfile({ id: docSnap.id, ...docSnap.data() } as ArtistProfile);
               } else {
-                  setArtistProfile(null);
+                console.warn("Artist document not found for ID:", user.artistProfile?.id);
+                setArtistProfile(null);
               }
-          });
+            });
+          } else {
+            setArtistProfile(null);
+          }
           
           const publicHoldingsRef = firestoreCollection(db, 'users', user.uid, 'holdings');
           holdingsUnsub = onSnapshot(publicHoldingsRef, async (publicSnapshot) => {
@@ -617,7 +627,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               aiScorecard: evaluation.breakdown,
               valuationBreakdown: evaluation.valuationBreakdown,
               artistMinEstimate: artworkData.minEstimatedValue,
-              artistMaxEstimate: artworkData.maxEstimatedValue,
               crestoxPriceRange: evaluation.crestoxPriceRange,
               editions: f_old + f_portfolio_new,
           };

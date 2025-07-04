@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -20,10 +21,26 @@ service cloud.firestore {
 
     // --- Public Collections ---
     match /artists/{artistId} {
-      allow get: if true; // Public can get a specific artist if they know the ID
-      allow list: if isAuthenticated(); // Authenticated users can query the list (e.g., to find their own profile)
-      allow create: if isAuthenticated(); // Authenticated users can create a profile
-      allow update: if isAuthenticated() && isOwner(resource.data.userId); // Only owner can update
+      // Allow anyone to get a single artist document (for public profiles).
+      allow get: if true;
+      // Allow anyone to list/query artists (for explore page and data loading).
+      allow list: if true;
+      
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Allow artist to update their own profile, or allow transactions to update specific financial fields.
+      allow update: if isAuthenticated() && 
+                     (isOwner(resource.data.userId) || 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        'fractalPrice', 
+                        'priceHistory', 
+                        'totalPortfolioValue', 
+                        'totalPortfolioValueHistory', 
+                        'availableEditions', 
+                        'kFactor', 
+                        'totalScoreWeightedValuation', 
+                        'sumOfScoresSquared', 
+                        'totalEditions'
+                      ]));
     }
 
     match /fractals/{fractalId} {
