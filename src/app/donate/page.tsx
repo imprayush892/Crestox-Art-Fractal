@@ -28,7 +28,7 @@ const foundersData = [
   }
 ];
 
-const wordmarkUrl = 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.appspot.com/o/public%2Fassets%2Fcrestox-wordmark.png?alt=media';
+const wordmarkUrl = 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/public%2Fassets%2Fcrestox-wordmark.png?alt=media';
 
 const TabContentWrapper = ({ children, className }: { children: React.ReactNode, className?: string }) => (
     <div className={`mt-6 w-full max-w-4xl mx-auto p-4 md:p-8 rounded-lg bg-card border ${className}`}>
