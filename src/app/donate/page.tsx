@@ -10,12 +10,17 @@ import {
     GalleryVertical, Users, Globe, LineChart, PieChart, Heart, Key
 } from 'lucide-react';
 import React from 'react';
+import { storage } from '@/lib/firebase';
 
 const getPublicUrl = (path: string) => {
-    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    // By removing the fallback, we ensure that if the environment variable is missing,
-    // it will generate a broken URL, making the error visible in the browser console
-    // on the live site instead of silently showing a placeholder.
+    // This is the robust way. It gets the bucket from the initialized firebase app,
+    // which avoids issues with environment variables not being set on the server.
+    const storageBucket = storage.app.options.storageBucket;
+    if (!storageBucket) {
+        console.error("Firebase storage bucket is not configured. Images will not load.");
+        // Return a path that will clearly fail, rather than a silent placeholder.
+        return `https://placehold.co/160x160.png?text=Error:BucketMissing`;
+    }
     return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
 }
 
