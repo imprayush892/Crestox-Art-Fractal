@@ -14,14 +14,14 @@ import React from 'react';
 const foundersData = [
   {
     name: 'Prayush Shah',
-    imageSrc: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.appspot.com/o/founders%2Ffounder_prayush.jpeg?alt=media',
+    imageSrc: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/founders%2Ffounder_prayush.jpeg?alt=media',
     description: "A CEPT alum with a tech-savvy, entrepreneurial spirit, Prayush drives Crestox’s product vision. From crafting seamless user journeys to building robust digital tools, he’s the brains behind our platform’s innovation. With a deep passion for Indian art and its future, Prayush ensures every feature empowers artists and collectors alike.",
     contact: '9978902743',
     aiHint: 'man portrait',
   },
   {
     name: 'Udit Shah',
-    imageSrc: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.appspot.com/o/founders%2Ffounder_udit.jpeg?alt=media',
+    imageSrc: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/founders%2Ffounder_udit.jpeg?alt=media',
     description: "A CEPT graduate, Udit brings a strong business pedigree rooted in his family’s ventures. He excels at forging partnerships, growing networks, and overseeing logistics. Udit’s knack for Indian art and culture fuels Crestox’s community building—connecting creators, collectors, and collaborators across the country.",
     contact: '9879608470',
     aiHint: 'man portrait',
