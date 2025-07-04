@@ -1,9 +1,7 @@
-
 'use client';
 
 import { useAuth } from '@/context/auth-context';
-import { useRouter } from 'next/navigation';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,25 +16,15 @@ import { Badge } from '@/components/ui/badge';
 import { ScorecardDialog } from '@/components/scorecard-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-export default function PortfolioPage() {
-  const { isLoggedIn, artistProfile, fractals } = useAuth();
-  const router = useRouter();
+export function PortfolioClient() {
+  const { artistProfile, fractals } = useAuth();
   const [selectedFractal, setSelectedFractal] = useState<Fractal | null>(null);
 
-  useEffect(() => {
-    if (!isLoggedIn) {
-      router.push('/login?redirect=/portfolio');
-    }
-  }, [isLoggedIn, router]);
-  
   const artistFractals = useMemo(() => {
     if (!artistProfile) return [];
     return fractals.filter(f => f.artistId === artistProfile.id);
   }, [fractals, artistProfile]);
 
-  if (!isLoggedIn) {
-    return null; // Or a loading spinner
-  }
 
   if (!artistProfile) {
     return (
@@ -59,7 +47,6 @@ export default function PortfolioPage() {
   const fractalsSoldCount = artistProfile.totalEditions - artistProfile.availableEditions;
   const needsArtistMessage = artistFractals.length > 0 && !artistProfile.artistMessage;
   
-  // This is a placeholder for now, as earnings tracking is not yet implemented.
   const totalEarnings = 0;
 
   return (
@@ -77,7 +64,7 @@ export default function PortfolioPage() {
               <AvatarFallback>{artistProfile.name.substring(0, 2)}</AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="font-headline text-4xl font-bold">{artistProfile.name}</h1>
+              <h1 className="font-headline text-3xl md:text-4xl font-bold">{artistProfile.name}</h1>
               <p className="text-muted-foreground">Your Artist Dashboard</p>
             </div>
           </div>
@@ -119,7 +106,7 @@ export default function PortfolioPage() {
                               <DollarSign className="h-4 w-4 text-muted-foreground" />
                           </CardHeader>
                           <CardContent>
-                              <div className="text-2xl font-bold">₹{currentPortfolioValue.toLocaleString('en-IN')}</div>
+                              <div className="text-2xl font-bold">₹{currentPortfolioValue.toLocaleString()}</div>
                               <p className="text-xs text-muted-foreground">Based on artwork valuations</p>
                           </CardContent>
                       </Card>
@@ -129,7 +116,7 @@ export default function PortfolioPage() {
                               <Tag className="h-4 w-4 text-muted-foreground" />
                           </CardHeader>
                           <CardContent>
-                              <div className="text-2xl font-bold">₹{artistProfile.fractalPrice.toLocaleString('en-IN')}</div>
+                              <div className="text-2xl font-bold">₹{artistProfile.fractalPrice.toLocaleString()}</div>
                               <p className="text-xs text-muted-foreground">Market price per portfolio fractal</p>
                           </CardContent>
                       </Card>
@@ -139,7 +126,7 @@ export default function PortfolioPage() {
                               <Layers className="h-4 w-4 text-muted-foreground" />
                           </CardHeader>
                           <CardContent>
-                              <div className="text-2xl font-bold">{artistProfile.availableEditions.toLocaleString('en-IN')}</div>
+                              <div className="text-2xl font-bold">{artistProfile.availableEditions.toLocaleString()}</div>
                               <p className="text-xs text-muted-foreground">Portfolio fractals available to buy</p>
                           </CardContent>
                       </Card>
@@ -149,7 +136,7 @@ export default function PortfolioPage() {
                               <TrendingUp className="h-4 w-4 text-muted-foreground" />
                           </CardHeader>
                           <CardContent>
-                              <div className="text-2xl font-bold">+{fractalsSoldCount.toLocaleString('en-IN')}</div>
+                              <div className="text-2xl font-bold">+{fractalsSoldCount.toLocaleString()}</div>
                               <p className="text-xs text-muted-foreground">Total fractals sold from your portfolio</p>
                           </CardContent>
                       </Card>
@@ -192,6 +179,7 @@ export default function PortfolioPage() {
                       </Button>
                   </CardHeader>
                   <CardContent>
+                    <div className="w-full overflow-x-auto">
                       <Table>
                           <TableHeader>
                               <TableRow>
@@ -209,7 +197,7 @@ export default function PortfolioPage() {
                                           <Image src={fractal.heroImage} alt={fractal.title} width={40} height={40} className="rounded-md object-cover" />
                                       </TableCell>
                                       <TableCell className="font-medium">{fractal.title}</TableCell>
-                                      <TableCell>₹{fractal.price.toLocaleString('en-IN')}</TableCell>
+                                      <TableCell>₹{fractal.price.toLocaleString()}</TableCell>
                                       <TableCell>
                                         {fractal.crestoxGrade ? (
                                             <Button variant="ghost" size="sm" className="p-1 h-auto" onClick={() => setSelectedFractal(fractal)}>
@@ -227,7 +215,7 @@ export default function PortfolioPage() {
                                           <Button variant="outline" size="sm" asChild>
                                               <Link href={`/portfolio/artwork/edit/${fractal.id}`}>
                                                 <Wand2 className="mr-2 h-3 w-3" />
-                                                Edit / Re-evaluate
+                                                Edit
                                               </Link>
                                           </Button>
                                       </TableCell>
@@ -241,6 +229,7 @@ export default function PortfolioPage() {
                               )}
                           </TableBody>
                       </Table>
+                      </div>
                   </CardContent>
               </Card>
           </TabsContent>

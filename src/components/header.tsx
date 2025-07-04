@@ -35,14 +35,8 @@ export function Header() {
     { href: '/explore', label: 'Explore' },
     { href: '/suggestions', label: 'AI Curator' },
   ];
-
-  const loggedInCollectorLinks = [
-    { href: '/collection', label: 'My Collection' },
-  ];
   
-  const loggedInArtistLinks = [
-      { href: '/portfolio', label: 'My Portfolio' },
-  ];
+  const profileLink = { href: '/profile', label: 'My Profile' };
 
   const handleLogout = async () => {
     await logout();
@@ -66,18 +60,9 @@ export function Header() {
               </Link>
             ))}
             {isLoggedIn && (
-              <>
-                {loggedInCollectorLinks.map((link) => (
-                  <Link key={link.href} href={link.href} className="transition-colors text-foreground/60 hover:text-primary">
-                    {link.label}
-                  </Link>
-                ))}
-                {loggedInArtistLinks.map((link) => (
-                  <Link key={link.href} href={link.href} className="transition-colors text-foreground/60 hover:text-primary">
-                    {link.label}
-                  </Link>
-                ))}
-              </>
+              <Link href={profileLink.href} className="transition-colors text-foreground/60 hover:text-primary">
+                {profileLink.label}
+              </Link>
             )}
              <Link href="/donate" className="transition-colors text-foreground/60 hover:text-primary">
                 About Crestox
@@ -143,18 +128,9 @@ export function Header() {
                     </Link>
                   ))}
                   {isLoggedIn && (
-                    <>
-                      {loggedInCollectorLinks.map((link) => (
-                        <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
-                          {link.label}
-                        </Link>
-                      ))}
-                      {loggedInArtistLinks.map((link) => (
-                        <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
-                          {link.label}
-                        </Link>
-                      ))}
-                    </>
+                    <Link href={profileLink.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
+                      {profileLink.label}
+                    </Link>
                   )}
                   <Link href="/donate" onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
                     About Crestox
