@@ -11,23 +11,6 @@ import {
 } from 'lucide-react';
 import React from 'react';
 
-const foundersData = [
-  {
-    name: 'Prayush Shah',
-    imageSrc: '/founders/founder_prayush.jpeg',
-    description: "A CEPT alum with a tech-savvy, entrepreneurial spirit, Prayush drives Crestox’s product vision. From crafting seamless user journeys to building robust digital tools, he’s the brains behind our platform’s innovation. With a deep passion for Indian art and its future, Prayush ensures every feature empowers artists and collectors alike.",
-    contact: '9978902743',
-    aiHint: 'man portrait',
-  },
-  {
-    name: 'Udit Shah',
-    imageSrc: '/founders/founder_udit.jpeg',
-    description: "A CEPT graduate, Udit brings a strong business pedigree rooted in his family’s ventures. He excels at forging partnerships, growing networks, and overseeing logistics. Udit’s knack for Indian art and culture fuels Crestox’s community building—connecting creators, collectors, and collaborators across the country.",
-    contact: '9879608470',
-    aiHint: 'man portrait',
-  }
-];
-
 const getPublicUrl = (path: string) => {
     const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
     if (!storageBucket) {
@@ -36,6 +19,23 @@ const getPublicUrl = (path: string) => {
     }
     return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
 }
+
+const foundersData = [
+  {
+    name: 'Prayush Shah',
+    imageSrc: getPublicUrl('public/founders/founder_prayush.jpeg'),
+    description: "A CEPT alum with a tech-savvy, entrepreneurial spirit, Prayush drives Crestox’s product vision. From crafting seamless user journeys to building robust digital tools, he’s the brains behind our platform’s innovation. With a deep passion for Indian art and its future, Prayush ensures every feature empowers artists and collectors alike.",
+    contact: '9978902743',
+    aiHint: 'man portrait',
+  },
+  {
+    name: 'Udit Shah',
+    imageSrc: getPublicUrl('public/founders/founder_udit.jpeg'),
+    description: "A CEPT graduate, Udit brings a strong business pedigree rooted in his family’s ventures. He excels at forging partnerships, growing networks, and overseeing logistics. Udit’s knack for Indian art and culture fuels Crestox’s community building—connecting creators, collectors, and collaborators across the country.",
+    contact: '9879608470',
+    aiHint: 'man portrait',
+  }
+];
 
 const TabContentWrapper = ({ children, className }: { children: React.ReactNode, className?: string }) => (
     <div className={`mt-6 w-full max-w-4xl mx-auto p-4 md:p-8 rounded-lg bg-card border ${className}`}>
