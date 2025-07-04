@@ -13,6 +13,20 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // This function checks if a non-owner update on a user document
+    // is a valid seller payout from a transaction.
+    function isSellerPayout() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let affectedKeys = after.diff(before).affectedKeys();
+
+      return isAuthenticated() &&
+             // Ensure only walletBalance and holdingsByArtist are being changed.
+             affectedKeys.hasOnly(['walletBalance', 'holdingsByArtist']) &&
+             // Ensure the seller's wallet balance is not decreasing.
+             after.walletBalance >= before.walletBalance;
+    }
+
     // --- Collection Group Rules ---
     // This allows the "Collectors" tab query to work.
     match /{path=**}/holdings/{holdingId} {
@@ -64,9 +78,8 @@ service cloud.firestore {
       allow get: if isAuthenticated();
       allow list: if isAuthenticated(); 
       allow create: if isOwner(userId);
-      // Allow user to update own data, or allow a transaction to update balance and holdings count
-      allow update: if isOwner(userId) || 
-                     (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['walletBalance', 'holdingsByArtist']));
+      // Allow user to update their own data, or allow a transaction to update a seller's data.
+      allow update: if isOwner(userId) || isSellerPayout();
 
       // --- User-Specific Subcollections ---
       match /holdings/{holdingId} {
@@ -75,6 +88,7 @@ service cloud.firestore {
         allow list: if isOwner(userId);
         allow create, update: if isOwner(userId);
         // Allow any authenticated user (i.e., a buyer) to delete a holding during a transaction.
+        // NOTE: This is permissive but required for the client-side transaction to work.
         allow delete: if isAuthenticated();
       }
       
@@ -82,6 +96,7 @@ service cloud.firestore {
         // Private data is only readable/listable by the owner.
         allow read, list, create, update: if isOwner(userId);
         // Allow any authenticated user (a buyer) to delete a private holding during a transaction, but NOT read it.
+        // NOTE: This is permissive but required for the client-side transaction to work.
         allow delete: if isAuthenticated();
       }
     }
