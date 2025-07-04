@@ -14,33 +14,40 @@ service cloud.firestore {
     }
 
     // This function checks if a non-owner update on a user document
-    // is a valid seller payout from a transaction.
+    // is a valid seller payout from a transaction. It does this by ensuring
+    // sensitive fields are NOT changed, while allowing walletBalance to increase.
     function isSellerPayout() {
       let before = resource.data;
       let after = request.resource.data;
-      let changedKeys = after.diff(before).affectedKeys();
-      
-      // Blacklist of sensitive fields that should NOT be changed by another user.
-      let forbiddenChanges = ['uid', 'email', 'firstName', 'lastName', 'artistProfile', 'watchlist'];
 
       return isAuthenticated() &&
-             // Ensure the seller's wallet balance strictly increases.
-             after.walletBalance > before.walletBalance &&
-             // Ensure that NO sensitive/forbidden fields were part of the update.
-             changedKeys.hasAny(forbiddenChanges) == false;
+             // Ensure the seller's wallet balance does not decrease.
+             after.walletBalance >= before.walletBalance &&
+             // Ensure sensitive fields are not changed by the transaction.
+             after.uid == before.uid &&
+             after.email == before.email &&
+             after.firstName == before.firstName &&
+             after.lastName == before.lastName &&
+             after.watchlist == before.watchlist &&
+             after.artistProfile == before.artistProfile;
     }
 
     // This function checks if a non-owner update on a resale listing
-    // is a valid purchase transaction.
+    // is a valid purchase transaction. It ensures core properties are not
+    // tampered with, while allowing quantity to decrease.
     function isValidListingUpdate() {
         let before = resource.data;
         let after = request.resource.data;
-        let affectedKeys = after.diff(before).affectedKeys();
-        let allowedKeys = ['quantity', 'holdingIds', 'status'];
 
-        let areKeysAllowed = affectedKeys.size() > 0 && affectedKeys.difference(allowedKeys).size() == 0;
-
-        return isAuthenticated() && areKeysAllowed;
+        return isAuthenticated() &&
+               // Ensure core properties of the listing are not tampered with.
+               after.artistId == before.artistId &&
+               after.resellerId == before.resellerId &&
+               after.initialPrice == before.initialPrice &&
+               after.minPrice == before.minPrice &&
+               after.periodSeconds == before.periodSeconds &&
+               // Quantity should only decrease or stay the same.
+               after.quantity <= before.quantity;
     }
 
     // --- Collection Group Rules ---
