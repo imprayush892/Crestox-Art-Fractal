@@ -14,14 +14,14 @@ import React from 'react';
 const foundersData = [
   {
     name: 'Prayush Shah',
-    imagePath: 'founders/founder_prayush.jpeg',
+    imageSrc: '/founders/founder_prayush.jpeg',
     description: "A CEPT alum with a tech-savvy, entrepreneurial spirit, Prayush drives Crestox’s product vision. From crafting seamless user journeys to building robust digital tools, he’s the brains behind our platform’s innovation. With a deep passion for Indian art and its future, Prayush ensures every feature empowers artists and collectors alike.",
     contact: '9978902743',
     aiHint: 'man portrait',
   },
   {
     name: 'Udit Shah',
-    imagePath: 'founders/founder_udit.jpeg',
+    imageSrc: '/founders/founder_udit.jpeg',
     description: "A CEPT graduate, Udit brings a strong business pedigree rooted in his family’s ventures. He excels at forging partnerships, growing networks, and overseeing logistics. Udit’s knack for Indian art and culture fuels Crestox’s community building—connecting creators, collectors, and collaborators across the country.",
     contact: '9879608470',
     aiHint: 'man portrait',
@@ -247,11 +247,6 @@ const HowItWorksDiagram = () => {
 
 
 export default function DonatePage() {
-  const founders = foundersData.map((founder) => ({
-      ...founder,
-      imageSrc: getPublicUrl(founder.imagePath)
-  }));
-
   return (
     <div className="container mx-auto max-w-6xl py-12 md:py-20">
         <div className="text-center mb-12">
@@ -281,7 +276,7 @@ export default function DonatePage() {
             <TabsContent value="partners">
                  <TabContentWrapper>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-                        {founders.map((founder) => (
+                        {foundersData.map((founder) => (
                         <Card key={founder.name} className="p-8 shadow-none border-0">
                             <div className="flex justify-center mb-6">
                                 <Image
