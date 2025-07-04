@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -27,8 +26,8 @@ export interface User {
   holdingsByArtist?: { [key: string]: number; };
   artistProfile?: {
     id: string;
-    name: string;
     avatar: string;
+    name: string;
   }
 }
 
@@ -109,155 +108,132 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const [resaleListings, setResaleListings] = useState<ResaleListing[]>([]);
   const [allUsers, setAllUsers] = useState<PublicUser[]>([]);
 
-  // Stage 1: One-time auth state check and initial profile load
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (!db) {
-          setIsLoading(false);
-          return;
-        };
-        if (firebaseUser) {
-            const userRef = doc(db, "users", firebaseUser.uid);
-            try {
-                const docSnap = await getDoc(userRef);
-                if (docSnap.exists()) {
-                    setUser(docSnap.data() as User);
+    // This master effect handles all auth state and dependent data listeners.
+    let unsubscribeUser: () => void = () => {};
+    let unsubscribeArtist: () => void = () => {};
+    let unsubscribeHoldings: () => void = () => {};
+    let unsubscribeAllUsers: () => void = () => {};
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      // First, clean up any existing user-specific listeners from the previous state.
+      unsubscribeUser();
+      unsubscribeArtist();
+      unsubscribeHoldings();
+      unsubscribeAllUsers();
+      
+      if (firebaseUser) {
+        setIsLoading(true);
+        setIsCollectionLoading(true);
+
+        // --- Start Listener Chain ---
+        // 1. Listen to the user document.
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        unsubscribeUser = onSnapshot(userRef, (userDoc) => {
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as User;
+            setUser(userData); // Update user state
+
+            // 2. Listen to the artist document, if the user has one.
+            if (userData.artistProfile?.id) {
+              const artistRef = doc(db, 'artists', userData.artistProfile.id);
+              unsubscribeArtist = onSnapshot(artistRef, (artistDoc) => {
+                if (artistDoc.exists()) {
+                  setArtistProfile({ id: artistDoc.id, ...artistDoc.data() } as ArtistProfile);
                 } else {
-                    console.log("User document not found for new login, will be created by login/signup logic.");
+                  console.warn("Artist document not found, resetting profile.");
+                  setArtistProfile(null);
                 }
-            } catch (e) {
-                const error = e as Error;
-                console.error("Error fetching user document on auth change:", error);
-                toast({ variant: 'destructive', title: 'Login Error', description: handleAuthError(error) });
-                setUser(null);
+              });
+            } else {
+              setArtistProfile(null); // Explicitly set to null if no profile ID
             }
-        } else {
+
+            // 3. Listen to user's holdings.
+            const publicHoldingsRef = firestoreCollection(db, 'users', firebaseUser.uid, 'holdings');
+            unsubscribeHoldings = onSnapshot(publicHoldingsRef, async (publicSnapshot) => {
+                const publicHoldings = publicSnapshot.docs.map(d => ({ id: d.id, ...d.data() })) as (PublicHolding & {id: string})[];
+                const privateHoldingPromises = publicHoldings.map(publicDoc => getDoc(doc(db, 'users', firebaseUser.uid, 'privateHoldings', publicDoc.id)));
+                const privateHoldingSnaps = await Promise.all(privateHoldingPromises);
+                const fullCollection = publicHoldings.map((publicDoc, index) => {
+                    const privateDocSnap = privateHoldingSnaps[index];
+                    return privateDocSnap.exists() ? { ...publicDoc, ...(privateDocSnap.data() as PrivateHolding) } : null;
+                }).filter((item): item is OwnedFractal => item !== null);
+                
+                setCollection(fullCollection);
+                setIsCollectionLoading(false);
+            });
+
+            // 4. Listen to all public user profiles.
+            const allUsersQuery = query(firestoreCollection(db, 'users'));
+            unsubscribeAllUsers = onSnapshot(allUsersQuery, (snapshot) => {
+                const users = snapshot.docs.map(d => ({
+                    id: d.id,
+                    name: `${d.data().firstName} ${d.data().lastName}`,
+                    avatar: (d.data().artistProfile as any)?.avatar || '',
+                })) as PublicUser[];
+                setAllUsers(users);
+            });
+
+            setIsLoading(false);
+          } else {
+            // This case can happen briefly during signup. If it persists, it's an error.
+            console.error(`User ${firebaseUser.uid} is authenticated but has no user document.`);
+            // For safety, clear local state.
             setUser(null);
             setArtistProfile(null);
+            setCollection([]);
             setAllUsers([]);
-        }
+            setIsLoading(false);
+            setIsCollectionLoading(false);
+          }
+        });
+        
+      } else {
+        // User is logged out. Clear all user-specific state.
+        setUser(null);
+        setArtistProfile(null);
+        setCollection([]);
+        setAllUsers([]);
         setIsLoading(false);
+        setIsCollectionLoading(false);
+      }
     });
 
-    return () => unsubscribe();
-  }, [toast]);
+    return () => unsubscribeAuth(); // Cleanup the main auth listener on component unmount
+  }, []);
 
-  // Stage 2: Real-time listeners for all data, dependent on user state
+  // Effect for public, non-user-specific data
   useEffect(() => {
-      if (!db) return;
-      
-      const artistsUnsub = onSnapshot(firestoreCollection(db, "artists"), (snapshot) => {
-          const liveArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
-          const liveArtistIds = new Set(liveArtists.map(a => a.id));
-          const uniqueMockArtists = mockArtists.filter(a => !liveArtistIds.has(a.id));
-          setArtists([...liveArtists, ...uniqueMockArtists].map(sanitizeArtist));
-      }, (error) => {
-          console.error("Error fetching artists, using mock data.", error);
-          setArtists(mockArtists.map(sanitizeArtist));
-      });
+    if (!db) return;
+    
+    const artistsUnsub = onSnapshot(firestoreCollection(db, "artists"), (snapshot) => {
+        const liveArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
+        setArtists(liveArtists.map(sanitizeArtist));
+    }, (error) => {
+        console.error("Error fetching artists, falling back to initial data.", error);
+        setArtists(initialArtists.map(sanitizeArtist));
+    });
 
-      const fractalsUnsub = onSnapshot(firestoreCollection(db, "fractals"), (snapshot) => {
-          const liveFractals = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Fractal[];
-          const liveFractalIds = new Set(liveFractals.map(f => f.id));
-          const uniqueMockFractals = mockFractals.filter(f => !liveFractalIds.has(f.id));
-          setFractals([...liveFractals, ...uniqueMockFractals]);
-      }, (error) => {
-          console.error("Error fetching fractals, using mock data.", error);
-          setFractals(mockFractals);
-      });
+    const fractalsUnsub = onSnapshot(firestoreCollection(db, "fractals"), (snapshot) => {
+        const liveFractals = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Fractal[];
+        setFractals(liveFractals);
+    }, (error) => {
+        console.error("Error fetching fractals, falling back to initial data.", error);
+        setFractals(initialFractals);
+    });
 
-      const resaleUnsub = onSnapshot(firestoreCollection(db, "resaleListings"), (snapshot) => {
-          const fetchedListings = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as ResaleListing[];
-          setResaleListings(fetchedListings);
-      });
-      
-      let artistUnsub = () => {};
-      let holdingsUnsub = () => {};
-      let userUnsub = () => {};
-      let allUsersUnsub = () => {};
-      
-      if (user?.uid) {
-          setIsCollectionLoading(true);
-          const userRef = doc(db, 'users', user.uid);
-          userUnsub = onSnapshot(userRef, (docSnap) => {
-              if (docSnap.exists()){
-                  setUser(docSnap.data() as User);
-              }
-          });
+    const resaleUnsub = onSnapshot(firestoreCollection(db, "resaleListings"), (snapshot) => {
+        const fetchedListings = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as ResaleListing[];
+        setResaleListings(fetchedListings);
+    });
 
-          if (user.artistProfile?.id) {
-            const artistRef = doc(db, 'artists', user.artistProfile.id);
-            artistUnsub = onSnapshot(artistRef, (docSnap) => {
-              if (docSnap.exists()) {
-                setArtistProfile({ id: docSnap.id, ...docSnap.data() } as ArtistProfile);
-              } else {
-                console.warn("Artist document not found for ID:", user.artistProfile?.id);
-                setArtistProfile(null);
-              }
-            });
-          } else {
-            setArtistProfile(null);
-          }
-          
-          const publicHoldingsRef = firestoreCollection(db, 'users', user.uid, 'holdings');
-          holdingsUnsub = onSnapshot(publicHoldingsRef, async (publicSnapshot) => {
-              const publicHoldings = publicSnapshot.docs.map(d => ({ id: d.id, ...d.data() })) as (PublicHolding & {id: string})[];
-              
-              const privateHoldingPromises = publicHoldings.map(publicDoc => {
-                  const privateDocRef = doc(db, 'users', user.uid, 'privateHoldings', publicDoc.id);
-                  return getDoc(privateDocRef);
-              });
-
-              const privateHoldingSnaps = await Promise.all(privateHoldingPromises);
-
-              const fullCollection = publicHoldings.map((publicDoc, index) => {
-                  const privateDocSnap = privateHoldingSnaps[index];
-                  if (privateDocSnap.exists()) {
-                      const privateData = privateDocSnap.data() as PrivateHolding;
-                      return {
-                          ...publicDoc,
-                          ...privateData
-                      };
-                  }
-                  return null;
-              }).filter((item): item is OwnedFractal => item !== null);
-              
-              setCollection(fullCollection);
-              setIsCollectionLoading(false);
-          });
-          
-          const allUsersQuery = query(firestoreCollection(db, 'users'));
-          allUsersUnsub = onSnapshot(allUsersQuery, (snapshot) => {
-            const users = snapshot.docs.map(d => {
-                const data = d.data();
-                return {
-                    id: d.id,
-                    name: `${data.firstName} ${data.lastName}`,
-                    avatar: (data.artistProfile as any)?.avatar || '',
-                }
-            }) as PublicUser[];
-            setAllUsers(users);
-          }, (error) => {
-             console.error("Error fetching all users:", error);
-          });
-
-      } else {
-          setArtistProfile(null);
-          setCollection([]);
-          setAllUsers([]);
-          setIsCollectionLoading(false);
-      }
-
-      return () => {
-          artistsUnsub();
-          fractalsUnsub();
-          resaleUnsub();
-          artistUnsub();
-          holdingsUnsub();
-          userUnsub();
-          allUsersUnsub();
-      };
-  }, [user?.uid]);
+    return () => {
+        artistsUnsub();
+        fractalsUnsub();
+        resaleUnsub();
+    };
+  }, [initialArtists, initialFractals]);
   
   const getCollectorsForArtist = async (artistId: string) => {
       if (!db || !user) throw new Error("Not authenticated.");
@@ -312,9 +288,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   const logout = async () => {
     await signOut(auth);
-    setUser(null);
-    setArtistProfile(null);
-    setCollection([]);
   };
 
   const createArtistProfile = async (profileData: CreateArtistProfileData) => {
@@ -402,7 +375,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             name: newArtistData.name,
           }
         });
-        setArtistProfile({ ...newArtistData, id: artistRef.id, userId: user.uid });
     } catch (error) { throw new Error(handleAuthError(error)); }
   };
   
@@ -445,7 +417,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                     await uploadBytes(storageRef, img);
                     return getDownloadURL(storageRef);
                   }
-                  return img; // It's already a URL string
+                  return img;
                 })
               );
               return { value: exhibition.value, images: imageUrls.filter(Boolean) as string[] };
@@ -725,7 +697,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             throw new Error(`This purchase would exceed the ${holdingLimit} fractal limit (10%) for this artist.`);
         }
         
-        // --- PRE-FETCH RESELLER DATA (outside main loop)
         const resellerRefs = new Map<string, DocumentReference>();
         for (const item of orderBreakdown) {
           if (item.source === 'RESELLER' && item.resellerId) {
@@ -736,14 +707,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         }
         const resellerSnaps = new Map<string, DocumentSnapshot>();
         for(const [id, ref] of resellerRefs) { resellerSnaps.set(id, await transaction.get(ref)); }
-        // --- END PRE-FETCH
         
         let P_new = P_current;
         const quantityFromArtist = orderBreakdown
             .filter(item => item.source === 'ARTIST')
             .reduce((sum, item) => sum + item.quantity, 0);
         
-        // Step 1: `ArtFractalValueChange` - Calculate new fractal price from market impact
         if (quantityFromArtist > 0 && F_total > 0) {
             const beta = 0.4472;
             const fraction = quantityFromArtist / F_total;
@@ -751,10 +720,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             P_new = P_current * impactFactor;
         }
 
-        // Step 2: `ArtFractalPro` Reverse Mechanism
         const delta_Veff = (P_new - P_current) * F_total;
         
-        // Recalculate aggregates from scratch for accuracy
         const V_current_sum = allArtistFractals.reduce((sum, f) => sum + (f.price || 0), 0);
         const sum_SiVi_current = allArtistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) * (f.price || 0)), 0);
         const k_recalculated = V_current_sum > 0 && sum_SiVi_current > 0 ? V_current_sum / sum_SiVi_current : 0;
@@ -765,7 +732,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             c = delta_Veff / (k_recalculated * sum_S_squared);
         }
 
-        // Update each artwork's valuation
         let V_new_total = 0;
         for (const fractal of allArtistFractals) {
             const Vi_current = fractal.price || 0;
@@ -781,7 +747,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             });
         }
 
-        // 3. Process wallet transfers and holding movements
         transaction.update(buyerRef, { 
             walletBalance: buyerData.walletBalance - totalPayable,
             [`holdingsByArtist.${artistId}`]: currentUserHoldings + purchaseQuantity
@@ -829,7 +794,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             }
         }
         
-        // 4. Atomically update the artist document with all new values
         const artistUpdate: Record<string, any> = {
             fractalPrice: P_new,
             totalPortfolioValue: V_new_total,
