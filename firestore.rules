@@ -19,12 +19,28 @@ service cloud.firestore {
       let before = resource.data;
       let after = request.resource.data;
       let affectedKeys = after.diff(before).affectedKeys();
+      let allowedKeys = ['walletBalance', 'holdingsByArtist'];
+
+      // Ensure that the set of changed keys is a non-empty subset of the allowed keys.
+      let areKeysAllowed = affectedKeys.size() > 0 && affectedKeys.difference(allowedKeys).size() == 0;
 
       return isAuthenticated() &&
-             // Ensure only walletBalance and holdingsByArtist are being changed.
-             affectedKeys.hasOnly(['walletBalance', 'holdingsByArtist']) &&
+             areKeysAllowed &&
              // Ensure the seller's wallet balance is not decreasing.
              after.walletBalance >= before.walletBalance;
+    }
+
+    // This function checks if a non-owner update on a resale listing
+    // is a valid purchase transaction.
+    function isValidListingUpdate() {
+        let before = resource.data;
+        let after = request.resource.data;
+        let affectedKeys = after.diff(before).affectedKeys();
+        let allowedKeys = ['quantity', 'holdingIds', 'status'];
+
+        let areKeysAllowed = affectedKeys.size() > 0 && affectedKeys.difference(allowedKeys).size() == 0;
+
+        return isAuthenticated() && areKeysAllowed;
     }
 
     // --- Collection Group Rules ---
@@ -70,7 +86,7 @@ service cloud.firestore {
         // Allow the owner to cancel the listing
         (isOwner(resource.data.resellerId) && request.resource.data.status == 'cancelled') ||
         // Allow a buyer to update quantity/status, but not price or other fields
-        (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'holdingIds', 'status']));
+        isValidListingUpdate();
     }
 
     // --- User Data ---
