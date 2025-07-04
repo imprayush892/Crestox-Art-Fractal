@@ -109,14 +109,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const [allUsers, setAllUsers] = useState<PublicUser[]>([]);
 
   useEffect(() => {
-    // This master effect handles all auth state and dependent data listeners.
     let unsubscribeUser: () => void = () => {};
     let unsubscribeArtist: () => void = () => {};
     let unsubscribeHoldings: () => void = () => {};
     let unsubscribeAllUsers: () => void = () => {};
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      // First, clean up any existing user-specific listeners from the previous state.
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       unsubscribeUser();
       unsubscribeArtist();
       unsubscribeHoldings();
@@ -126,30 +124,54 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         setIsLoading(true);
         setIsCollectionLoading(true);
 
-        // --- Start Listener Chain ---
-        // 1. Listen to the user document.
         const userRef = doc(db, 'users', firebaseUser.uid);
-        unsubscribeUser = onSnapshot(userRef, (userDoc) => {
+        unsubscribeUser = onSnapshot(userRef, async (userDoc) => {
           if (userDoc.exists()) {
             const userData = userDoc.data() as User;
-            setUser(userData); // Update user state
+            setUser(userData);
 
-            // 2. Listen to the artist document, if the user has one.
+            // --- Robust Artist Profile Loading ---
+            let foundArtistProfile = false;
+
+            // 1. Fast Path: Use the direct link if it exists.
             if (userData.artistProfile?.id) {
               const artistRef = doc(db, 'artists', userData.artistProfile.id);
               unsubscribeArtist = onSnapshot(artistRef, (artistDoc) => {
                 if (artistDoc.exists()) {
                   setArtistProfile({ id: artistDoc.id, ...artistDoc.data() } as ArtistProfile);
+                  foundArtistProfile = true;
                 } else {
-                  console.warn("Artist document not found, resetting profile.");
+                  console.warn("Artist document link is broken, resetting profile.");
                   setArtistProfile(null);
                 }
               });
             } else {
-              setArtistProfile(null); // Explicitly set to null if no profile ID
-            }
+              // 2. Fallback & Self-Heal: If no direct link, query to find the profile.
+              const artistsQuery = query(firestoreCollection(db, 'artists'), where("userId", "==", firebaseUser.uid));
+              const artistQuerySnapshot = await getDocs(artistsQuery);
 
-            // 3. Listen to user's holdings.
+              if (!artistQuerySnapshot.empty) {
+                const artistDoc = artistQuerySnapshot.docs[0];
+                const artistData = { id: artistDoc.id, ...artistDoc.data() } as ArtistProfile;
+                setArtistProfile(artistData);
+                foundArtistProfile = true;
+
+                // Self-Heal: Repair the missing link in the user's document.
+                console.log("Repairing missing artist profile link for user:", firebaseUser.uid);
+                await updateDoc(userRef, {
+                  artistProfile: {
+                    id: artistData.id,
+                    avatar: artistData.avatar,
+                    name: artistData.name,
+                  }
+                }).catch(err => console.error("Failed to repair user document:", err));
+
+              } else {
+                setArtistProfile(null);
+              }
+            }
+            
+            // --- Other Data Listeners ---
             const publicHoldingsRef = firestoreCollection(db, 'users', firebaseUser.uid, 'holdings');
             unsubscribeHoldings = onSnapshot(publicHoldingsRef, async (publicSnapshot) => {
                 const publicHoldings = publicSnapshot.docs.map(d => ({ id: d.id, ...d.data() })) as (PublicHolding & {id: string})[];
@@ -164,7 +186,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 setIsCollectionLoading(false);
             });
 
-            // 4. Listen to all public user profiles.
             const allUsersQuery = query(firestoreCollection(db, 'users'));
             unsubscribeAllUsers = onSnapshot(allUsersQuery, (snapshot) => {
                 const users = snapshot.docs.map(d => ({
@@ -177,9 +198,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
             setIsLoading(false);
           } else {
-            // This case can happen briefly during signup. If it persists, it's an error.
             console.error(`User ${firebaseUser.uid} is authenticated but has no user document.`);
-            // For safety, clear local state.
             setUser(null);
             setArtistProfile(null);
             setCollection([]);
@@ -190,7 +209,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         });
         
       } else {
-        // User is logged out. Clear all user-specific state.
         setUser(null);
         setArtistProfile(null);
         setCollection([]);
@@ -200,7 +218,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       }
     });
 
-    return () => unsubscribeAuth(); // Cleanup the main auth listener on component unmount
+    return () => unsubscribeAuth();
   }, []);
 
   // Effect for public, non-user-specific data
