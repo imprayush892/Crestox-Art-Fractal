@@ -13,41 +13,41 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // This function checks if a non-owner update on a user document is a valid seller payout.
-    // It uses a "blacklist" approach, ensuring sensitive fields DO NOT change,
-    // which is more robust than checking which fields *are* changing.
+    // This function checks if a non-owner update on a user document
+    // is a valid seller payout from a transaction.
+    // It uses a "blacklist" approach, ensuring sensitive fields are NOT changed.
     function isSellerPayout() {
       let before = resource.data;
       let after = request.resource.data;
 
       return isAuthenticated() &&
-             // Sensitive fields must not be changed by the buyer.
+             // Ensure it is a payout
+             after.walletBalance > before.walletBalance &&
+             // Ensure sensitive fields are not modified
              after.uid == before.uid &&
-             after.email == before.email &&
              after.firstName == before.firstName &&
              after.lastName == before.lastName &&
+             after.email == before.email &&
              after.watchlist == before.watchlist &&
-             after.artistProfile == before.artistProfile &&
-             // The seller's wallet balance must increase or stay the same.
-             after.walletBalance >= before.walletBalance;
+             after.artistProfile == before.artistProfile;
     }
 
-    // This function checks if a non-owner update on a resale listing is a valid purchase transaction.
-    // It uses a "blacklist" approach to ensure core listing details are not tampered with.
+    // This function checks if a non-owner update on a resale listing
+    // is a valid purchase transaction by a buyer.
     function isValidListingUpdate() {
         let before = resource.data;
         let after = request.resource.data;
 
+        // A purchase must decrease the quantity.
         return isAuthenticated() &&
-               // Core listing details must not change.
+               after.quantity < before.quantity &&
+               // Ensure the core financial terms of the listing are not changed.
                after.artistId == before.artistId &&
                after.resellerId == before.resellerId &&
                after.initialPrice == before.initialPrice &&
                after.minPrice == before.minPrice &&
                after.periodSeconds == before.periodSeconds &&
-               after.listingTimestamp == before.listingTimestamp &&
-               // Quantity can only decrease or stay the same.
-               after.quantity <= before.quantity;
+               after.listingTimestamp == before.listingTimestamp;
     }
 
     // --- Collection Group Rules ---
