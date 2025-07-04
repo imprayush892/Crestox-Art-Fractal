@@ -227,7 +227,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     
     const artistsUnsub = onSnapshot(firestoreCollection(db, "artists"), (snapshot) => {
         const liveArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
-        setArtists(liveArtists.map(sanitizeArtist));
+        
+        const combined = [...liveArtists];
+        const existingIds = new Set(liveArtists.map(a => a.id));
+
+        for (const mockArtist of initialArtists) {
+            if (!existingIds.has(mockArtist.id)) {
+                combined.push(mockArtist);
+            }
+        }
+        
+        setArtists(combined.map(sanitizeArtist));
     }, (error) => {
         console.error("Error fetching artists, falling back to initial data.", error);
         setArtists(initialArtists.map(sanitizeArtist));
@@ -235,7 +245,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
     const fractalsUnsub = onSnapshot(firestoreCollection(db, "fractals"), (snapshot) => {
         const liveFractals = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Fractal[];
-        setFractals(liveFractals);
+        
+        const combined = [...liveFractals];
+        const existingIds = new Set(liveFractals.map(f => f.id));
+
+        for (const mockFractal of initialFractals) {
+            if (!existingIds.has(mockFractal.id)) {
+                combined.push(mockFractal);
+            }
+        }
+
+        setFractals(combined);
     }, (error) => {
         console.error("Error fetching fractals, falling back to initial data.", error);
         setFractals(initialFractals);
