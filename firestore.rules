@@ -18,16 +18,16 @@ service cloud.firestore {
     function isSellerPayout() {
       let before = resource.data;
       let after = request.resource.data;
-      let affectedKeys = after.diff(before).affectedKeys();
-      let allowedKeys = ['walletBalance', 'holdingsByArtist'];
-
-      // Ensure that the set of changed keys is a non-empty subset of the allowed keys.
-      let areKeysAllowed = affectedKeys.size() > 0 && affectedKeys.difference(allowedKeys).size() == 0;
+      let changedKeys = after.diff(before).affectedKeys();
+      
+      // Blacklist of sensitive fields that should NOT be changed by another user.
+      let forbiddenChanges = ['uid', 'email', 'firstName', 'lastName', 'artistProfile', 'watchlist'];
 
       return isAuthenticated() &&
-             areKeysAllowed &&
-             // Ensure the seller's wallet balance is not decreasing.
-             after.walletBalance >= before.walletBalance;
+             // Ensure the seller's wallet balance strictly increases.
+             after.walletBalance > before.walletBalance &&
+             // Ensure that NO sensitive/forbidden fields were part of the update.
+             changedKeys.hasAny(forbiddenChanges) == false;
     }
 
     // This function checks if a non-owner update on a resale listing
