@@ -13,45 +13,41 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // This function checks if a non-owner update on a user document
-    // is a valid seller payout from a transaction. It does this by ensuring
-    // sensitive fields are NOT changed, while allowing walletBalance to increase.
+    // This function checks if a non-owner update on a user document is a valid seller payout.
+    // It uses a "blacklist" approach, ensuring sensitive fields DO NOT change,
+    // which is more robust than checking which fields *are* changing.
     function isSellerPayout() {
       let before = resource.data;
       let after = request.resource.data;
 
-      // Ensure that sensitive data is not being changed by a non-owner.
-      let coreDataUnchanged = after.uid == before.uid &&
-                               after.firstName == before.firstName &&
-                               after.lastName == before.lastName &&
-                               after.email == before.email &&
-                               after.watchlist == before.watchlist &&
-                               after.artistProfile == before.artistProfile;
-
-      // Allows only walletBalance to increase and holdingsByArtist to change.
       return isAuthenticated() &&
-             coreDataUnchanged &&
+             // Sensitive fields must not be changed by the buyer.
+             after.uid == before.uid &&
+             after.email == before.email &&
+             after.firstName == before.firstName &&
+             after.lastName == before.lastName &&
+             after.watchlist == before.watchlist &&
+             after.artistProfile == before.artistProfile &&
+             // The seller's wallet balance must increase or stay the same.
              after.walletBalance >= before.walletBalance;
     }
 
-    // This function checks if a non-owner update on a resale listing
-    // is a valid purchase transaction. It ensures only transactional fields can change.
+    // This function checks if a non-owner update on a resale listing is a valid purchase transaction.
+    // It uses a "blacklist" approach to ensure core listing details are not tampered with.
     function isValidListingUpdate() {
         let before = resource.data;
         let after = request.resource.data;
 
-        // Ensure core properties of the listing are not changed by the buyer
-        let coreDataUnchanged = after.artistId == before.artistId &&
-                                 after.resellerId == before.resellerId &&
-                                 after.initialPrice == before.initialPrice &&
-                                 after.minPrice == before.minPrice &&
-                                 after.periodSeconds == before.periodSeconds &&
-                                 after.listingTimestamp == before.listingTimestamp;
-
-        // Ensure the quantity is only decreasing (or staying the same if other fields change)
-        let quantityValid = after.quantity <= before.quantity;
-
-        return isAuthenticated() && coreDataUnchanged && quantityValid;
+        return isAuthenticated() &&
+               // Core listing details must not change.
+               after.artistId == before.artistId &&
+               after.resellerId == before.resellerId &&
+               after.initialPrice == before.initialPrice &&
+               after.minPrice == before.minPrice &&
+               after.periodSeconds == before.periodSeconds &&
+               after.listingTimestamp == before.listingTimestamp &&
+               // Quantity can only decrease or stay the same.
+               after.quantity <= before.quantity;
     }
 
     // --- Collection Group Rules ---
@@ -66,20 +62,20 @@ service cloud.firestore {
       allow get: if true;
       // Allow anyone to list/query artists (for explore page and data loading).
       allow list: if true;
-
+      
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       // Allow artist to update their own profile, or allow transactions to update specific financial fields.
-      allow update: if isAuthenticated() &&
-                     (isOwner(resource.data.userId) ||
+      allow update: if isAuthenticated() && 
+                     (isOwner(resource.data.userId) || 
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                        'fractalPrice',
-                        'priceHistory',
-                        'totalPortfolioValue',
-                        'totalPortfolioValueHistory',
-                        'availableEditions',
-                        'kFactor',
-                        'totalScoreWeightedValuation',
-                        'sumOfScoresSquared',
+                        'fractalPrice', 
+                        'priceHistory', 
+                        'totalPortfolioValue', 
+                        'totalPortfolioValueHistory', 
+                        'availableEditions', 
+                        'kFactor', 
+                        'totalScoreWeightedValuation', 
+                        'sumOfScoresSquared', 
                         'totalEditions'
                       ]));
     }
@@ -93,17 +89,17 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAuthenticated();
       // Allow updates only under specific, secure conditions
-      allow update: if
+      allow update: if 
         // Allow the owner to cancel the listing
         (isOwner(resource.data.resellerId) && request.resource.data.status == 'cancelled') ||
-        // Allow a buyer to update quantity/status, etc. during a valid purchase
+        // Allow a buyer to update the listing as part of a purchase
         isValidListingUpdate();
     }
 
     // --- User Data ---
     match /users/{userId} {
       allow get: if isAuthenticated();
-      allow list: if isAuthenticated();
+      allow list: if isAuthenticated(); 
       allow create: if isOwner(userId);
       // Allow user to update their own data, or allow a transaction to update a seller's data.
       allow update: if isOwner(userId) || isSellerPayout();
@@ -111,14 +107,14 @@ service cloud.firestore {
       // --- User-Specific Subcollections ---
       match /holdings/{holdingId} {
         // Allow reads for owners and for others to check existence.
-        allow get: if isAuthenticated();
+        allow get: if isAuthenticated(); 
         allow list: if isOwner(userId);
         allow create, update: if isOwner(userId);
         // Allow any authenticated user (i.e., a buyer) to delete a holding during a transaction.
         // NOTE: This is permissive but required for the client-side transaction to work.
         allow delete: if isAuthenticated();
       }
-
+      
       match /privateHoldings/{holdingId} {
         // Private data is only readable/listable by the owner.
         allow read, list, create, update: if isOwner(userId);
