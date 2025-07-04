@@ -27,7 +27,7 @@ const getPublicUrl = (path: string) => {
 const monogramUrl = getPublicUrl('public/assets/crestox-monogram.png');
 
 export function Header() {
-  const { user, isLoggedIn, logout, artistProfile, isLoading, isArtist } = useAuth();
+  const { user, isLoggedIn, logout, artistProfile, isLoading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
@@ -72,7 +72,7 @@ export function Header() {
                     {link.label}
                   </Link>
                 ))}
-                {isArtist && loggedInArtistLinks.map((link) => (
+                {loggedInArtistLinks.map((link) => (
                   <Link key={link.href} href={link.href} className="transition-colors text-foreground/60 hover:text-primary">
                     {link.label}
                   </Link>
@@ -80,7 +80,7 @@ export function Header() {
               </>
             )}
              <Link href="/donate" className="transition-colors text-foreground/60 hover:text-primary">
-                Donate to Crestox
+                About Crestox
               </Link>
           </nav>
           <div className="flex items-center gap-4">
@@ -149,7 +149,7 @@ export function Header() {
                           {link.label}
                         </Link>
                       ))}
-                      {isArtist && loggedInArtistLinks.map((link) => (
+                      {loggedInArtistLinks.map((link) => (
                         <Link key={link.href} href={link.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
                           {link.label}
                         </Link>
@@ -157,7 +157,7 @@ export function Header() {
                     </>
                   )}
                   <Link href="/donate" onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
-                    Donate to Crestox
+                    About Crestox
                   </Link>
                 </nav>
                 <div className="mt-auto border-t p-4">
