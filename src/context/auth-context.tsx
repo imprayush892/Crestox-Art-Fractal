@@ -704,29 +704,60 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     }
     
     const artistFractalsQuery = query(firestoreCollection(db, "fractals"), where("artistId", "==", artistId));
-    const artistFractalsSnap = await getDocs(artistFractalsQuery);
-    const allArtistFractals = artistFractalsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Fractal));
-
+    
     await runTransaction(db, async (transaction) => {
+        // --- 1. GATHER ALL DOCUMENT REFERENCES ---
         const buyerRef = doc(db, "users", user.uid);
         const artistRef = doc(db, "artists", artistId);
-
-        const buyerSnap = await transaction.get(buyerRef);
-        const artistSnap = await transaction.get(artistRef);
         
+        const resellerRefs = new Map<string, DocumentReference>();
+        const listingRefs = new Map<string, DocumentReference>();
+        
+        for (const item of orderBreakdown) {
+            if (item.source === 'RESELLER') {
+                if (item.resellerId) resellerRefs.set(item.resellerId, doc(db, "users", item.resellerId));
+                if (item.listingId) listingRefs.set(item.listingId, doc(db, "resaleListings", item.listingId));
+            }
+        }
+
+        // --- 2. EXECUTE ALL READS FIRST ---
+        const [
+            buyerSnap,
+            artistSnap,
+            artistFractalsSnap,
+            ...otherSnaps
+        ] = await Promise.all([
+            transaction.get(buyerRef),
+            transaction.get(artistRef),
+            getDocs(artistFractalsQuery), // This is a non-transactional read, which is fine
+            ...Array.from(resellerRefs.values()).map(ref => transaction.get(ref)),
+            ...Array.from(listingRefs.values()).map(ref => transaction.get(ref)),
+        ]);
+        
+        const resellerSnaps = new Map<string, DocumentSnapshot>();
+        const listingSnaps = new Map<string, DocumentSnapshot>();
+
+        let snapIndex = 0;
+        for (const id of resellerRefs.keys()) {
+            resellerSnaps.set(id, otherSnaps[snapIndex++]);
+        }
+        for (const id of listingRefs.keys()) {
+            listingSnaps.set(id, otherSnaps[snapIndex++]);
+        }
+
+        // --- 3. VALIDATE DATA AND PERFORM CALCULATIONS ---
         if (!buyerSnap.exists()) throw new Error("Buyer user document not found.");
         if (!artistSnap.exists()) throw new Error("Artist document not found.");
-
+        
+        const allArtistFractals = artistFractalsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Fractal));
         const buyerData = buyerSnap.data() as User;
         const artistData = artistSnap.data() as Artist;
         
-        const F_total = artistData.totalEditions || 0;
-        const P_current = artistData.fractalPrice || 0;
-
         if (buyerData.walletBalance < totalPayable) {
             throw new Error("Insufficient funds. Your balance may have changed.");
         }
 
+        const F_total = artistData.totalEditions || 0;
         const holdingLimit = F_total > 0 ? Math.floor(F_total * 0.1) : 0;
         const currentUserHoldings = buyerData.holdingsByArtist?.[artistId] || 0;
         const purchaseQuantity = orderBreakdown.reduce((sum, item) => sum + item.quantity, 0);
@@ -734,18 +765,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         if (holdingLimit > 0 && currentUserHoldings + purchaseQuantity > holdingLimit) {
             throw new Error(`This purchase would exceed the ${holdingLimit} fractal limit (10%) for this artist.`);
         }
-        
-        const resellerRefs = new Map<string, DocumentReference>();
-        for (const item of orderBreakdown) {
-          if (item.source === 'RESELLER' && item.resellerId) {
-            if (!resellerRefs.has(item.resellerId)) {
-              resellerRefs.set(item.resellerId, doc(db, "users", item.resellerId));
-            }
-          }
-        }
-        const resellerSnaps = new Map<string, DocumentSnapshot>();
-        for(const [id, ref] of resellerRefs) { resellerSnaps.set(id, await transaction.get(ref)); }
-        
+
+        // All calculations from here...
+        const P_current = artistData.fractalPrice || 0;
         let P_new = P_current;
         const quantityFromArtist = orderBreakdown
             .filter(item => item.source === 'ARTIST')
@@ -770,6 +792,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             c = delta_Veff / (k_recalculated * sum_S_squared);
         }
 
+        // --- 4. EXECUTE ALL WRITES LAST ---
+        transaction.update(buyerRef, { 
+            walletBalance: buyerData.walletBalance - totalPayable,
+            [`holdingsByArtist.${artistId}`]: currentUserHoldings + purchaseQuantity
+        });
+        
         let V_new_total = 0;
         for (const fractal of allArtistFractals) {
             const Vi_current = fractal.price || 0;
@@ -785,11 +813,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             });
         }
 
-        transaction.update(buyerRef, { 
-            walletBalance: buyerData.walletBalance - totalPayable,
-            [`holdingsByArtist.${artistId}`]: currentUserHoldings + purchaseQuantity
-        });
-
         for (const item of orderBreakdown) {
             for (let j = 0; j < item.quantity; j++) {
               const newHoldingId = uuidv4();
@@ -802,23 +825,24 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             if (item.source === 'RESELLER' && item.resellerId && item.listingId) {
                 const sellerRef = resellerRefs.get(item.resellerId)!;
                 const sellerSnap = resellerSnaps.get(item.resellerId)!;
+                const listingSnap = listingSnaps.get(item.listingId)!;
+
                 if (!sellerSnap.exists()) throw new Error("Seller not found");
+                if (!listingSnap.exists()) throw new Error(`Listing ${item.listingId} not found.`);
                 
                 const sellerData = sellerSnap.data() as User;
+                const listingData = listingSnap.data() as ResaleListing;
+                
                 const proceeds = (item.quantity * item.price) * 0.98;
                 const sellerHoldingsCount = sellerData.holdingsByArtist?.[artistId] || 0;
+                
                 transaction.update(sellerRef, { 
                     walletBalance: sellerData.walletBalance + proceeds,
                     [`holdingsByArtist.${artistId}`]: Math.max(0, sellerHoldingsCount - item.quantity)
                 });
                 
-                const listingRef = doc(db, "resaleListings", item.listingId);
-                const listingDataSnap = await transaction.get(listingRef);
-                if (!listingDataSnap.exists()) throw new Error(`Listing ${item.listingId} not found.`);
-                const listingData = listingDataSnap.data() as ResaleListing;
-
                 const newQuantity = listingData.quantity - item.quantity;
-                transaction.update(listingRef, {
+                transaction.update(listingSnap.ref, {
                     quantity: newQuantity,
                     holdingIds: listingData.holdingIds.slice(item.quantity),
                     status: newQuantity === 0 ? 'completed' : 'active',
