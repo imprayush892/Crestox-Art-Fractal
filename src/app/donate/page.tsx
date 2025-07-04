@@ -13,10 +13,9 @@ import React from 'react';
 
 const getPublicUrl = (path: string) => {
     const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    if (!storageBucket) {
-        console.warn("Firebase Storage Bucket is not configured in environment variables. Falling back to placeholder.");
-        return 'https://placehold.co/160x160.png';
-    }
+    // By removing the fallback, we ensure that if the environment variable is missing,
+    // it will generate a broken URL, making the error visible in the browser console
+    // on the live site instead of silently showing a placeholder.
     return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
 }
 
