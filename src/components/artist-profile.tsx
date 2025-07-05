@@ -344,9 +344,11 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
           <TabsTrigger value="collectors"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Users /></motion.div>Collectors</TabsTrigger>
         </TabsList>
         <TabsContent value="artworks" className="mt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8">
                 {artistFractals.map((fractal) => (
-                    <FractalCard key={fractal.id} fractal={fractal} artist={artist} />
+                    <div key={fractal.id} className="break-inside-avoid mb-8">
+                        <FractalCard fractal={fractal} artist={artist} />
+                    </div>
                 ))}
             </div>
             {artistFractals.length === 0 && (

@@ -110,12 +110,12 @@ export function ExploreTool({ fractals, artists }: ExploreToolProps) {
         </div>
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-8">
+      <div className="columns-2 md:columns-3 lg:columns-4 gap-4 sm:gap-8">
         {filteredAndSortedFractals.map((fractal) => {
           const artist = artistsMap.get(fractal.artistId);
           if (!artist) return null;
           return (
-            <div key={fractal.id}>
+            <div key={fractal.id} className="break-inside-avoid mb-4 sm:mb-8">
               <FractalCard fractal={fractal} artist={artist} />
             </div>
           );
