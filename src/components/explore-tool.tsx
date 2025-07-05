@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -6,6 +7,22 @@ import { FractalCard } from '@/components/fractal-card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 interface ExploreToolProps {
     fractals: Fractal[];
@@ -55,7 +72,9 @@ export function ExploreTool({ fractals, artists }: ExploreToolProps) {
     <>
       <div className="flex flex-col md:flex-row gap-4 mb-8 p-4 bg-muted/50 rounded-lg border sticky top-16 z-40">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="absolute left-3 top-1/2 -translate-y-1/2">
+            <Search className="h-5 w-5 text-muted-foreground" />
+          </motion.div>
           <Input
             type="search"
             placeholder="Search by title, artist, or description..."

@@ -9,6 +9,22 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from 'next/link';
 import { ArrowUpRight, DollarSign, Package } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 interface CollectorProfileProps {
     collector: PublicUser;
@@ -108,11 +124,11 @@ export function CollectorProfile({ collector, holdings, listings }: CollectorPro
                                         <CardTitle className="font-headline">{artist.name}</CardTitle>
                                         <div className="text-sm text-muted-foreground flex items-center gap-4 pt-1">
                                             <div className="flex items-center gap-1.5">
-                                                <Package className="h-4 w-4"/>
+                                                <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Package className="h-4 w-4"/></motion.div>
                                                 <span>{holdingsCount} Held</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
-                                                <DollarSign className="h-4 w-4"/>
+                                                <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><DollarSign className="h-4 w-4"/></motion.div>
                                                 <span>{forSaleCount} For Sale</span>
                                             </div>
                                         </div>
@@ -144,7 +160,7 @@ export function CollectorProfile({ collector, holdings, listings }: CollectorPro
                                             <p className="text-sm text-muted-foreground py-4">No fractals from this artist are currently listed for sale.</p>
                                         )}
                                          <Link href={`/artist/${artist.id}`} className="inline-flex items-center gap-1 text-primary hover:underline text-xs mt-4">
-                                            View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
+                                            View Artist Portfolio <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><ArrowUpRight className="h-3 w-3" /></motion.div>
                                         </Link>
                                     </CardContent>
                                 </Card>

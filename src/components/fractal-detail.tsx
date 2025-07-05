@@ -16,6 +16,22 @@ import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import React, { useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 interface FractalDetailProps {
     fractal: Fractal;
@@ -71,7 +87,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
             />
             {fractal.crestoxGrade && (
                 <Badge variant="secondary" className="absolute top-4 right-4 text-base py-1 px-3 shadow-lg">
-                    <Star className="w-4 h-4 mr-2 text-yellow-400 fill-yellow-400" />
+                    <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Star className="w-4 h-4 text-yellow-400 fill-yellow-400" /></motion.div>
                     Crestox Grade: {fractal.crestoxGrade}
                 </Badge>
             )}
@@ -79,10 +95,10 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
             {fractal.images.length > 1 && (
                 <>
                     <Button onClick={handlePrev} size="icon" variant="ghost" className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 text-white hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ChevronLeft />
+                        <motion.div variants={iconVariants} initial="hidden" animate="visible"><ChevronLeft /></motion.div>
                     </Button>
                     <Button onClick={handleNext} size="icon" variant="ghost" className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 text-white hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ChevronRight />
+                        <motion.div variants={iconVariants} initial="hidden" animate="visible"><ChevronRight /></motion.div>
                     </Button>
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                         {fractal.images.map((_, index) => (

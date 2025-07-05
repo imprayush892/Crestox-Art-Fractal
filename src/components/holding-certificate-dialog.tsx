@@ -16,6 +16,22 @@ import { HoldingCertificate } from './holding-certificate';
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 
 interface HoldingCertificateDialogProps {
@@ -99,7 +115,7 @@ export function HoldingCertificateDialog({ isOpen, onClose, artist, ownedFractal
             </div>
             <DialogFooter className="mt-4">
                 <Button variant="outline" onClick={handleDownload} disabled={isDownloading}>
-                    {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Download className="h-4 w-4" /></motion.div>}
                     Download PDF
                 </Button>
                 <Button onClick={onClose}>Close</Button>

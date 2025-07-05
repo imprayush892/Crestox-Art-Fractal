@@ -1,9 +1,26 @@
+
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useEffect } from 'react';
 import { Button } from './ui/button';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
+
 
 interface LightboxProps {
   isOpen: boolean;
@@ -49,7 +66,9 @@ export function Lightbox({ isOpen, onClose, children }: LightboxProps) {
               onClick={onClose}
               className="absolute -top-2 -right-2 md:top-0 md:right-0 bg-white/20 hover:bg-white/30 text-white rounded-full h-10 w-10 z-10"
             >
-              <X className="h-6 w-6" />
+              <motion.div variants={iconVariants} initial="hidden" animate="visible">
+                <X className="h-6 w-6" />
+              </motion.div>
             </Button>
             {children}
           </motion.div>

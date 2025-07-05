@@ -11,6 +11,22 @@ import { AlertTriangle, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 interface ArtistCollectorsListProps {
     artistId: string;
@@ -108,7 +124,9 @@ export function ArtistCollectorsList({ artistId }: ArtistCollectorsListProps) {
             <Card className="text-center p-8">
                 <CardHeader>
                     <div className="mx-auto bg-muted rounded-full h-16 w-16 flex items-center justify-center mb-4">
-                        <Users className="h-8 w-8 text-muted-foreground" />
+                        <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}>
+                          <Users className="h-8 w-8 text-muted-foreground" />
+                        </motion.div>
                     </div>
                     <CardTitle>View the Collector Community</CardTitle>
                     <CardDescription>
@@ -132,7 +150,7 @@ export function ArtistCollectorsList({ artistId }: ArtistCollectorsListProps) {
     if (error) {
         return (
             <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
+                <motion.div variants={iconVariants} initial="hidden" animate="visible"><AlertTriangle className="h-4 w-4" /></motion.div>
                 <AlertTitle>Error Loading Data</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
             </Alert>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition } from 'react';
@@ -9,6 +10,23 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Wand2 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Skeleton } from './ui/skeleton';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
+
 
 export function SuggestionTool() {
   const [isPending, startTransition] = useTransition();
@@ -47,7 +65,7 @@ export function SuggestionTool() {
                 <p className="text-muted-foreground mt-1">Let our AI curator suggest new artwork based on your taste.</p>
             </div>
             <Button onClick={handleGenerate} disabled={isPending} size="lg">
-              {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}
+              {isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Wand2 className="h-5 w-5" /></motion.div>}
               Generate Suggestions
             </Button>
         </div>

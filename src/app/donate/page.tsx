@@ -10,6 +10,23 @@ import {
     GalleryVertical, Users, Globe, LineChart, PieChart, Heart, Key
 } from 'lucide-react';
 import React from 'react';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
+
 
 // Hardcoding the full, correct public URLs for reliability.
 const foundersData = [
@@ -41,7 +58,9 @@ const TabContentWrapper = ({ children, className }: { children: React.ReactNode,
 const InfoCard = ({ icon: Icon, title, description, step }: { icon: React.ElementType, title: string, description: string, step?: number }) => (
     <div className="flex flex-col items-center p-4 text-center">
         <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
-            <Icon className="w-10 h-10 text-primary" />
+            <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}>
+              <Icon className="w-10 h-10 text-primary" />
+            </motion.div>
         </div>
         {step && (
             <p className="text-xs font-semibold bg-primary/10 text-primary rounded-full inline-block px-3 py-1 mb-2">Step {step}</p>

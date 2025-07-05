@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -16,6 +17,22 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 const getPublicUrl = (path: string) => {
     const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
@@ -74,14 +91,14 @@ export function Header() {
             ) : isLoggedIn && user ? (
               <>
                 <div className="flex items-center gap-2">
-                    <Wallet className="w-5 h-5 text-primary"/>
+                    <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wallet className="w-5 h-5 text-primary"/></motion.div>
                     <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')}</span>
                     <span className="text-sm text-muted-foreground">CreCoins</span>
                 </div>
                 <Button onClick={handleLogout} variant="secondary">Logout</Button>
                 <Avatar>
                   <AvatarImage src={artistProfile?.avatar} alt="User" data-ai-hint="user avatar" />
-                  <AvatarFallback><User className="w-4 h-4"/></AvatarFallback>
+                  <AvatarFallback><motion.div variants={iconVariants} initial="hidden" animate="visible"><User className="w-4 h-4"/></motion.div></AvatarFallback>
                 </Avatar>
               </>
             ) : (
@@ -144,7 +161,7 @@ export function Header() {
                  ) : isLoggedIn && user ? (
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-2 text-lg font-medium">
-                            <Wallet className="w-5 h-5"/>
+                            <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wallet className="w-5 h-5"/></motion.div>
                             <span>{user.walletBalance.toLocaleString('en-IN')} CreCoins</span>
                         </div>
                         <div className="flex items-center gap-2 font-medium">

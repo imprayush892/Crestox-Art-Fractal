@@ -35,6 +35,22 @@ import { cn } from '@/lib/utils';
 import type { z } from 'zod';
 import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
 import { EvaluationScorecardDialog } from '@/components/evaluation-scorecard-dialog';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 type SuccessfulEvaluationData = Extract<EvaluationResult, { status: 'success' }>['evaluation'];
 
@@ -384,7 +400,9 @@ export default function CreateArtworkPage() {
       <Dialog open={isManualReviewDialogOpen} onOpenChange={setIsManualReviewDialogOpen}>
           <DialogContent>
               <DialogHeader>
-                  <DialogTitle className="font-headline text-2xl flex items-center gap-2"><AlertTriangle className="text-destructive"/> Manual Review Required</DialogTitle>
+                  <DialogTitle className="font-headline text-2xl flex items-center gap-2">
+                    <motion.div variants={iconVariants} initial="hidden" animate="visible"><AlertTriangle className="text-destructive"/></motion.div> Manual Review Required
+                  </DialogTitle>
                   <DialogDescription>
                       Our AI has flagged this artwork for potential authenticity issues.
                   </DialogDescription>
@@ -424,7 +442,7 @@ export default function CreateArtworkPage() {
             {evaluationResult && !isEvaluating && (
                 <div className="space-y-6">
                   <Alert>
-                      <Wand2 className="h-4 w-4" />
+                    <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wand2 className="h-4 w-4" /></motion.div>
                       <AlertTitle>Evaluation Complete!</AlertTitle>
                       <AlertDescription>
                           Choose a valuation for your artwork. Accepting the Crestox price ensures you receive a grade badge.
@@ -456,7 +474,7 @@ export default function CreateArtworkPage() {
                           </CardContent>
                           <CardContent>
                               <Button size="lg" className="w-full" onClick={() => handlePriceChoice(true)} disabled={isSubmitting}>
-                                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ArrowRight className="mr-2 h-4 w-4" />}
+                                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><ArrowRight className="h-4 w-4" /></motion.div>}
                                   Accept Crestox Valuation
                               </Button>
                           </CardContent>
@@ -503,7 +521,7 @@ export default function CreateArtworkPage() {
                                                 <Image src={preview} alt={`Preview ${index + 1}`} width={150} height={150} className={cn("rounded-md object-contain cursor-pointer border-4", form.watch('heroImageIndex') === index ? "border-primary" : "border-transparent" )} />
                                                 <div className="absolute top-2 left-2 flex items-center gap-2 bg-black/50 text-white p-1 rounded-full text-xs">
                                                    <RadioGroupItem value={index.toString()} id={`hero-image-${index}`} className="h-5 w-5 border-white text-white"/>
-                                                    <Star className="h-4 w-4"/> Hero
+                                                    <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Star className="h-4 w-4"/></motion.div> Hero
                                                 </div>
                                             </label>
                                             <Button
@@ -529,14 +547,14 @@ export default function CreateArtworkPage() {
                                                 }
                                               }}
                                             >
-                                              <X className="h-4 w-4" />
+                                              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><X className="h-4 w-4" /></motion.div>
                                             </Button>
                                         </div>
                                     ))}
                                 </RadioGroup>
                             ) : (
                               <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <UploadCloud className="w-10 h-10 mb-3 text-muted-foreground" />
+                                <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><UploadCloud className="w-10 h-10 mb-3 text-muted-foreground" /></motion.div>
                                 <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
                                 <p className="text-xs text-muted-foreground">PNG, JPG, or WEBP (MAX. 10MB each)</p>
                               </div>
@@ -688,7 +706,7 @@ export default function CreateArtworkPage() {
                         />
                         <div className="w-full sm:w-[200px] flex-shrink-0">
                             <Card className="bg-muted/50 p-3">
-                                <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3" /> Est. Price Per Fractal</p>
+                                <p className="text-xs text-muted-foreground flex items-center gap-1"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Info className="h-3 w-3" /></motion.div> Est. Price Per Fractal</p>
                                 <p className="font-bold text-lg text-primary">
                                     {estimatedFractalPrice > 0 ? `₹${estimatedFractalPrice.toFixed(2)}` : 'N/A'}
                                 </p>
@@ -776,7 +794,7 @@ export default function CreateArtworkPage() {
                     </Accordion>
                   </div>
                   <Button type="submit" size="lg" disabled={isEvaluating}>
-                    <Wand2 className="mr-2 h-4 w-4" />
+                    <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Wand2 className="h-4 w-4" /></motion.div>
                     Evaluate Artwork
                   </Button>
                 </form>

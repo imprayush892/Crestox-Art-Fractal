@@ -1,3 +1,4 @@
+
 'use client';
 
 import { CollectionClient } from '@/components/collection-client';
@@ -8,6 +9,23 @@ import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PortfolioClient } from '@/components/portfolio-client';
 import { Package, Palette } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
+
 
 function ProfilePageContent() {
   const { isLoggedIn, isLoading } = useAuth();
@@ -50,11 +68,15 @@ function ProfilePageContent() {
             <div className="flex justify-center mb-8">
                 <TabsList className="grid w-full max-w-sm grid-cols-2">
                     <TabsTrigger value="collection">
-                        <Package className="mr-2 h-4 w-4" />
+                        <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
+                          <Package className="h-4 w-4" />
+                        </motion.div>
                         My Collection
                     </TabsTrigger>
                     <TabsTrigger value="portfolio">
-                        <Palette className="mr-2 h-4 w-4" />
+                        <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
+                          <Palette className="h-4 w-4" />
+                        </motion.div>
                         My Portfolio
                     </TabsTrigger>
                 </TabsList>

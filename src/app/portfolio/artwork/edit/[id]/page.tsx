@@ -36,6 +36,22 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
 import { EvaluationScorecardDialog } from '@/components/evaluation-scorecard-dialog';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 type SuccessfulEvaluation = Extract<EvaluationResult, { status: 'success' }>['evaluation'];
 
@@ -318,7 +334,8 @@ export default function EditArtworkPage() {
       <Dialog open={isManualReviewDialogOpen} onOpenChange={setIsManualReviewDialogOpen}>
           <DialogContent>
               <DialogHeader>
-                  <DialogTitle className="font-headline text-2xl flex items-center gap-2"><AlertTriangle className="text-destructive"/> Manual Review Required</DialogTitle>
+                  <DialogTitle className="font-headline text-2xl flex items-center gap-2">
+                    <motion.div variants={iconVariants} initial="hidden" animate="visible"><AlertTriangle className="text-destructive"/></motion.div> Manual Review Required</DialogTitle>
                   <DialogDescription>
                       Our AI has flagged this artwork for potential authenticity issues during re-evaluation.
                   </DialogDescription>
@@ -341,8 +358,8 @@ export default function EditArtworkPage() {
             <div className='flex items-center justify-between'>
               <CardTitle className="font-headline text-3xl">Edit Artwork</CardTitle>
               <Button variant="ghost" asChild>
-                  <Link href="/portfolio">
-                      <ArrowLeft className="mr-2 h-4 w-4" />
+                  <Link href="/portfolio" className="flex items-center">
+                      <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><ArrowLeft className="h-4 w-4" /></motion.div>
                       Back to Portfolio
                   </Link>
               </Button>
@@ -365,7 +382,7 @@ export default function EditArtworkPage() {
             {evaluationResult && !isEvaluating && (
                 <div className="space-y-6">
                   <Alert>
-                      <Wand2 className="h-4 w-4" />
+                      <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wand2 className="h-4 w-4" /></motion.div>
                       <AlertTitle>Re-evaluation Complete!</AlertTitle>
                       <AlertDescription>
                           Choose a valuation for your artwork. Accepting the Crestox price ensures you receive a grade badge.
@@ -397,7 +414,7 @@ export default function EditArtworkPage() {
                           </CardContent>
                           <CardContent>
                               <Button size="lg" className="w-full" onClick={() => handlePriceChoice(true)} disabled={isSubmitting}>
-                                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
+                                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Wand2 className="h-4 w-4" /></motion.div>}
                                   Accept Crestox Valuation
                               </Button>
                           </CardContent>
@@ -431,7 +448,7 @@ export default function EditArtworkPage() {
                                     <Image src={img} alt={`Artwork image ${index + 1}`} width={150} height={150} className={cn("rounded-md object-contain cursor-pointer border-4", form.watch('heroImage') === img ? "border-primary" : "border-transparent" )} />
                                     <div className="absolute top-2 left-2 flex items-center gap-2 bg-black/50 text-white p-1 rounded-full text-xs">
                                       <RadioGroupItem value={img} id={`hero-image-${index}`} className="h-5 w-5 border-white text-white"/>
-                                        <Star className="h-4 w-4"/> Hero
+                                        <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Star className="h-4 w-4"/></motion.div> Hero
                                     </div>
                                 </label>
                             </div>
@@ -637,11 +654,11 @@ export default function EditArtworkPage() {
                   <div className="flex items-center gap-4">
                     <Button type="button" size="lg" variant="secondary" onClick={handleSimpleSave} disabled={isSubmitting || !form.formState.isDirty}>
                       {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <Save className="mr-2 h-4 w-4" />
+                      <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Save className="h-4 w-4" /></motion.div>
                       Save Changes
                     </Button>
                     <Button type="submit" size="lg">
-                      <Wand2 className="mr-2 h-4 w-4" />
+                      <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Wand2 className="h-4 w-4" /></motion.div>
                       Re-evaluate Artwork
                     </Button>
                   </div>

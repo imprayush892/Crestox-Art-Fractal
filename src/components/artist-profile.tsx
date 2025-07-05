@@ -21,6 +21,22 @@ import { ArtistCollectorsList } from './artist-collectors-list';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Progress } from './ui/progress';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -71,10 +87,10 @@ function SoldArtworkCard({ artwork }: SoldArtworkCardProps) {
                 />
 
                 <Button onClick={goToPrevious} size="icon" variant="ghost" className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 text-white hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ChevronLeft />
+                    <motion.div variants={iconVariants} initial="hidden" animate="visible"><ChevronLeft /></motion.div>
                 </Button>
                 <Button onClick={goToNext} size="icon" variant="ghost" className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 text-white hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ChevronRight />
+                    <motion.div variants={iconVariants} initial="hidden" animate="visible"><ChevronRight /></motion.div>
                 </Button>
 
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
@@ -213,29 +229,29 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
               <div className="mt-4 flex flex-wrap justify-center md:justify-start items-center gap-x-4 gap-y-2 text-muted-foreground">
                 {artist.location && (
                     <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
+                        <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><MapPin className="w-4 h-4" /></motion.div>
                         <span>{artist.location}</span>
                     </div>
                 )}
                 {artist.university && (
                     <div className="flex items-center gap-2">
-                        <GraduationCap className="w-4 h-4" />
+                        <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><GraduationCap className="w-4 h-4" /></motion.div>
                         <span>{artist.university}</span>
                     </div>
                 )}
                 {artist.website && (
                     <a href={artist.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-primary hover:underline">
-                        <LinkIcon className="w-4 h-4" />
+                        <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><LinkIcon className="w-4 h-4" /></motion.div>
                         <span>Portfolio</span>
                     </a>
                 )}
-                 {artist.twitter && <a href={artist.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Twitter className="w-5 h-5"/></a>}
-                 {artist.instagram && <a href={artist.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Instagram className="w-5 h-5"/></a>}
-                 {artist.linkedin && <a href={artist.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><Linkedin className="w-5 h-5"/></a>}
+                 {artist.twitter && <a href={artist.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Twitter className="w-5 h-5"/></motion.div></a>}
+                 {artist.instagram && <a href={artist.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Instagram className="w-5 h-5"/></motion.div></a>}
+                 {artist.linkedin && <a href={artist.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Linkedin className="w-5 h-5"/></motion.div></a>}
               </div>
               {artist.style && (
                 <div className="mt-4 flex justify-center md:justify-start items-center gap-2 text-muted-foreground">
-                    <Palette className="w-4 h-4" />
+                    <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Palette className="w-4 h-4" /></motion.div>
                     <span className="text-sm">{artist.style}</span>
                 </div>
               )}
@@ -252,14 +268,14 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                       <CardDescription>This is how collectors see your profile.</CardDescription>
                     </div>
                     <Button variant="outline" size="icon" className="text-primary border-primary hover:bg-primary/10 hover:text-primary" onClick={handleShare}>
-                        <Share2 className="w-5 h-5" />
+                        <motion.div variants={iconVariants} initial="hidden" animate="visible"><Share2 className="w-5 h-5" /></motion.div>
                         <span className="sr-only">Share Profile</span>
                     </Button>
                 </CardHeader>
                 <CardContent>
                     <Button size="lg" className="w-full" asChild>
                         <Link href="/portfolio">
-                            <Edit className="mr-2 h-5 w-5" />
+                            <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Edit className="h-5 w-5" /></motion.div>
                             Go to Dashboard
                         </Link>
                     </Button>
@@ -273,7 +289,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                         <CardDescription>Purchase fractals from the collection.</CardDescription>
                       </div>
                       <Button variant="outline" size="icon" className="text-primary border-primary hover:bg-primary/10 hover:text-primary" onClick={handleShare}>
-                          <Share2 className="w-5 h-5" />
+                          <motion.div variants={iconVariants} initial="hidden" animate="visible"><Share2 className="w-5 h-5" /></motion.div>
                           <span className="sr-only">Share Profile</span>
                       </Button>
                   </CardHeader>
@@ -293,11 +309,13 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <Button size="lg" className="w-full" onClick={handleCollectClick} disabled={!isCollectible}>
-                            <ShoppingCart className="mr-2 h-5 w-5" />
+                            <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><ShoppingCart className="h-5 w-5" /></motion.div>
                             Collect Now
                         </Button>
                          <Button size="lg" variant="outline" onClick={handleWatchClick} aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}>
-                            <Star className={`w-5 h-5 transition-colors ${isWatched ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'}`} />
+                            <motion.div variants={iconVariants} initial="hidden" animate="visible">
+                              <Star className={`w-5 h-5 transition-colors ${isWatched ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'}`} />
+                            </motion.div>
                         </Button>
                       </div>
                        {!isCollectible && (
@@ -307,7 +325,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                       )}
                       {(ownedCount > 0 || listedCount > 0) && (
                           <div className="mt-4 text-center text-sm text-green-600 font-medium flex items-center justify-center gap-2">
-                              <CheckCircle className="w-4 h-4" />
+                              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><CheckCircle className="w-4 h-4" /></motion.div>
                               <span>You have {ownedCount} in holdings{listedCount > 0 ? ` and ${listedCount} on sale` : ''} from this artist.</span>
                           </div>
                       )}
@@ -319,11 +337,11 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
       
       <Tabs defaultValue="artworks" className="mb-12">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
-          <TabsTrigger value="artworks"><Palette className="mr-2" />Artworks</TabsTrigger>
-          <TabsTrigger value="analytics"><TrendingUp className="mr-2" />Analytics</TabsTrigger>
-          <TabsTrigger value="achievements"><Award className="mr-2" />Achievements</TabsTrigger>
-          <TabsTrigger value="sold"><History className="mr-2" />Previously Sold</TabsTrigger>
-          <TabsTrigger value="collectors"><Users className="mr-2" />Collectors</TabsTrigger>
+          <TabsTrigger value="artworks"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Palette /></motion.div>Artworks</TabsTrigger>
+          <TabsTrigger value="analytics"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><TrendingUp /></motion.div>Analytics</TabsTrigger>
+          <TabsTrigger value="achievements"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Award /></motion.div>Achievements</TabsTrigger>
+          <TabsTrigger value="sold"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><History /></motion.div>Previously Sold</TabsTrigger>
+          <TabsTrigger value="collectors"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Users /></motion.div>Collectors</TabsTrigger>
         </TabsList>
         <TabsContent value="artworks" className="mt-6">
             <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8 space-y-8">
@@ -486,7 +504,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl flex items-center gap-2">
-                            <Award /> Awards
+                            <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Award /></motion.div> Awards
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -520,7 +538,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl flex items-center gap-2">
-                            <Building2 /> Exhibitions
+                            <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Building2 /></motion.div> Exhibitions
                         </CardTitle>
                     </CardHeader>
                     <CardContent>

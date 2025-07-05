@@ -20,6 +20,22 @@ import {
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 import { ArrowDown, ArrowUp } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 interface ArtistHoldingsDialogProps {
   isOpen: boolean;
@@ -65,8 +81,8 @@ export function ArtistHoldingsDialog({ isOpen, onClose, artist, ownedFractals }:
                     <TableCell className="text-right font-semibold">₹{currentValue.toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                        <div className={`flex items-center justify-end gap-1 font-medium ${gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                         {gainLoss > 0 && <ArrowUp className="h-3 w-3"/>}
-                         {gainLoss < 0 && <ArrowDown className="h-3 w-3"/>}
+                         {gainLoss > 0 && <motion.div variants={iconVariants} initial="hidden" animate="visible"><ArrowUp className="h-3 w-3"/></motion.div>}
+                         {gainLoss < 0 && <motion.div variants={iconVariants} initial="hidden" animate="visible"><ArrowDown className="h-3 w-3"/></motion.div>}
                          <span>{percentageChange.toFixed(2)}%</span>
                       </div>
                     </TableCell>

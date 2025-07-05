@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/context/auth-context';
@@ -15,6 +16,22 @@ import type { Fractal } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { ScorecardDialog } from '@/components/scorecard-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 export function PortfolioClient() {
   const { artistProfile, fractals } = useAuth();
@@ -35,7 +52,7 @@ export function PortfolioClient() {
         </p>
         <Button size="lg" className="mt-8" asChild>
           <Link href="/portfolio/create">
-            <UserPlus className="mr-2" />
+            <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><UserPlus /></motion.div>
             Create Artist Profile
           </Link>
         </Button>
@@ -70,7 +87,7 @@ export function PortfolioClient() {
           </div>
           <Button asChild>
               <Link href={`/artist/${artistProfile.id}`}>
-                  <Eye className="mr-2" />
+                  <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Eye /></motion.div>
                   View Public Profile
               </Link>
           </Button>
@@ -78,10 +95,10 @@ export function PortfolioClient() {
 
         <Tabs defaultValue="overview">
           <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
-            <TabsTrigger value="overview"><TrendingUp className="mr-2" /> Overview</TabsTrigger>
-            <TabsTrigger value="artworks"><Palette className="mr-2" /> My Artworks</TabsTrigger>
+            <TabsTrigger value="overview"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><TrendingUp /></motion.div> Overview</TabsTrigger>
+            <TabsTrigger value="artworks"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Palette /></motion.div> My Artworks</TabsTrigger>
             <TabsTrigger value="settings" className="relative">
-              <Settings className="mr-2" />
+              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Settings /></motion.div>
               Profile Settings
               {needsArtistMessage && (
                 <span className="absolute top-1 right-1 flex h-3 w-3">
@@ -103,7 +120,7 @@ export function PortfolioClient() {
                       <Card>
                           <CardHeader className="flex flex-row items-center justify-between pb-2">
                               <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
-                              <DollarSign className="h-4 w-4 text-muted-foreground" />
+                              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}><DollarSign className="h-4 w-4 text-muted-foreground" /></motion.div>
                           </CardHeader>
                           <CardContent>
                               <div className="text-2xl font-bold">₹{currentPortfolioValue.toLocaleString()}</div>
@@ -113,7 +130,7 @@ export function PortfolioClient() {
                       <Card>
                           <CardHeader className="flex flex-row items-center justify-between pb-2">
                               <CardTitle className="text-sm font-medium">Current Fractal Price</CardTitle>
-                              <Tag className="h-4 w-4 text-muted-foreground" />
+                              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}><Tag className="h-4 w-4 text-muted-foreground" /></motion.div>
                           </CardHeader>
                           <CardContent>
                               <div className="text-2xl font-bold">₹{artistProfile.fractalPrice.toLocaleString()}</div>
@@ -123,7 +140,7 @@ export function PortfolioClient() {
                       <Card>
                           <CardHeader className="flex flex-row items-center justify-between pb-2">
                               <CardTitle className="text-sm font-medium">Available Fractals</CardTitle>
-                              <Layers className="h-4 w-4 text-muted-foreground" />
+                              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}><Layers className="h-4 w-4 text-muted-foreground" /></motion.div>
                           </CardHeader>
                           <CardContent>
                               <div className="text-2xl font-bold">{artistProfile.availableEditions.toLocaleString()}</div>
@@ -133,7 +150,7 @@ export function PortfolioClient() {
                       <Card>
                           <CardHeader className="flex flex-row items-center justify-between pb-2">
                               <CardTitle className="text-sm font-medium">Fractals Sold</CardTitle>
-                              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}><TrendingUp className="h-4 w-4 text-muted-foreground" /></motion.div>
                           </CardHeader>
                           <CardContent>
                               <div className="text-2xl font-bold">+{fractalsSoldCount.toLocaleString()}</div>
@@ -143,7 +160,7 @@ export function PortfolioClient() {
                       <Card>
                           <CardHeader className="flex flex-row items-center justify-between pb-2">
                               <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-                              <DollarSign className="h-4 w-4 text-muted-foreground" />
+                              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}><DollarSign className="h-4 w-4 text-muted-foreground" /></motion.div>
                           </CardHeader>
                           <CardContent>
                               <div className="text-2xl font-bold">₹{totalEarnings.toFixed(2)}</div>
@@ -174,7 +191,7 @@ export function PortfolioClient() {
                       </div>
                       <Button asChild>
                           <Link href="/portfolio/artwork/create">
-                              <ImageIcon className="mr-2"/>Add New Artwork
+                              <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><ImageIcon /></motion.div>Add New Artwork
                           </Link>
                       </Button>
                   </CardHeader>
@@ -213,8 +230,8 @@ export function PortfolioClient() {
                                       </TableCell>
                                       <TableCell className="text-right space-x-2">
                                           <Button variant="outline" size="sm" asChild>
-                                              <Link href={`/portfolio/artwork/edit/${fractal.id}`}>
-                                                <Wand2 className="mr-2 h-3 w-3" />
+                                              <Link href={`/portfolio/artwork/edit/${fractal.id}`} className="flex items-center">
+                                                <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Wand2 className="h-3 w-3" /></motion.div>
                                                 Edit
                                               </Link>
                                           </Button>
@@ -243,7 +260,7 @@ export function PortfolioClient() {
                   <CardContent>
                       {needsArtistMessage && (
                         <Alert variant="destructive" className="mb-6">
-                            <AlertTriangle className="h-4 w-4" />
+                            <motion.div variants={iconVariants} initial="hidden" animate="visible"><AlertTriangle className="h-4 w-4" /></motion.div>
                             <AlertTitle>Action Required</AlertTitle>
                             <AlertDescription>
                                 Add a "Message to your Collectors" to make your artworks collectible. This message will be included on their certificate of holding.

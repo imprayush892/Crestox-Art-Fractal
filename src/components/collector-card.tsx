@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { PublicUser } from '@/lib/data';
@@ -6,6 +7,22 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Package, Tag } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 interface CollectorStats {
     onSaleCount: number;
@@ -34,11 +51,11 @@ export function CollectorCard({ collector, stats, ownedCount }: CollectorCardPro
             </div>
             <div className="mt-4 space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground flex items-center gap-2"><Package className="h-4 w-4"/> Fractals Held</span>
+                    <span className="text-muted-foreground flex items-center gap-2"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Package className="h-4 w-4"/></motion.div> Fractals Held</span>
                     <span className="font-semibold">{ownedCount}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground flex items-center gap-2"><Tag className="h-4 w-4"/> Fractals for Sale</span>
+                    <span className="text-muted-foreground flex items-center gap-2"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Tag className="h-4 w-4"/></motion.div> Fractals for Sale</span>
                     <span className="font-semibold">{stats.onSaleCount}</span>
                 </div>
             </div>

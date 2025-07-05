@@ -20,6 +20,22 @@ import { Label } from './ui/label';
 import { Minus, Plus, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Separator } from './ui/separator';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 interface SellDialogProps {
   artist: Artist | null;
@@ -105,11 +121,11 @@ export function SellDialog({ artist, ownedFractals, isOpen, onClose }: SellDialo
                 </Label>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity - 1)} disabled={quantity <= 1}>
-                        <Minus className="h-4 w-4" />
+                        <motion.div variants={iconVariants} initial="hidden" animate="visible"><Minus className="h-4 w-4" /></motion.div>
                     </Button>
                     <Input id="quantity" type="number" value={quantity} onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)} className="col-span-3 text-center h-10" min="1" max={ownedShares} />
                     <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity + 1)} disabled={quantity >= ownedShares}>
-                        <Plus className="h-4 w-4" />
+                        <motion.div variants={iconVariants} initial="hidden" animate="visible"><Plus className="h-4 w-4" /></motion.div>
                     </Button>
                 </div>
                  <p className="text-xs text-muted-foreground text-right">You own {ownedShares.toLocaleString()} available fractals</p>

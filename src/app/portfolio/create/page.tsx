@@ -25,6 +25,22 @@ import { Loader2, PlusCircle, Trash2, Twitter, Instagram, Linkedin, User, Upload
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
 import type { CreateArtistProfileData } from '@/lib/data';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -168,7 +184,7 @@ export default function CreateArtistProfilePage() {
                           <div className="flex items-center gap-6">
                               <Avatar className="w-24 h-24">
                                   <AvatarImage src={avatarPreview ?? undefined} alt="Avatar Preview" data-ai-hint="artist avatar" />
-                                  <AvatarFallback><User className="w-10 h-10" /></AvatarFallback>
+                                  <AvatarFallback><motion.div variants={iconVariants} initial="hidden" animate="visible"><User className="w-10 h-10" /></motion.div></AvatarFallback>
                               </Avatar>
                               <FormControl>
                                   <Input 
@@ -240,12 +256,12 @@ export default function CreateArtistProfilePage() {
                                 </FormItem>
                             )}/>
                         </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeAward(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeAward(index)}><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Trash2 className="h-4 w-4 text-destructive" /></motion.div></Button>
                       </div>
                     </Card>
                   ))}
                 </div>
-                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendAward({ value: '' })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Award </Button>
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendAward({ value: '' })}> <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><PlusCircle className="h-4 w-4" /></motion.div> Add Award </Button>
               </FormItem>
 
               <FormItem>
@@ -268,12 +284,12 @@ export default function CreateArtistProfilePage() {
                             </FormItem>
                           )}/>
                         </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeExhibition(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeExhibition(index)}><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Trash2 className="h-4 w-4 text-destructive" /></motion.div></Button>
                       </div>
                     </Card>
                   ))}
                 </div>
-                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendExhibition({ value: '', images: [] })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Exhibition </Button>
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendExhibition({ value: '', images: [] })}> <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><PlusCircle className="h-4 w-4" /></motion.div> Add Exhibition </Button>
               </FormItem>
 
               <FormItem>
@@ -296,23 +312,23 @@ export default function CreateArtistProfilePage() {
                             )}/>
                           </div>
                            <FormField control={form.control} name={`previouslySoldArtworks.${index}.saleValue`} render={({ field }) => (
-                            <FormItem><FormLabel className="text-xs">Sale Value (₹)</FormLabel><div className="relative"><DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><FormControl><Input type="number" className="pl-8" placeholder="50000" {...field} /></FormControl></div><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Sale Value (₹)</FormLabel><div className="relative"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="absolute left-2.5 top-2.5"><DollarSign className="h-4 w-4 text-muted-foreground" /></motion.div><FormControl><Input type="number" className="pl-8" placeholder="50000" {...field} /></FormControl></div><FormMessage /></FormItem>
                           )}/>
                         </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeSold(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeSold(index)}><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Trash2 className="h-4 w-4 text-destructive" /></motion.div></Button>
                       </div>
                     </Card>
                   ))}
                 </div>
-                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendSold({ name: '', saleValue: 0, artworkImage: null, proofOfSaleImage: null })}> <PlusCircle className="mr-2 h-4 w-4" /> Add Sold Artwork </Button>
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => appendSold({ name: '', saleValue: 0, artworkImage: null, proofOfSaleImage: null })}> <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><PlusCircle className="h-4 w-4" /></motion.div> Add Sold Artwork </Button>
               </FormItem>
 
               <FormItem>
                   <FormLabel>Social Links</FormLabel>
                    <div className="space-y-4">
-                        <FormField control={form.control} name="twitter" render={({ field }) => (<FormItem><div className="flex items-center gap-2"><Twitter className="h-5 w-5 text-muted-foreground" /><FormControl><Input placeholder="https://twitter.com/..." {...field} /></FormControl></div><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="instagram" render={({ field }) => (<FormItem><div className="flex items-center gap-2"><Instagram className="h-5 w-5 text-muted-foreground" /><FormControl><Input placeholder="https://instagram.com/..." {...field} /></FormControl></div><FormMessage /></FormItem>)}/>
-                        <FormField control={form.control} name="linkedin" render={({ field }) => (<FormItem><div className="flex items-center gap-2"><Linkedin className="h-5 w-5 text-muted-foreground" /><FormControl><Input placeholder="https://linkedin.com/in/..." {...field} /></FormControl></div><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="twitter" render={({ field }) => (<FormItem><div className="flex items-center gap-2"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Twitter className="h-5 w-5 text-muted-foreground" /></motion.div><FormControl><Input placeholder="https://twitter.com/..." {...field} /></FormControl></div><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="instagram" render={({ field }) => (<FormItem><div className="flex items-center gap-2"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Instagram className="h-5 w-5 text-muted-foreground" /></motion.div><FormControl><Input placeholder="https://instagram.com/..." {...field} /></FormControl></div><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="linkedin" render={({ field }) => (<FormItem><div className="flex items-center gap-2"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><Linkedin className="h-5 w-5 text-muted-foreground" /></motion.div><FormControl><Input placeholder="https://linkedin.com/in/..." {...field} /></FormControl></div><FormMessage /></FormItem>)}/>
                     </div>
               </FormItem>
 

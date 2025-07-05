@@ -19,6 +19,21 @@ import { HoldingCertificateDialog } from './holding-certificate-dialog';
 import { Skeleton } from './ui/skeleton';
 import { motion } from 'framer-motion';
 
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
+
 const HoldingCardSkeleton = () => (
     <Card className="flex flex-col">
         <CardHeader className="flex-row items-center gap-4">
@@ -68,21 +83,6 @@ export function CollectionClient() {
   const [artistToSell, setArtistToSell] = useState<Artist | null>(null);
   const [certificateArtist, setCertificateArtist] = useState<Artist | null>(null);
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
-
-  const iconVariants = {
-    hidden: { scale: 0.5, opacity: 0, rotate: -30 },
-    visible: {
-      scale: 1,
-      opacity: 1,
-      rotate: 0,
-      transition: {
-        type: "spring",
-        stiffness: 260,
-        damping: 20,
-        delay: 0.1,
-      },
-    },
-  };
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
@@ -340,14 +340,14 @@ export function CollectionClient() {
                                         </div>
                                         <div className="flex justify-between items-center w-full mt-4 gap-2">
                                             <Button size="sm" variant="outline" onClick={() => setCertificateArtist(artist)} className="flex-1">
-                                                <Download className="mr-1 h-3 w-3" /> Certificate
+                                                <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-1"><Download className="h-3 w-3" /></motion.div> Certificate
                                             </Button>
                                             <Button size="sm" variant="outline" onClick={(e) => handleSellClick(e, artist)} disabled={ownedCount === 0} className="flex-1">
-                                                <DollarSign className="mr-1 h-3 w-3" /> Sell
+                                                <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-1"><DollarSign className="h-3 w-3" /></motion.div> Sell
                                             </Button>
                                         </div>
                                     <Link href={`/artist/${artist.id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-primary hover:underline text-xs mt-4">
-                                        View Artist Portfolio <ArrowUpRight className="h-3 w-3" />
+                                        View Artist Portfolio <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}><ArrowUpRight className="h-3 w-3" /></motion.div>
                                     </Link>
                                 </CardFooter>
                             </Card>

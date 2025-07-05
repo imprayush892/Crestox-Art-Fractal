@@ -19,6 +19,22 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Minus, Plus, Wallet, Loader2 } from 'lucide-react';
 import { Separator } from './ui/separator';
+import { motion } from 'framer-motion';
+
+const iconVariants = {
+  hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: {
+      type: "spring",
+      stiffness: 260,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
 
 interface InvestmentDialogProps {
   artist: Artist | null;
@@ -171,7 +187,7 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
             {user && (
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                        <Wallet className="w-4 h-4" />
+                        <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wallet className="w-4 h-4" /></motion.div>
                         <span>Your Balance</span>
                     </div>
                     <span className="font-semibold">{user.walletBalance.toLocaleString()} CreCoins</span>
@@ -183,9 +199,9 @@ export function InvestmentDialog({ artist, isOpen, onClose }: InvestmentDialogPr
                 Quantity
                 </Label>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity - 1)} disabled={quantity <= 0}> <Minus className="h-4 w-4" /> </Button>
+                    <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity - 1)} disabled={quantity <= 0}> <motion.div variants={iconVariants} initial="hidden" animate="visible"><Minus className="h-4 w-4" /></motion.div> </Button>
                     <Input id="quantity" type="number" value={quantity} onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 0)} className="col-span-3 text-center h-10" min="0" max={maxAvailable} />
-                    <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity + 1)} disabled={quantity >= maxAvailable}> <Plus className="h-4 w-4" /> </Button>
+                    <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => handleQuantityChange(quantity + 1)} disabled={quantity >= maxAvailable}> <motion.div variants={iconVariants} initial="hidden" animate="visible"><Plus className="h-4 w-4" /></motion.div> </Button>
                 </div>
                  <p className="text-xs text-muted-foreground text-right">{maxAvailable.toLocaleString()} available (10% portfolio cap)</p>
             </div>
