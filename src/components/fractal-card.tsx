@@ -42,13 +42,13 @@ export const FractalCard = React.forwardRef<HTMLDivElement, FractalCardProps>(({
         <Link href={`/fractal/${fractal.id}`} className="group block">
           <Card className="overflow-hidden transition-all duration-300 ease-in-out shadow-md group-hover:shadow-xl group-hover:shadow-primary/10 border-2 border-transparent group-hover:border-primary/20">
             <CardContent className="p-0">
-              <div className="relative overflow-hidden">
+              <div className="relative overflow-hidden aspect-square">
                 <Image
                   src={fractal.heroImage}
                   alt={fractal.title}
-                  width={fractal.width}
-                  height={fractal.height}
-                  className="object-cover w-full h-auto transition-transform duration-300 ease-in-out group-hover:scale-105"
+                  fill
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                  className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
                   data-ai-hint={fractal.aiHint}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
