@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Header } from '@/components/header';
@@ -7,9 +8,16 @@ import { AuthProvider } from '@/context/auth-context';
 import { getInitialArtists, getInitialFractals } from '@/lib/server-data';
 import { PageTransition } from '@/components/page-transition';
 
+const monogramUrl = 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/public%2Fassets%2Fcrestox-monogram.png?alt=media';
+
 export const metadata: Metadata = {
   title: 'Crestox - Digital Fractal Art Marketplace',
   description: 'Explore, collect, and trade unique AI-assisted fractal art.',
+  icons: {
+    icon: monogramUrl,
+    shortcut: monogramUrl,
+    apple: monogramUrl,
+  },
 };
 
 export default async function RootLayout({
