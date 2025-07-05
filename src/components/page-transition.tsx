@@ -6,12 +6,13 @@ import { useEffect, useState } from 'react';
 import { ExitIntentModal } from './exit-intent-modal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/context/auth-context';
+import type { Fractal } from '@/lib/data';
 
 export function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasTriggered, setHasTriggered] = useState(false);
-  const [randomImageUrl, setRandomImageUrl] = useState<string | undefined>(undefined);
+  const [randomFractal, setRandomFractal] = useState<Fractal | undefined>(undefined);
   const isMobile = useIsMobile();
   const { fractals } = useAuth();
 
@@ -25,8 +26,8 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
            // Prefer fractals from real users (which won't have the 'fractal-' prefix)
           const realUserFractals = fractals.filter(f => !f.id.startsWith('fractal-'));
           const fractalsToSample = realUserFractals.length > 0 ? realUserFractals : fractals;
-          const randomFractal = fractalsToSample[Math.floor(Math.random() * fractalsToSample.length)];
-          setRandomImageUrl(randomFractal.heroImage);
+          const selectedFractal = fractalsToSample[Math.floor(Math.random() * fractalsToSample.length)];
+          setRandomFractal(selectedFractal);
         }
         setIsModalOpen(true);
         setHasTriggered(true);
@@ -45,7 +46,7 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
       <ExitIntentModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        imageUrl={randomImageUrl}
+        fractal={randomFractal}
       />
       <AnimatePresence mode="wait">
         <motion.div
