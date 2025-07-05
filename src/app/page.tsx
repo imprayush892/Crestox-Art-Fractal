@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/context/auth-context';
@@ -19,8 +20,6 @@ const getPublicUrl = (path: string) => {
 }
 
 const wordmarkUrl = getPublicUrl('public/assets/crestox-wordmark.png');
-
-const MotionFractalCard = motion(FractalCard);
 
 export default function Home() {
   const { artists, fractals } = useAuth();
