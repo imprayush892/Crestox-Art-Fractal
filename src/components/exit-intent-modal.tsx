@@ -11,19 +11,19 @@ import Link from 'next/link';
 interface ExitIntentModalProps {
   isOpen: boolean;
   onClose: () => void;
+  imageUrl?: string;
 }
 
-export function ExitIntentModal({ isOpen, onClose }: ExitIntentModalProps) {
+export function ExitIntentModal({ isOpen, onClose, imageUrl }: ExitIntentModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden border-0">
         <div className="relative aspect-video flex items-center justify-center text-center text-white p-6">
           <Image
-            src="https://placehold.co/600x400.png"
+            src={imageUrl || "https://placehold.co/600x400.png"}
             alt="Featured Artwork"
-            layout="fill"
-            objectFit="cover"
-            className="brightness-50"
+            fill
+            className="object-cover brightness-50"
             data-ai-hint="luxury art gallery"
           />
           <div className="relative z-10">

@@ -5,12 +5,15 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ExitIntentModal } from './exit-intent-modal';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/context/auth-context';
 
 export function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasTriggered, setHasTriggered] = useState(false);
+  const [randomImageUrl, setRandomImageUrl] = useState<string | undefined>(undefined);
   const isMobile = useIsMobile();
+  const { fractals } = useAuth();
 
   useEffect(() => {
     if (isMobile || hasTriggered) return;
@@ -18,6 +21,13 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
     const handleMouseOut = (event: MouseEvent) => {
       // Trigger if cursor leaves the top of the viewport
       if (event.clientY <= 0 && !event.relatedTarget && !event.toElement) {
+        if (fractals && fractals.length > 0) {
+           // Prefer fractals from real users (which won't have the 'fractal-' prefix)
+          const realUserFractals = fractals.filter(f => !f.id.startsWith('fractal-'));
+          const fractalsToSample = realUserFractals.length > 0 ? realUserFractals : fractals;
+          const randomFractal = fractalsToSample[Math.floor(Math.random() * fractalsToSample.length)];
+          setRandomImageUrl(randomFractal.heroImage);
+        }
         setIsModalOpen(true);
         setHasTriggered(true);
       }
@@ -28,11 +38,15 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
     return () => {
       document.removeEventListener('mouseout', handleMouseOut);
     };
-  }, [hasTriggered, isMobile]);
+  }, [hasTriggered, isMobile, fractals]);
 
   return (
     <>
-      <ExitIntentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <ExitIntentModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        imageUrl={randomImageUrl}
+      />
       <AnimatePresence mode="wait">
         <motion.div
           key={pathname}
