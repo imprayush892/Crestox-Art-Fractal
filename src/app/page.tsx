@@ -50,7 +50,7 @@ export default function Home() {
 
   const renderSkeletons = () => {
     return (
-        <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8 space-y-8">
+        <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-4 sm:gap-8 space-y-4 sm:space-y-8">
             {[...Array(12)].map((_, i) => (
                 <div key={i} className="break-inside-avoid">
                     <Skeleton className="h-64 w-full" />
@@ -109,7 +109,7 @@ export default function Home() {
       </div>
       
       {isLoading ? renderSkeletons() : (
-        <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8 space-y-8">
+        <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-4 sm:gap-8 space-y-4 sm:space-y-8">
           {displayedFractals.map((fractal, i) => {
             const artist = getArtistById(fractal.artistId);
             if (!artist) return null;

@@ -20,7 +20,7 @@ export const FractalCard = React.forwardRef<HTMLDivElement, FractalCardProps>(({
       transition={{ type: 'spring', stiffness: 300 }}
     >
       <Link href={`/fractal/${fractal.id}`} className="group block">
-        <Card className="overflow-hidden transition-all duration-300 ease-in-out shadow-md hover:shadow-xl">
+        <Card className="overflow-hidden transition-all duration-300 ease-in-out shadow-md group-hover:shadow-xl group-hover:shadow-primary/10 border-2 border-transparent group-hover:border-primary/20">
           <CardContent className="p-0">
              <div className="relative overflow-hidden">
               <Image

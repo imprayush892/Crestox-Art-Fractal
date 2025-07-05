@@ -12,10 +12,11 @@ interface ArtistCardProps {
 export function ArtistCard({ artist }: ArtistCardProps) {
   return (
     <motion.div
+      className="group h-full"
       whileHover={{ y: -5, scale: 1.03 }}
       transition={{ type: 'spring', stiffness: 300 }}
     >
-      <Card className="overflow-hidden h-full">
+      <Card className="overflow-hidden h-full transition-all duration-300 shadow-md border-2 border-transparent group-hover:border-primary/20 group-hover:shadow-xl group-hover:shadow-primary/10">
         <CardContent className="p-6 flex flex-col items-center text-center">
           <Avatar className="w-24 h-24 mb-4 border-4 border-primary/20">
             <AvatarImage src={artist.avatar} alt={artist.name} data-ai-hint="artist avatar" />
