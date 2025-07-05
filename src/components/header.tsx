@@ -18,6 +18,7 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { SafeImage as Image } from '@/components/ui/safe-image';
 import { motion } from 'framer-motion';
+import { ThemeToggle } from './theme-toggle';
 
 const iconVariants = {
   hidden: { scale: 0.5, opacity: 0, rotate: -30 },
@@ -86,6 +87,7 @@ export function Header() {
               </Link>
           </nav>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin"/>
             ) : isLoggedIn && user ? (
@@ -114,6 +116,7 @@ export function Header() {
           </div>
         </div>
         <div className="flex flex-1 items-center justify-end md:hidden">
+          <ThemeToggle />
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
