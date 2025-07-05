@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import { SafeImage as Image } from '@/components/ui/safe-image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Fractal, Artist } from '@/lib/data';

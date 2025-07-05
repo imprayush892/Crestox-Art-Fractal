@@ -1,7 +1,7 @@
 
 'use client';
 
-import Image from 'next/image';
+import { SafeImage as Image } from '@/components/ui/safe-image';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { SafeImage as Image } from '@/components/ui/safe-image';
 import { motion } from 'framer-motion';
 
 const iconVariants = {

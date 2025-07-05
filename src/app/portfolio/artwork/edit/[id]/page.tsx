@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import { Loader2, Wand2, ArrowLeft, Save, AlertTriangle } from 'lucide-react';
 import type { Fractal } from '@/lib/data';
-import Image from 'next/image';
+import { SafeImage as Image } from '@/components/ui/safe-image';
 import { evaluateArtwork, type EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';

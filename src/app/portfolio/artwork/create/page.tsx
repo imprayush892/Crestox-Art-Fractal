@@ -22,7 +22,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { Loader2, UploadCloud, X, Wand2, ArrowRight, Star, Info, AlertTriangle } from 'lucide-react';
-import Image from 'next/image';
+import { SafeImage as Image } from '@/components/ui/safe-image';
 import { evaluateArtwork } from '@/ai/flows/evaluate-artwork-flow';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';

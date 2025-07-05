@@ -3,7 +3,7 @@
 
 import { useAuth } from '@/context/auth-context';
 import type { Artist, Fractal, OwnedFractal } from '@/lib/data';
-import Image from 'next/image';
+import { SafeImage as Image } from '@/components/ui/safe-image';
 import { format } from 'date-fns';
 import { useMemo } from 'react';
 

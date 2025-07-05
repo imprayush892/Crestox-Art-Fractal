@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image';
+import { SafeImage as Image } from '@/components/ui/safe-image';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 const getPublicUrl = (path: string) => {

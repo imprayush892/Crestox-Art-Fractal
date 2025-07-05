@@ -19,11 +19,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef, useEffect } from 'react';
-import { Loader2, User, PlusCircle, Trash2, Twitter, Instagram, Linkedin, Upload, Image as ImageIcon, DollarSign } from 'lucide-react';
+import { Loader2, User, PlusCircle, Trash2, Twitter, Instagram, Linkedin, Upload, ImageIcon, DollarSign } from 'lucide-react';
 import type { Artist, CreateArtistProfileData } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Card } from './ui/card';
-import Image from 'next/image';
+import { SafeImage as Image } from '@/components/ui/safe-image';
 
 interface ArtistSettingsFormProps {
   artist: Artist;

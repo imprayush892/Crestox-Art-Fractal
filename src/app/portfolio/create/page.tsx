@@ -21,9 +21,9 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState, useRef } from 'react';
-import { Loader2, PlusCircle, Trash2, Twitter, Instagram, Linkedin, User, Upload, Image as ImageIcon, DollarSign } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Twitter, Instagram, Linkedin, User, Upload, ImageIcon, DollarSign } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import Image from 'next/image';
+import { SafeImage as Image } from '@/components/ui/safe-image';
 import type { CreateArtistProfileData } from '@/lib/data';
 import { motion } from 'framer-motion';
 

@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, Wand2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { ArtistSettingsForm } from '@/components/artist-settings-form';
-import Image from 'next/image';
+import { SafeImage as Image } from '@/components/ui/safe-image';
 import type { Fractal } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { ScorecardDialog } from '@/components/scorecard-dialog';
