@@ -20,7 +20,7 @@ export const FractalCard = React.forwardRef<HTMLDivElement, FractalCardProps>(({
   const handleMouseEnter = () => {
     hoverTimeout.current = setTimeout(() => {
       setIsLightboxOpen(true);
-    }, 700); // 0.7 second delay for preview
+    }, 1500); // 1.5 second delay for preview
   };
 
   const handleMouseLeave = () => {
