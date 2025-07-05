@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/context/auth-context';
@@ -93,6 +92,20 @@ export default function Home() {
         <motion.p style={{ y: yParagraph, opacity }} className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground">
           Crestox is a revolutionary platform dedicated to making the world of art accessible. We believe in the power of art to inspire, connect, and transform.
         </motion.p>
+        <motion.div 
+          style={{ y: yParagraph, opacity }} 
+          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
+        >
+          <Button size="lg" asChild className="font-semibold bg-accent text-accent-foreground hover:bg-accent/90 hover:shadow-lg transition-shadow">
+            <Link href="/explore">Start Collecting</Link>
+          </Button>
+          <Button size="lg" variant="secondary" asChild className="font-semibold hover:shadow-lg transition-shadow">
+            <Link href="/portfolio">Become a Listed Artist</Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild className="font-semibold hover:shadow-lg transition-shadow">
+            <Link href="/donate">What is Crestox?</Link>
+          </Button>
+        </motion.div>
       </div>
       
       {isLoading ? renderSkeletons() : (
@@ -116,12 +129,6 @@ export default function Home() {
           })}
         </div>
       )}
-
-      <div className="text-center mt-16">
-        <Button size="lg" variant="outline" asChild>
-          <Link href="/explore">Explore More</Link>
-        </Button>
-      </div>
     </div>
   );
 }
