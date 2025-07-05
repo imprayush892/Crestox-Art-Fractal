@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArtistCollectorsList } from './artist-collectors-list';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { Progress } from './ui/progress';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -123,6 +124,8 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
   }, [collection, artist.id]);
 
   const isWatched = watchlist.includes(artist.id);
+
+  const availablePercentage = artist.totalEditions > 0 ? (artist.availableEditions / artist.totalEditions) * 100 : 0;
 
   const isCollectible = useMemo(() => {
     if (isOwnProfile) return false;
@@ -275,14 +278,18 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                       </Button>
                   </CardHeader>
                   <CardContent>
-                      <div className="flex justify-between items-center mb-4">
-                          <div className="text-sm text-muted-foreground flex items-center gap-2">
-                              <Layers className="w-4 h-4" />
-                              <span>{artist.availableEditions.toLocaleString()} of {artist.totalEditions.toLocaleString()} available</span>
-                          </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-muted-foreground">Current Price</span>
                           <div className="text-3xl font-bold text-primary">
                               ₹{artist.fractalPrice.toLocaleString()}
                           </div>
+                      </div>
+                      <div className="w-full mb-4">
+                        <div className="flex justify-between items-center text-xs text-muted-foreground mb-1">
+                          <span>Fractals Available</span>
+                          <span>{artist.availableEditions.toLocaleString()} / {artist.totalEditions.toLocaleString()}</span>
+                        </div>
+                        <Progress value={availablePercentage} className="h-2" />
                       </div>
                       <div className="flex items-center gap-2">
                         <Button size="lg" className="w-full" onClick={handleCollectClick} disabled={!isCollectible}>
