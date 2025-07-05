@@ -17,6 +17,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ArtistCard } from './artist-card';
 import { HoldingCertificateDialog } from './holding-certificate-dialog';
 import { Skeleton } from './ui/skeleton';
+import { motion } from 'framer-motion';
 
 const HoldingCardSkeleton = () => (
     <Card className="flex flex-col">
@@ -67,6 +68,21 @@ export function CollectionClient() {
   const [artistToSell, setArtistToSell] = useState<Artist | null>(null);
   const [certificateArtist, setCertificateArtist] = useState<Artist | null>(null);
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
+
+  const iconVariants = {
+    hidden: { scale: 0.5, opacity: 0, rotate: -30 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      rotate: 0,
+      transition: {
+        type: "spring",
+        stiffness: 260,
+        damping: 20,
+        delay: 0.1,
+      },
+    },
+  };
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
@@ -214,7 +230,9 @@ export function CollectionClient() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Portfolio Value</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </motion.div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₹{portfolioStats.currentValue.toLocaleString()}</div>
@@ -224,7 +242,9 @@ export function CollectionClient() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-              <BarChart className="h-4 w-4 text-muted-foreground" />
+              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}>
+                <BarChart className="h-4 w-4 text-muted-foreground" />
+              </motion.div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₹{portfolioStats.totalSpent.toLocaleString()}</div>
@@ -234,7 +254,9 @@ export function CollectionClient() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Gain / Loss</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </motion.div>
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${portfolioStats.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -250,9 +272,24 @@ export function CollectionClient() {
 
       <Tabs defaultValue="holdings" className="mt-8">
             <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
-                <TabsTrigger value="holdings"><Package className="mr-2 h-4 w-4" /> My Holdings</TabsTrigger>
-                <TabsTrigger value="listed"><Store className="mr-2 h-4 w-4" />Listed for Sale</TabsTrigger>
-                <TabsTrigger value="watchlist"><Eye className="mr-2 h-4 w-4" />Watchlist</TabsTrigger>
+                <TabsTrigger value="holdings">
+                    <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
+                        <Package className="h-4 w-4" />
+                    </motion.div>
+                    My Holdings
+                </TabsTrigger>
+                <TabsTrigger value="listed">
+                    <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
+                        <Store className="h-4 w-4" />
+                    </motion.div>
+                    Listed for Sale
+                </TabsTrigger>
+                <TabsTrigger value="watchlist">
+                    <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
+                        <Eye className="h-4 w-4" />
+                    </motion.div>
+                    Watchlist
+                </TabsTrigger>
             </TabsList>
             
             <TabsContent value="holdings" className="mt-6">
@@ -278,7 +315,9 @@ export function CollectionClient() {
                                 className="flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
                             >
                                 <CardHeader className="flex-row items-center gap-4 cursor-pointer" onClick={() => handleCardClick(artist)}>
-                                    <Wallet className="w-8 h-8 text-primary"/>
+                                    <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.8 }}>
+                                      <Wallet className="w-8 h-8 text-primary"/>
+                                    </motion.div>
                                     <div>
                                         <CardTitle className="font-headline text-2xl">{artist.name}</CardTitle>
                                         <CardDescription>{ownedCount} in Holdings, {listedCount} on Sale</CardDescription>
