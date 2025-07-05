@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import React from 'react';
 
+// Hardcoding the full, correct public URLs for reliability.
 const foundersData = [
   {
     name: 'Prayush Shah',
@@ -28,6 +29,7 @@ const foundersData = [
   }
 ];
 
+// Hardcoding the full, correct public URL for the wordmark.
 const wordmarkUrl = 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/public%2Fassets%2Fcrestox-wordmark.png?alt=media';
 
 const TabContentWrapper = ({ children, className }: { children: React.ReactNode, className?: string }) => (
