@@ -96,13 +96,13 @@ export default function Home() {
           style={{ y: yParagraph, opacity }} 
           className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <Button size="lg" asChild className="font-semibold bg-accent text-accent-foreground hover:bg-accent/90 hover:shadow-lg transition-shadow">
+          <Button size="lg" variant="secondary" asChild className="font-semibold hover:bg-primary hover:text-primary-foreground hover:shadow-lg transition-shadow">
             <Link href="/explore">Start Collecting</Link>
           </Button>
-          <Button size="lg" variant="secondary" asChild className="font-semibold hover:shadow-lg transition-shadow">
+          <Button size="lg" variant="secondary" asChild className="font-semibold hover:bg-primary hover:text-primary-foreground hover:shadow-lg transition-shadow">
             <Link href="/portfolio">Become a Listed Artist</Link>
           </Button>
-          <Button size="lg" variant="outline" asChild className="font-semibold hover:shadow-lg transition-shadow">
+          <Button size="lg" variant="secondary" asChild className="font-semibold hover:bg-primary hover:text-primary-foreground hover:shadow-lg transition-shadow">
             <Link href="/donate">What is Crestox?</Link>
           </Button>
         </motion.div>
