@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -42,9 +41,9 @@ export function ExitIntentModal({ isOpen, onClose, fractal }: ExitIntentModalPro
           )}
           
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
-            <div className="text-primary">
-              <h2 className="font-headline text-2xl font-bold">Love what you see?</h2>
-              <p className="mt-2 text-base opacity-90">Support an artist today.</p>
+            <div className="text-primary text-center">
+              <h2 className="font-headline text-xl font-bold">Love what you see?</h2>
+              <p className="mt-2 text-sm opacity-90">Support an artist today.</p>
               <Button asChild size="lg" className="mt-6 bg-accent text-accent-foreground hover:bg-primary hover:text-primary-foreground" onClick={onClose}>
                 <Link href={fractal ? `/fractal/${fractal.id}` : "/explore"}>
                   {fractal ? 'View Artwork' : 'Explore Art'}
