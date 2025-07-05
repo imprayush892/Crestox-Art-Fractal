@@ -1,3 +1,4 @@
+
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,7 +22,7 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
 
     const handleMouseOut = (event: MouseEvent) => {
       // Trigger if cursor leaves the top of the viewport
-      if (event.clientY <= 0 && !event.relatedTarget && !event.toElement) {
+      if (event.clientY <= 0 && !event.relatedTarget) {
         if (fractals && fractals.length > 0) {
            // Prefer fractals from real users (which won't have the 'fractal-' prefix)
           const realUserFractals = fractals.filter(f => !f.id.startsWith('fractal-'));
