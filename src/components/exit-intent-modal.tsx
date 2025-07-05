@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -19,7 +20,7 @@ export function ExitIntentModal({ isOpen, onClose, fractal }: ExitIntentModalPro
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl p-0 overflow-hidden border-0 max-h-[90vh]">
-        <div className="relative flex items-center justify-center text-center text-white p-6 h-full">
+        <div className="relative flex items-center justify-center text-center p-6 h-full">
           {fractal ? (
             <Image
               src={fractal.heroImage}
@@ -40,10 +41,10 @@ export function ExitIntentModal({ isOpen, onClose, fractal }: ExitIntentModalPro
             />
           )}
           
-          <div className="relative z-10">
+          <div className="relative z-10 text-primary">
             <h2 className="font-headline text-3xl font-bold">Love what you see?</h2>
-            <p className="mt-2 text-lg text-white/90">Support an artist today.</p>
-            <Button asChild size="lg" className="mt-6 bg-accent text-accent-foreground hover:bg-accent/90" onClick={onClose}>
+            <p className="mt-2 text-lg opacity-90">Support an artist today.</p>
+            <Button asChild size="lg" className="mt-6 bg-accent text-accent-foreground hover:bg-primary hover:text-primary-foreground" onClick={onClose}>
               <Link href={fractal ? `/fractal/${fractal.id}` : "/explore"}>
                 {fractal ? 'View Artwork' : 'Explore Art'}
               </Link>
