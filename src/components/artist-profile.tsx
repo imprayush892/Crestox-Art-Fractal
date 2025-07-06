@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap, DollarSign, History, ChevronLeft, ChevronRight, Flag } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap, DollarSign, History, ChevronLeft, ChevronRight, Flag, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
@@ -22,6 +22,9 @@ import { SafeImage as Image } from '@/components/ui/safe-image';
 import { cn } from '@/lib/utils';
 import { Progress } from './ui/progress';
 import { motion } from 'framer-motion';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
 
 const iconVariants = {
   hidden: { scale: 0.5, opacity: 0, rotate: -30 },
@@ -63,6 +66,11 @@ function SoldArtworkCard({ artwork, artist }: SoldArtworkCardProps) {
     const images = [artwork.artworkImage, artwork.proofOfSaleImage];
     const [currentIndex, setCurrentIndex] = useState(0);
 
+    const { toast } = useToast();
+    const [isFlagging, setIsFlagging] = useState(false);
+    const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
+    const [flagReason, setFlagReason] = useState("");
+
     const goToPrevious = () => {
         const isFirst = currentIndex === 0;
         const newIndex = isFirst ? images.length - 1 : currentIndex - 1;
@@ -78,12 +86,27 @@ function SoldArtworkCard({ artwork, artist }: SoldArtworkCardProps) {
     const currentImageUrl = images[currentIndex];
     const isFlagged = artist.flaggedImageUrls?.includes(currentImageUrl);
 
-    const handleFlag = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        flagArtistContent(artist.id, currentImageUrl, !isFlagged);
+    const handleFlagSubmit = async () => {
+        if (!flagReason) {
+            toast({ variant: "destructive", title: "Reason required" });
+            return;
+        }
+        setIsFlagging(true);
+        try {
+            await flagArtistContent(artist.id, currentImageUrl, !isFlagged, flagReason);
+            toast({ title: `Content ${isFlagged ? 'Unflagged' : 'Flagged'}` });
+            setIsFlagDialogOpen(false);
+            setFlagReason("");
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: "Action Failed", description: error.message });
+        } finally {
+            setIsFlagging(false);
+        }
     };
 
+
     return (
+      <>
         <Card className="overflow-hidden">
             <div className="relative group bg-muted/20">
                 <Image
@@ -103,7 +126,7 @@ function SoldArtworkCard({ artwork, artist }: SoldArtworkCardProps) {
                 )}
                 
                 {isAdmin && (
-                  <Button size="icon" variant={isFlagged ? 'destructive' : 'secondary'} className="absolute top-2 right-2 h-8 w-8" onClick={handleFlag}>
+                  <Button size="icon" variant={isFlagged ? 'destructive' : 'secondary'} className="absolute top-2 right-2 h-8 w-8" onClick={() => setIsFlagDialogOpen(true)}>
                     <Flag className="h-4 w-4" />
                   </Button>
                 )}
@@ -135,6 +158,26 @@ function SoldArtworkCard({ artwork, artist }: SoldArtworkCardProps) {
                 <p className="text-sm text-muted-foreground">Sold for <span className="font-medium text-primary">₹{artwork.saleValue.toLocaleString()}</span></p>
             </div>
         </Card>
+        <Dialog open={isFlagDialogOpen} onOpenChange={setIsFlagDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Reason for {isFlagged ? 'Unflagging' : 'Flagging'}</DialogTitle>
+                    <DialogDescription>This message will be sent to the artist.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Label htmlFor="flag-reason">Reason</Label>
+                    <Textarea id="flag-reason" value={flagReason} onChange={(e) => setFlagReason(e.target.value)} />
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setIsFlagDialogOpen(false)} disabled={isFlagging}>Cancel</Button>
+                    <Button onClick={handleFlagSubmit} disabled={isFlagging}>
+                        {isFlagging && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Submit
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      </>
     );
 }
 
@@ -152,6 +195,11 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
   const router = useRouter();
   const [isCollecting, setIsCollecting] = useState(false);
   const { toast } = useToast();
+
+  const [isFlagging, setIsFlagging] = useState(false);
+  const [flaggedContent, setFlaggedContent] = useState<{imageUrl: string, isFlagged: boolean, type: string} | null>(null);
+  const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
+  const [flagReason, setFlagReason] = useState("");
 
   const isOwnProfile = artistProfile?.id === artist.id;
   
@@ -217,6 +265,30 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
     }
   };
 
+  const openFlagDialog = (imageUrl: string, isFlagged: boolean, type: string) => {
+    setFlaggedContent({imageUrl, isFlagged, type});
+    setIsFlagDialogOpen(true);
+  }
+
+  const handleFlagSubmit = async () => {
+    if (!flaggedContent || !flagReason) {
+        toast({ variant: "destructive", title: "Reason required" });
+        return;
+    }
+    setIsFlagging(true);
+    try {
+        await flagArtistContent(artist.id, flaggedContent.imageUrl, !flaggedContent.isFlagged, flagReason);
+        toast({ title: `Content ${flaggedContent.isFlagged ? 'Unflagged' : 'Flagged'}` });
+        setIsFlagDialogOpen(false);
+        setFlagReason("");
+        setFlaggedContent(null);
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: "Action Failed", description: error.message });
+    } finally {
+        setIsFlagging(false);
+    }
+};
+
   const fractalPriceHistory = artist.priceHistory.map(p => ({ date: p.date, value: p.price }));
   const totalValueHistory = artist.totalPortfolioValueHistory.map(p => ({ date: p.date, value: p.value }));
 
@@ -243,6 +315,26 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
         isOpen={isCollecting}
         onClose={() => setIsCollecting(false)}
       />
+      <Dialog open={isFlagDialogOpen} onOpenChange={setIsFlagDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Reason for {flaggedContent?.isFlagged ? 'Unflagging' : 'Flagging'} {flaggedContent?.type}</DialogTitle>
+                    <DialogDescription>This message will be sent to the artist.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Label htmlFor="flag-reason-artist">Reason</Label>
+                    <Textarea id="flag-reason-artist" value={flagReason} onChange={(e) => setFlagReason(e.target.value)} />
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setIsFlagDialogOpen(false)} disabled={isFlagging}>Cancel</Button>
+                    <Button onClick={handleFlagSubmit} disabled={isFlagging}>
+                        {isFlagging && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Submit
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
         <div className="lg:col-span-3 flex flex-col items-center md:items-start">
             <Avatar className="w-32 h-32 md:w-40 md:h-40 border-4 border-primary shadow-lg">
@@ -551,7 +643,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                         data-ai-hint="award certificate" 
                                                     />
                                                     {isFlagged && <div className="absolute inset-0 flex items-center justify-center bg-black/50"><Flag className="h-10 w-10 text-destructive"/></div>}
-                                                    {isAdmin && <Button size="icon" variant={isFlagged ? 'destructive' : 'secondary'} className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100" onClick={() => flagArtistContent(artist.id, award.image!, !isFlagged)}><Flag className="h-4 w-4" /></Button>}
+                                                    {isAdmin && <Button size="icon" variant={isFlagged ? 'destructive' : 'secondary'} className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100" onClick={() => openFlagDialog(award.image!, !!isFlagged, 'Award Image')}><Flag className="h-4 w-4" /></Button>}
                                                 </div>
                                             )}
                                             <div className="p-4">
@@ -596,7 +688,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                                       data-ai-hint="exhibition photo" 
                                                                   />
                                                                   {isFlagged && <div className="absolute inset-0 flex items-center justify-center bg-black/50"><Flag className="h-10 w-10 text-destructive"/></div>}
-                                                                  {isAdmin && <Button size="icon" variant={isFlagged ? 'destructive' : 'secondary'} className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100" onClick={() => flagArtistContent(artist.id, img, !isFlagged)}><Flag className="h-4 w-4" /></Button>}
+                                                                  {isAdmin && <Button size="icon" variant={isFlagged ? 'destructive' : 'secondary'} className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100" onClick={() => openFlagDialog(img, !!isFlagged, 'Exhibition Image')}><Flag className="h-4 w-4" /></Button>}
                                                               </div>
                                                           )
                                                         })}

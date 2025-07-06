@@ -35,6 +35,18 @@ export interface PreviouslySoldArtwork {
   saleValue: number;
 }
 
+export interface Notification {
+  id: string;
+  message: string;
+  timestamp: string; // ISO string
+  read: boolean;
+  type: 'artwork_flagged' | 'content_flagged' | 'artwork_unflagged' | 'content_unflagged';
+  relatedContent: {
+    title: string; // e.g., Artwork title or "Your award image"
+    url: string; // e.g., link to fractal detail page or artist page
+  };
+}
+
 export interface Artist {
   id: string;
   userId?: string;
@@ -475,3 +487,4 @@ export const artists: Artist[] = finalArtists;
 
 
     
+

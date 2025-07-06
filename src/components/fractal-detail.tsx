@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Artist, Fractal, ArtworkSize } from '@/lib/data';
@@ -20,8 +21,8 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/auth-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from './ui/textarea';
 
 
 const iconVariants = {
@@ -76,8 +77,9 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
   const [newPrice, setNewPrice] = useState<string>(fractal.price.toString());
   const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
 
-  const [isFlagConfirmOpen, setIsFlagConfirmOpen] = useState(false);
   const [isFlagging, setIsFlagging] = useState(false);
+  const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
+  const [flagReason, setFlagReason] = useState("");
 
 
   const handlePrev = () => setCurrentIndex((prev) => (prev === 0 ? fractal.images.length - 1 : prev - 1));
@@ -100,12 +102,17 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
     }
   };
 
-  const handleFlagToggle = async () => {
+  const handleFlagSubmit = async () => {
+    if (!flagReason) {
+        toast({ variant: "destructive", title: "Reason required", description: "Please provide a reason for flagging." });
+        return;
+    }
     setIsFlagging(true);
     try {
-        await flagArtwork(fractal.id, !fractal.isFlagged);
+        await flagArtwork(fractal.id, !fractal.isFlagged, flagReason);
         toast({ title: `Artwork ${fractal.isFlagged ? 'Unflagged' : 'Flagged'}`});
-        setIsFlagConfirmOpen(false);
+        setIsFlagDialogOpen(false);
+        setFlagReason("");
     } catch (error: any) {
         toast({ variant: 'destructive', title: "Action Failed", description: error.message });
     } finally {
@@ -289,7 +296,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2">
                     <Button onClick={() => setIsPriceDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit Price</Button>
-                    <Button variant={fractal.isFlagged ? "destructive" : "outline"} onClick={() => setIsFlagConfirmOpen(true)}>
+                    <Button variant={fractal.isFlagged ? "destructive" : "outline"} onClick={() => setIsFlagDialogOpen(true)}>
                         <Flag className="mr-2 h-4 w-4" />
                         {fractal.isFlagged ? 'Unflag Artwork' : 'Flag Artwork'}
                     </Button>
@@ -333,23 +340,32 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
               </DialogFooter>
           </DialogContent>
       </Dialog>
-      <AlertDialog open={isFlagConfirmOpen} onOpenChange={setIsFlagConfirmOpen}>
-          <AlertDialogContent>
-              <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                      You are about to {fractal.isFlagged ? 'unflag' : 'flag'} this artwork. This will change its visibility and status on the platform.
-                  </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleFlagToggle} disabled={isFlagging}>
+      <Dialog open={isFlagDialogOpen} onOpenChange={setIsFlagDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Reason for {fractal.isFlagged ? 'Unflagging' : 'Flagging'}</DialogTitle>
+                  <DialogDescription>
+                    Provide a reason for this action. This will be sent as a notification to the artist.
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                  <Label htmlFor="flag-reason">Reason</Label>
+                  <Textarea 
+                    id="flag-reason" 
+                    value={flagReason} 
+                    onChange={(e) => setFlagReason(e.target.value)}
+                    placeholder="e.g., Copyright concern, low quality image..."
+                  />
+              </div>
+              <DialogFooter>
+                  <Button variant="ghost" onClick={() => setIsFlagDialogOpen(false)} disabled={isFlagging}>Cancel</Button>
+                  <Button onClick={handleFlagSubmit} disabled={isFlagging}>
                       {isFlagging && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Confirm
-                  </AlertDialogAction>
-              </AlertDialogFooter>
-          </AlertDialogContent>
-      </AlertDialog>
+                      Submit
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
 
     </>
   );

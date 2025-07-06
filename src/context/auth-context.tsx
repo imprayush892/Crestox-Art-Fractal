@@ -3,11 +3,11 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser, PrivateHolding, PublicHolding, CollectorInfo, Award, Exhibition, PreviouslySoldArtwork } from '@/lib/data';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser, PrivateHolding, PublicHolding, CollectorInfo, Award, Exhibition, PreviouslySoldArtwork, Notification } from '@/lib/data';
 import type { EvaluationResult, ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
@@ -50,6 +50,7 @@ interface AuthContextType {
   collection: OwnedFractal[];
   resaleListings: ResaleListing[];
   watchlist: string[];
+  notifications: Notification[];
   login: (email: string, pass: string) => Promise<void>;
   signup: (firstName: string, lastName: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -66,8 +67,9 @@ interface AuthContextType {
   reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
   getCollectorsForArtist: (artistId: string) => Promise<CollectorInfo[]>;
   updateFractalPriceAsAdmin: (fractalId: string, newPrice: number) => Promise<void>;
-  flagArtwork: (fractalId: string, flag: boolean) => Promise<void>;
-  flagArtistContent: (artistId: string, imageUrl: string, flag: boolean) => Promise<void>;
+  flagArtwork: (fractalId: string, flag: boolean, reason: string) => Promise<void>;
+  flagArtistContent: (artistId: string, imageUrl: string, flag: boolean, reason: string) => Promise<void>;
+  markNotificationsAsRead: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -112,18 +114,21 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
   const [resaleListings, setResaleListings] = useState<ResaleListing[]>([]);
   const [allUsers, setAllUsers] = useState<PublicUser[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     let unsubscribeUser: () => void = () => {};
     let unsubscribeArtist: () => void = () => {};
     let unsubscribeHoldings: () => void = () => {};
     let unsubscribeAllUsers: () => void = () => {};
+    let unsubscribeNotifications: () => void = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       unsubscribeUser();
       unsubscribeArtist();
       unsubscribeHoldings();
       unsubscribeAllUsers();
+      unsubscribeNotifications();
       
       setIsAdmin(firebaseUser?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL);
 
@@ -202,6 +207,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 })) as PublicUser[];
                 setAllUsers(users);
             });
+            
+            const notificationsRef = firestoreCollection(db, 'users', firebaseUser.uid, 'notifications');
+            const notificationsQuery = query(notificationsRef, orderBy('timestamp', 'desc'));
+            unsubscribeNotifications = onSnapshot(notificationsQuery, (snapshot) => {
+                const fetchedNotifications = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Notification[];
+                setNotifications(fetchedNotifications);
+            });
+
 
             setIsLoading(false);
           } else {
@@ -1006,20 +1019,79 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     toast({ title: "Price Updated" });
   };
 
-  const flagArtwork = async (fractalId: string, flag: boolean) => {
+  const flagArtwork = async (fractalId: string, flag: boolean, reason: string) => {
       if (!isAdmin) throw new Error("Unauthorized");
+      if (!db) throw new Error("Database not available.");
+      
       const fractalRef = doc(db, "fractals", fractalId);
+      const fractalSnap = await getDoc(fractalRef);
+      if (!fractalSnap.exists()) throw new Error("Artwork not found");
+
+      const fractalData = fractalSnap.data() as Fractal;
+      const artistId = fractalData.artistId;
+
       await updateDoc(fractalRef, { isFlagged: flag });
+
+      const notificationRef = doc(firestoreCollection(db, `users/${artistId}/notifications`));
+      const notification: Omit<Notification, 'id'> = {
+          message: reason,
+          timestamp: new Date().toISOString(),
+          read: false,
+          type: flag ? 'artwork_flagged' : 'artwork_unflagged',
+          relatedContent: {
+              title: `Artwork: ${fractalData.title}`,
+              url: `/fractal/${fractalId}`,
+          }
+      };
+      await setDoc(notificationRef, notification);
+
       toast({ title: flag ? "Artwork Flagged" : "Artwork Unflagged" });
   };
 
-  const flagArtistContent = async (artistId: string, imageUrl: string, flag: boolean) => {
+  const flagArtistContent = async (artistId: string, imageUrl: string, flag: boolean, reason: string) => {
       if (!isAdmin) throw new Error("Unauthorized");
+      if (!db) throw new Error("Database not available.");
+
       const artistRef = doc(db, "artists", artistId);
       await updateDoc(artistRef, {
           flaggedImageUrls: flag ? arrayUnion(imageUrl) : arrayRemove(imageUrl),
       });
+
+      const artistData = (await getDoc(artistRef)).data() as Artist;
+      if (!artistData.userId) throw new Error("Artist has no associated user account.");
+      
+      const notificationRef = doc(firestoreCollection(db, `users/${artistData.userId}/notifications`));
+       const notification: Omit<Notification, 'id'> = {
+          message: reason,
+          timestamp: new Date().toISOString(),
+          read: false,
+          type: flag ? 'content_flagged' : 'content_unflagged',
+          relatedContent: {
+              title: `An image in your profile was ${flag ? 'flagged' : 'unflagged'}`,
+              url: `/artist/${artistId}`,
+          }
+      };
+      await setDoc(notificationRef, notification);
+
       toast({ title: flag ? "Image Flagged" : "Image Unflagged" });
+  };
+
+  const markNotificationsAsRead = async () => {
+    if (!db || !user || notifications.length === 0) return;
+    const unread = notifications.filter(n => !n.read);
+    if (unread.length === 0) return;
+    
+    const batch = writeBatch(db);
+    unread.forEach(n => {
+        const notifRef = doc(db, 'users', user.uid, 'notifications', n.id);
+        batch.update(notifRef, { read: true });
+    });
+    
+    try {
+        await batch.commit();
+    } catch (error) {
+        console.error("Error marking notifications as read:", error);
+    }
   };
 
 
@@ -1037,6 +1109,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     collection,
     resaleListings,
     watchlist: user?.watchlist ?? [],
+    notifications,
     login,
     signup,
     logout,
@@ -1055,6 +1128,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     updateFractalPriceAsAdmin,
     flagArtwork,
     flagArtistContent,
+    markNotificationsAsRead,
   };
   
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

@@ -2,7 +2,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, User, X, Wallet, Loader2, Shield } from 'lucide-react';
+import { Menu, User, X, Wallet, Loader2, Shield, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -19,6 +19,11 @@ import { useRouter } from 'next/navigation';
 import { SafeImage as Image } from '@/components/ui/safe-image';
 import { motion } from 'framer-motion';
 import { ThemeToggle } from './theme-toggle';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import type { Notification } from '@/lib/data';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { ScrollArea } from './ui/scroll-area';
 
 const iconVariants = {
   hidden: { scale: 0.5, opacity: 0, rotate: -30 },
@@ -44,10 +49,29 @@ const getPublicUrl = (path: string) => {
 }
 const monogramUrl = getPublicUrl('public/assets/crestox-monogram.png');
 
+const NotificationItem = ({ notification, onSelect }: { notification: Notification, onSelect: () => void }) => {
+  return (
+    <Link href={notification.relatedContent.url} className="block hover:bg-muted/50 p-3 rounded-md transition-colors" onClick={onSelect}>
+        <div className="flex items-start gap-3">
+            {!notification.read && <div className="mt-1.5 h-2 w-2 rounded-full bg-primary flex-shrink-0" />}
+            <div className={cn("flex-1", notification.read ? "pl-5" : "")}>
+                <p className="text-sm font-medium">{notification.relatedContent.title}</p>
+                <p className="text-sm text-muted-foreground">{notification.message}</p>
+                <p className="text-xs text-muted-foreground mt-1">{formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}</p>
+            </div>
+        </div>
+    </Link>
+  );
+};
+
+
 export function Header() {
-  const { user, isLoggedIn, logout, artistProfile, isLoading, isAdmin } = useAuth();
+  const { user, isLoggedIn, logout, artistProfile, isLoading, isAdmin, notifications, markNotificationsAsRead } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const router = useRouter();
+
+  const hasUnread = notifications.some(n => !n.read);
 
   const navLinks = [
     { href: '/explore', label: 'Explore' },
@@ -63,6 +87,13 @@ export function Header() {
   };
 
   const closeMenu = () => setIsMobileMenuOpen(false);
+
+  const handleNotificationsOpenChange = (open: boolean) => {
+    setIsNotificationsOpen(open);
+    if (open && hasUnread) {
+        markNotificationsAsRead();
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -91,8 +122,30 @@ export function Header() {
                 About Crestox
               </Link>
           </nav>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <ThemeToggle />
+             {isLoggedIn && (
+                 <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="relative">
+                            <Bell className="h-5 w-5" />
+                            {hasUnread && <span className="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-primary" />}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-2">
+                        <div className="p-2">
+                          <h3 className="font-medium">Notifications</h3>
+                        </div>
+                        <ScrollArea className="h-96">
+                          {notifications.length > 0 ? (
+                              notifications.map(n => <NotificationItem key={n.id} notification={n} onSelect={() => setIsNotificationsOpen(false)} />)
+                          ) : (
+                              <p className="text-sm text-muted-foreground p-4 text-center">No notifications yet.</p>
+                          )}
+                        </ScrollArea>
+                    </PopoverContent>
+                </Popover>
+             )}
             {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin"/>
             ) : isLoggedIn && user ? (
@@ -124,6 +177,28 @@ export function Header() {
         </div>
         <div className="flex flex-1 items-center justify-end md:hidden">
           <ThemeToggle />
+           {isLoggedIn && (
+                 <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="relative">
+                            <Bell className="h-5 w-5" />
+                            {hasUnread && <span className="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-primary" />}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-2">
+                         <div className="p-2">
+                          <h3 className="font-medium">Notifications</h3>
+                        </div>
+                        <ScrollArea className="h-96">
+                          {notifications.length > 0 ? (
+                              notifications.map(n => <NotificationItem key={n.id} notification={n} onSelect={() => {}} />)
+                          ) : (
+                              <p className="text-sm text-muted-foreground p-4 text-center">No notifications yet.</p>
+                          )}
+                        </ScrollArea>
+                    </PopoverContent>
+                </Popover>
+             )}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
