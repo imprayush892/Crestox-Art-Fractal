@@ -654,12 +654,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
     await setDoc(doc(db, "fractals", newFractalId), newFractalData);
 
-    const adminQuery = query(collection(db, 'users'), where('email', '==', process.env.NEXT_PUBLIC_ADMIN_EMAIL));
+    const adminQuery = query(firestoreCollection(db, 'users'), where('email', '==', process.env.NEXT_PUBLIC_ADMIN_EMAIL));
     const adminSnap = await getDocs(adminQuery);
     if (adminSnap.empty) throw new Error("Admin account not found.");
     const adminId = adminSnap.docs[0].id;
 
-    const notificationRef = doc(collection(db, `users/${adminId}/notifications`));
+    const notificationRef = doc(firestoreCollection(db, `users/${adminId}/notifications`));
     const notification: Omit<Notification, 'id'> = {
         message: `${artistProfile.name} has submitted an artwork for manual valuation.`,
         timestamp: new Date().toISOString(),
@@ -728,7 +728,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         });
         
         const artistUserRef = doc(db, 'users', artistSnap.data().userId);
-        const artistNotificationRef = doc(collection(artistUserRef, 'notifications'));
+        const artistNotificationRef = doc(firestoreCollection(artistUserRef, 'notifications'));
         const notification: Omit<Notification, 'id'> = {
             message: `Your artwork "${artworkData.title}" has been evaluated and is now active.`,
             timestamp: new Date().toISOString(),
