@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Artist, Fractal, ArtworkSize } from '@/lib/data';
@@ -21,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/auth-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from './ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 
 
