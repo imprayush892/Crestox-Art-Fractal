@@ -14,7 +14,7 @@ import { FractalCard } from '@/components/fractal-card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { format } from 'date-fns';
-import { Star, ChevronLeft, ChevronRight, Edit, Flag, Loader2 } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Edit, Flag, Loader2, Clock } from 'lucide-react';
 import React, { useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ import { useAuth } from '@/context/auth-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from './ui/textarea';
+import { notFound } from 'next/navigation';
 
 
 const iconVariants = {
@@ -66,8 +67,12 @@ const formatSize = (size: ArtworkSize) => {
 };
 
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
-  const { isAdmin, updateFractalPriceAsAdmin, flagArtwork } = useAuth();
+  const { user, isAdmin, updateFractalPriceAsAdmin, flagArtwork } = useAuth();
   const { toast } = useToast();
+  
+  if (fractal.status === 'pending_review' && !isAdmin && user?.uid !== artist?.userId) {
+      notFound();
+  }
   
   const [currentIndex, setCurrentIndex] = useState(
     fractal.images.indexOf(fractal.heroImage) > -1 ? fractal.images.indexOf(fractal.heroImage) : 0
@@ -135,10 +140,17 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
               priority
               key={currentIndex}
             />
-            {fractal.crestoxGrade && (
+            {fractal.crestoxGrade && fractal.status === 'active' && (
                 <Badge variant="secondary" className="absolute top-4 right-4 text-base py-1 px-3 shadow-lg">
                     <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Star className="w-4 h-4 text-yellow-400 fill-yellow-400" /></motion.div>
                     Crestox Grade: {fractal.crestoxGrade}
+                </Badge>
+            )}
+
+            {fractal.status === 'pending_review' && (
+                 <Badge variant="destructive" className="absolute top-4 right-4 text-base py-1 px-3 shadow-lg">
+                    <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Clock className="w-4 h-4" /></motion.div>
+                    Pending Review
                 </Badge>
             )}
 
@@ -247,9 +259,15 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
               </div>
             )}
 
-            <div className="text-4xl font-bold text-primary mt-6">
-                ₹{fractal.price.toLocaleString()}
-            </div>
+            {fractal.status === 'pending_review' ? (
+                <div className="text-2xl font-bold text-muted-foreground mt-6">
+                    Valuation Pending
+                </div>
+            ) : (
+                <div className="text-4xl font-bold text-primary mt-6">
+                    ₹{fractal.price.toLocaleString()}
+                </div>
+            )}
             <p className="text-sm text-muted-foreground">Artwork valuation</p>
 
             <p className="text-lg text-muted-foreground mt-4">{fractal.description}</p>
@@ -278,7 +296,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
               </Accordion>
             )}
 
-            {artist && !isAdmin && (
+            {artist && !isAdmin && fractal.status === 'active' && (
                 <div className="mt-6 border-t pt-6">
                     <Button size="lg" className="w-full" asChild>
                         <Link href={`/artist/${artist.id}`}>

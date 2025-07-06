@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, Wand2, AlertTriangle } from 'lucide-react';
+import { DollarSign, Eye, ImageIcon, Layers, Palette, Settings, Tag, TrendingUp, UserPlus, Wand2, AlertTriangle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { ArtistSettingsForm } from '@/components/artist-settings-form';
 import { SafeImage as Image } from '@/components/ui/safe-image';
@@ -203,7 +203,7 @@ export function PortfolioClient() {
                                   <TableHead className="w-[80px] hidden md:table-cell">Image</TableHead>
                                   <TableHead>Artwork</TableHead>
                                   <TableHead>Valuation</TableHead>
-                                  <TableHead>Crestox Grade</TableHead>
+                                  <TableHead>Status</TableHead>
                                   <TableHead className="text-right">Actions</TableHead>
                               </TableRow>
                           </TableHeader>
@@ -214,9 +214,18 @@ export function PortfolioClient() {
                                           <Image src={fractal.heroImage} alt={fractal.title} width={40} height={40} className="rounded-md object-cover" />
                                       </TableCell>
                                       <TableCell className="font-medium">{fractal.title}</TableCell>
-                                      <TableCell>₹{fractal.price.toLocaleString()}</TableCell>
                                       <TableCell>
-                                        {fractal.crestoxGrade ? (
+                                        {fractal.status === 'pending_review' ? (
+                                            <span className="text-muted-foreground italic">To be decided</span>
+                                        ) : `₹${fractal.price.toLocaleString()}`}
+                                      </TableCell>
+                                      <TableCell>
+                                        {fractal.status === 'pending_review' ? (
+                                             <Badge variant="destructive" className="flex items-center gap-1.5">
+                                                <Clock className="h-3 w-3"/>
+                                                Pending Review
+                                            </Badge>
+                                        ) : fractal.crestoxGrade ? (
                                             <Button variant="ghost" size="sm" className="p-1 h-auto" onClick={() => setSelectedFractal(fractal)}>
                                                 <Badge variant="secondary">{fractal.crestoxGrade}</Badge>
                                             </Button>

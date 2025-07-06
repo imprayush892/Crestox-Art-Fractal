@@ -36,11 +36,11 @@ export interface PreviouslySoldArtwork {
 }
 
 export interface Notification {
-  id: string;
+  id:string;
   message: string;
   timestamp: string; // ISO string
   read: boolean;
-  type: 'artwork_flagged' | 'content_flagged' | 'artwork_unflagged' | 'content_unflagged';
+  type: 'artwork_flagged' | 'content_flagged' | 'artwork_unflagged' | 'content_unflagged' | 'manual_valuation_request' | 'manual_valuation_completed';
   relatedContent: {
     title: string; // e.g., Artwork title or "Your award image"
     url: string; // e.g., link to fractal detail page or artist page
@@ -90,6 +90,7 @@ export interface Fractal {
   height: number;
   price: number; // This is Vi
   priceHistory: { date: string; price: number }[];
+  status?: 'active' | 'pending_review';
   editions?: number;
   editionsAvailable?: number;
   aiScore?: number; // This is Si
@@ -438,6 +439,7 @@ const tempFractals: Omit<Fractal, 'priceHistory'>[] = (() => {
             editionsAvailable: randomInt(0, editions),
             aiScore,
             crestoxGrade,
+            status: 'active' as const,
             artistMinEstimate: Math.round(price * 0.8),
             artistMaxEstimate: Math.round(price * 1.2),
             subjectSignificance: 'This piece explores the intersection of nature and technology.',
@@ -487,4 +489,5 @@ export const artists: Artist[] = finalArtists;
 
 
     
+
 

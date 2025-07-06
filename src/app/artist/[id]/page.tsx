@@ -1,3 +1,4 @@
+
 'use client';
 
 import { notFound, useParams } from 'next/navigation';
@@ -17,7 +18,7 @@ export default function ArtistProfilePage() {
   }
   
   const artistFractals = useMemo(() => {
-    return fractals.filter(f => f.artistId === artist.id);
+    return fractals.filter(f => f.artistId === artist.id && f.status !== 'pending_review');
   }, [artist.id, fractals]);
 
   return (

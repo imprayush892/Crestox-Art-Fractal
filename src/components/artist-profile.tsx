@@ -215,6 +215,8 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
   const isWatched = watchlist.includes(artist.id);
 
   const availablePercentage = artist.totalEditions > 0 ? (artist.availableEditions / artist.totalEditions) * 100 : 0;
+  
+  const activeArtworks = useMemo(() => artistFractals.filter(f => f.status !== 'pending_review'), [artistFractals]);
 
   const isCollectible = useMemo(() => {
     if (isOwnProfile) return false;
@@ -294,7 +296,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
 
   const portfolioSnapshotData = useMemo(() => {
     const grades = ['AAA', 'AA', 'A+', 'A', 'A-'];
-    const snapshot = artistFractals.reduce((acc, fractal) => {
+    const snapshot = activeArtworks.reduce((acc, fractal) => {
         if (fractal.crestoxGrade) {
             acc[fractal.crestoxGrade] = (acc[fractal.crestoxGrade] || 0) + 1;
         }
@@ -305,7 +307,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
         grade,
         count: snapshot[grade] || 0,
     })).filter(item => item.count > 0);
-  }, [artistFractals]);
+  }, [activeArtworks]);
 
 
   return (
@@ -462,13 +464,13 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
         </TabsList>
         <TabsContent value="artworks" className="mt-6">
             <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8">
-                {artistFractals.map((fractal) => (
+                {activeArtworks.map((fractal) => (
                     <div key={fractal.id} className="break-inside-avoid mb-8">
                         <FractalCard fractal={fractal} artist={artist} />
                     </div>
                 ))}
             </div>
-            {artistFractals.length === 0 && (
+            {activeArtworks.length === 0 && (
                 <div className="text-center py-16 text-muted-foreground">
                     This artist has not listed any artworks yet.
                 </div>

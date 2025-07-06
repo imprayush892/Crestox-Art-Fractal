@@ -37,7 +37,7 @@ export function ExploreTool({ fractals, artists }: ExploreToolProps) {
   const artistsMap = useMemo(() => new Map(artists.map(a => [a.id, a])), [artists]);
 
   const filteredAndSortedFractals = useMemo(() => {
-    let filtered = [...fractals];
+    let filtered = fractals.filter(f => f.status !== 'pending_review');
 
     if (searchTerm) {
       const lowercasedTerm = searchTerm.toLowerCase();
