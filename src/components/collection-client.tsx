@@ -271,26 +271,28 @@ export function CollectionClient() {
       )}
 
       <Tabs defaultValue="holdings" className="mt-8">
-            <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
-                <TabsTrigger value="holdings">
-                    <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
-                        <Package className="h-4 w-4" />
-                    </motion.div>
-                    My Holdings
-                </TabsTrigger>
-                <TabsTrigger value="listed">
-                    <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
-                        <Store className="h-4 w-4" />
-                    </motion.div>
-                    Listed for Sale
-                </TabsTrigger>
-                <TabsTrigger value="watchlist">
-                    <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
-                        <Eye className="h-4 w-4" />
-                    </motion.div>
-                    Watchlist
-                </TabsTrigger>
-            </TabsList>
+            <div className="w-full overflow-x-auto pb-2 -mx-1">
+                <TabsList className="gap-1 w-max px-1">
+                    <TabsTrigger value="holdings">
+                        <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
+                            <Package className="h-4 w-4" />
+                        </motion.div>
+                        My Holdings
+                    </TabsTrigger>
+                    <TabsTrigger value="listed">
+                        <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
+                            <Store className="h-4 w-4" />
+                        </motion.div>
+                        Listed for Sale
+                    </TabsTrigger>
+                    <TabsTrigger value="watchlist">
+                        <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
+                            <Eye className="h-4 w-4" />
+                        </motion.div>
+                        Watchlist
+                    </TabsTrigger>
+                </TabsList>
+            </div>
             
             <TabsContent value="holdings" className="mt-6">
                 {isCollectionLoading ? (
