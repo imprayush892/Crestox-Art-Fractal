@@ -1,22 +1,35 @@
-
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow public read access for specific folders containing public assets.
-    match /founders/{imageName} {
-      allow read;
-      allow write: if request.auth != null; // Keep writes restricted
+    
+    function isAdmin() {
+      // IMPORTANT: Replace with your admin email
+      return request.auth.token.email == 'admin@example.com';
     }
-
+  
+    // Allow public read on all files
+    allow read: if true;
+    
+    // Users can write to their own designated folders
+    match /avatars/{userId}/{fileName} {
+      allow write: if request.auth.uid == userId || isAdmin();
+    }
+    match /achievements/{userId}/{allPaths=**} {
+      allow write: if request.auth.uid == userId || isAdmin();
+    }
+    match /artworks/{userId}/{allPaths=**} {
+      allow write: if request.auth.uid == userId || isAdmin();
+    }
+     match /previouslySold/{userId}/{allPaths=**} {
+      allow write: if request.auth.uid == userId || isAdmin();
+    }
+    
+    // Admin can write to public/founder folders
     match /public/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null; // Keep writes restricted
+      allow write: if isAdmin();
     }
-
-    // All other paths require authentication to be read or written.
-    // This is a secure default for user-specific files.
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+    match /founders/{allPaths=**} {
+      allow write: if isAdmin();
     }
   }
 }

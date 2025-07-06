@@ -1,131 +1,50 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Helper Functions ---
-    function isAuthenticated() {
-      return request.auth != null;
+    
+    function isAdmin() {
+      // IMPORTANT: Replace with your actual admin email address
+      return request.auth.token.email == 'admin@example.com';
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    // Users can read public data, but only manage their own private data
+    match /users/{userId} {
+      allow read: if true; // Public user data is readable
+      allow write: if request.auth.uid == userId || isAdmin();
     }
-
-    // This function checks if a non-owner update on a user document
-    // is a valid seller payout from a transaction. It uses a blacklist approach
-    // to ensure sensitive fields are not changed, while allowing transactional fields to update.
-    function isSellerPayout() {
-      let before = resource.data;
-      let after = request.resource.data;
-
-      // Ensure sensitive fields are unchanged
-      let isSensitiveDataSafe = before.email == after.email &&
-                                before.firstName == after.firstName &&
-                                before.lastName == after.lastName;
-
-      // Ensure wallet balance only increases
-      let isBalanceCorrect = after.walletBalance >= before.walletBalance;
-
-      return isAuthenticated() && isSensitiveDataSafe && isBalanceCorrect;
+    
+    match /users/{userId}/holdings/{holdingId} {
+      allow read: if request.auth.uid == userId || isAdmin();
+      allow write: if request.auth.uid == userId || isAdmin();
     }
-
-    // This function checks if a non-owner update on a resale listing
-    // is a valid purchase transaction.
-    function isValidListingUpdate() {
-        let before = resource.data;
-        let after = request.resource.data;
-
-        // Core data must not change
-        let coreDataUnchanged = before.artistId == after.artistId &&
-                                before.resellerId == after.resellerId &&
-                                before.initialPrice == after.initialPrice &&
-                                before.minPrice == after.minPrice &&
-                                before.periodSeconds == after.periodSeconds;
-
-        // Transactional data must change correctly
-        let quantityDecreased = after.quantity < before.quantity;
-        let holdingsDecreased = after.holdingIds.size() < before.holdingIds.size();
-        let statusValid = (after.status == 'active' && quantityDecreased) || 
-                          (after.status == 'completed' && after.quantity == 0);
-
-        return isAuthenticated() &&
-               coreDataUnchanged &&
-               statusValid &&
-               holdingsDecreased;
+    
+    match /users/{userId}/privateHoldings/{holdingId} {
+       allow read, write: if request.auth.uid == userId || isAdmin();
     }
-
-    // This function checks if a non-owner update on an artist document
-    // is a valid transactional financial update.
-    function isArtistFinancialUpdate() {
-      let before = resource.data;
-      let after = request.resource.data;
-      
-      // Ensure artist identity fields are not changed by a transaction
-      return before.userId == after.userId &&
-             before.name == after.name &&
-             before.avatar == after.avatar &&
-             before.bio == after.bio;
-    }
-
-
-    // --- Collection Group Rules ---
-    // This allows the "Collectors" tab query to work.
-    match /{path=**}/holdings/{holdingId} {
-      allow read: if isAuthenticated();
-    }
-
-    // --- Public Collections ---
+    
+    // Artists can be read by anyone, but only updated by their owner or admin
     match /artists/{artistId} {
-      allow get, list: if true;
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      // Allow artist to update their own profile, or allow a transaction to update financial fields.
-      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isArtistFinancialUpdate());
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if (resource.data.userId == request.auth.uid) || isAdmin();
+      allow delete: if isAdmin();
     }
 
+    // Fractals can be read by anyone, but writes are restricted.
     match /fractals/{fractalId} {
       allow read: if true;
-      // Allow updates during transactions by any authenticated user.
-      allow create, update: if isAuthenticated();
+      // Writes are complex and handled by server-side logic (transactions in auth-context).
+      // This rule allows authenticated users (running the server action) and admins to write.
+      allow write: if request.auth != null || isAdmin();
     }
-
+    
+    // Resale listings can be read by anyone. Writes are restricted.
     match /resaleListings/{listingId} {
-      allow read: if true;
-      allow create: if isAuthenticated() && isOwner(request.resource.data.resellerId);
-      // Allow updates only under specific, secure conditions
-      allow update: if 
-        // Allow the owner to cancel the listing
-        (isOwner(resource.data.resellerId) && request.resource.data.status == 'cancelled') ||
-        // Allow a buyer to update the listing during a purchase
-        isValidListingUpdate();
-    }
-
-    // --- User Data ---
-    match /users/{userId} {
-      allow get: if isAuthenticated();
-      // NOTE: list permission is required for the app to find user profiles by ID.
-      allow list: if isAuthenticated(); 
-      allow create: if isOwner(userId);
-      // Allow user to update their own data, or allow a transaction to update a seller's data.
-      allow update: if isOwner(userId) || isSellerPayout();
-
-      // --- User-Specific Subcollections ---
-      match /holdings/{holdingId} {
-        allow get: if isAuthenticated(); 
-        allow list: if isOwner(userId);
-        allow create, update: if isOwner(userId);
-        // NOTE: Permissive delete is required for the client-side transaction to transfer holdings.
-        allow delete: if isAuthenticated();
-      }
-      
-      match /privateHoldings/{holdingId} {
-        allow read, list, create, update: if isOwner(userId);
-        // NOTE: Permissive delete is required for the client-side transaction. The data is private and cannot be read.
-        allow delete: if isAuthenticated();
-      }
+        allow read: if true;
+        allow create: if request.auth.uid == request.resource.data.resellerId || isAdmin();
+        allow update: if request.auth.uid == resource.data.resellerId || isAdmin();
+        allow delete: if isAdmin();
     }
   }
 }
-
-    
