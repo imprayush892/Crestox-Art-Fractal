@@ -94,7 +94,7 @@ export function PortfolioClient() {
         </div>
 
         <Tabs defaultValue="overview">
-          <div className="w-full overflow-x-auto pb-2 flex justify-center">
+          <div className="w-full overflow-x-auto pb-2">
             <TabsList className="w-max">
               <TabsTrigger value="overview"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><TrendingUp /></motion.div> Overview</TabsTrigger>
               <TabsTrigger value="artworks"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Palette /></motion.div> My Artworks</TabsTrigger>
