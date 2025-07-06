@@ -271,8 +271,8 @@ export function CollectionClient() {
       )}
 
       <Tabs defaultValue="holdings" className="mt-8">
-            <div className="w-full overflow-x-auto pb-2 -mx-1">
-                <TabsList className="gap-1 w-max px-1">
+            <div className="w-full overflow-x-auto pb-2">
+                <TabsList className="gap-1 w-max">
                     <TabsTrigger value="holdings">
                         <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
                             <Package className="h-4 w-4" />

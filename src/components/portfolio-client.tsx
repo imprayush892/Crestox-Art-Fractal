@@ -94,20 +94,22 @@ export function PortfolioClient() {
         </div>
 
         <Tabs defaultValue="overview">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
-            <TabsTrigger value="overview"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><TrendingUp /></motion.div> Overview</TabsTrigger>
-            <TabsTrigger value="artworks"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Palette /></motion.div> My Artworks</TabsTrigger>
-            <TabsTrigger value="settings" className="relative">
-              <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Settings /></motion.div>
-              Profile Settings
-              {needsArtistMessage && (
-                <span className="absolute top-1 right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto pb-2">
+            <TabsList className="w-max">
+              <TabsTrigger value="overview"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><TrendingUp /></motion.div> Overview</TabsTrigger>
+              <TabsTrigger value="artworks"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Palette /></motion.div> My Artworks</TabsTrigger>
+              <TabsTrigger value="settings" className="relative">
+                <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Settings /></motion.div>
+                Profile Settings
+                {needsArtistMessage && (
+                  <span className="absolute top-1 right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
           <TabsContent value="overview" className="mt-6 space-y-6">
             <Card>

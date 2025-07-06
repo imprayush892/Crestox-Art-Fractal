@@ -70,7 +70,8 @@ function ProfilePageContent() {
 
         <Tabs defaultValue={defaultView} className="w-full">
             <div className="flex justify-center mb-8">
-                <TabsList className="grid w-full max-w-sm grid-cols-2">
+              <div className="w-full max-w-sm overflow-x-auto pb-2">
+                <TabsList className="w-max min-w-full grid grid-cols-2">
                     <TabsTrigger value="collection">
                         <motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2">
                           <Package className="h-4 w-4" />
@@ -84,6 +85,7 @@ function ProfilePageContent() {
                         My Portfolio
                     </TabsTrigger>
                 </TabsList>
+              </div>
             </div>
 
             <TabsContent value="collection">

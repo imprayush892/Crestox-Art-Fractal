@@ -271,8 +271,8 @@ export default function DonatePage() {
         </div>
 
         <Tabs defaultValue="what-why-how" className="w-full">
-            <div className="w-full overflow-x-auto pb-2 -mx-1">
-                <TabsList className="gap-1 w-max px-1">
+            <div className="w-full overflow-x-auto pb-2">
+                <TabsList className="gap-1 w-max">
                     <TabsTrigger value="what-why-how">Crestox</TabsTrigger>
                     <TabsTrigger value="partners">Founding Partners</TabsTrigger>
                     <TabsTrigger value="advisory">Advisory Board</TabsTrigger>
