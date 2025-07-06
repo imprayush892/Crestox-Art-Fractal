@@ -44,6 +44,7 @@ interface AuthContextType {
   isLoading: boolean;
   isCollectionLoading: boolean;
   isArtist: boolean;
+  isAdmin: boolean;
   artists: Artist[];
   fractals: Fractal[];
   collection: OwnedFractal[];
@@ -64,6 +65,9 @@ interface AuthContextType {
   updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
   reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
   getCollectorsForArtist: (artistId: string) => Promise<CollectorInfo[]>;
+  updateFractalPriceAsAdmin: (fractalId: string, newPrice: number) => Promise<void>;
+  flagArtwork: (fractalId: string, flag: boolean) => Promise<void>;
+  flagArtistContent: (artistId: string, imageUrl: string, flag: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -99,6 +103,7 @@ const sanitizeArtist = (artist: Artist): Artist => ({
 export function AuthProvider({ children, initialArtists, initialFractals }: { children: ReactNode, initialArtists: Artist[], initialFractals: Fractal[] }) {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCollectionLoading, setIsCollectionLoading] = useState(true);
@@ -120,6 +125,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       unsubscribeHoldings();
       unsubscribeAllUsers();
       
+      setIsAdmin(firebaseUser?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL);
+
       if (firebaseUser) {
         setIsLoading(true);
         setIsCollectionLoading(true);
@@ -989,6 +996,33 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     }
   };
 
+  const updateFractalPriceAsAdmin = async (fractalId: string, newPrice: number) => {
+    if (!isAdmin) throw new Error("Unauthorized");
+    const fractalRef = doc(db, "fractals", fractalId);
+    await updateDoc(fractalRef, {
+        price: newPrice,
+        priceHistory: arrayUnion({ date: new Date().toISOString(), price: newPrice }),
+    });
+    toast({ title: "Price Updated" });
+  };
+
+  const flagArtwork = async (fractalId: string, flag: boolean) => {
+      if (!isAdmin) throw new Error("Unauthorized");
+      const fractalRef = doc(db, "fractals", fractalId);
+      await updateDoc(fractalRef, { isFlagged: flag });
+      toast({ title: flag ? "Artwork Flagged" : "Artwork Unflagged" });
+  };
+
+  const flagArtistContent = async (artistId: string, imageUrl: string, flag: boolean) => {
+      if (!isAdmin) throw new Error("Unauthorized");
+      const artistRef = doc(db, "artists", artistId);
+      await updateDoc(artistRef, {
+          flaggedImageUrls: flag ? arrayUnion(imageUrl) : arrayRemove(imageUrl),
+      });
+      toast({ title: flag ? "Image Flagged" : "Image Unflagged" });
+  };
+
+
   const contextValue: AuthContextType = {
     user,
     artistProfile,
@@ -997,6 +1031,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     isLoading,
     isCollectionLoading,
     isArtist: !!artistProfile,
+    isAdmin,
     artists,
     fractals,
     collection,
@@ -1017,6 +1052,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     updateArtworkDetails,
     reevaluateArtworkForGrading,
     getCollectorsForArtist,
+    updateFractalPriceAsAdmin,
+    flagArtwork,
+    flagArtistContent,
   };
   
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

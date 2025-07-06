@@ -7,16 +7,23 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { FractalCard } from '@/components/fractal-card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { format } from 'date-fns';
-import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Edit, Flag, Loader2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/context/auth-context';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from './ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+
 
 const iconVariants = {
   hidden: { scale: 0.5, opacity: 0, rotate: -30 },
@@ -59,9 +66,20 @@ const formatSize = (size: ArtworkSize) => {
 };
 
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
+  const { isAdmin, updateFractalPriceAsAdmin, flagArtwork } = useAuth();
+  const { toast } = useToast();
+  
   const [currentIndex, setCurrentIndex] = useState(
     fractal.images.indexOf(fractal.heroImage) > -1 ? fractal.images.indexOf(fractal.heroImage) : 0
   );
+  
+  const [isPriceDialogOpen, setIsPriceDialogOpen] = useState(false);
+  const [newPrice, setNewPrice] = useState<string>(fractal.price.toString());
+  const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
+
+  const [isFlagConfirmOpen, setIsFlagConfirmOpen] = useState(false);
+  const [isFlagging, setIsFlagging] = useState(false);
+
 
   const handlePrev = () => setCurrentIndex((prev) => (prev === 0 ? fractal.images.length - 1 : prev - 1));
   const handleNext = () => setCurrentIndex((prev) => (prev === fractal.images.length - 1 ? 0 : prev + 1));
@@ -69,6 +87,32 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
   const artworkValueHistory = fractal.priceHistory.map(p => ({ date: p.date, value: p.price }));
   const hasContext = fractal.subjectSignificance || fractal.personalSignificance || fractal.timeEffort || fractal.biographicalContext || fractal.commissionPatronage;
   const formattedSize = formatSize(fractal.artworkSize);
+
+  const handleUpdatePrice = async () => {
+    setIsUpdatingPrice(true);
+    try {
+        await updateFractalPriceAsAdmin(fractal.id, Number(newPrice));
+        toast({ title: "Price Updated", description: `Price for "${fractal.title}" has been updated.`});
+        setIsPriceDialogOpen(false);
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: "Update Failed", description: error.message });
+    } finally {
+        setIsUpdatingPrice(false);
+    }
+  };
+
+  const handleFlagToggle = async () => {
+    setIsFlagging(true);
+    try {
+        await flagArtwork(fractal.id, !fractal.isFlagged);
+        toast({ title: `Artwork ${fractal.isFlagged ? 'Unflagged' : 'Flagged'}`});
+        setIsFlagConfirmOpen(false);
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: "Action Failed", description: error.message });
+    } finally {
+        setIsFlagging(false);
+    }
+  };
 
   return (
     <>
@@ -80,7 +124,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
               alt={fractal.title}
               width={fractal.width}
               height={fractal.height}
-              className="w-full h-auto object-cover transition-opacity duration-300"
+              className={cn("w-full h-auto object-cover transition-opacity duration-300", fractal.isFlagged && "opacity-50 grayscale")}
               data-ai-hint={fractal.aiHint}
               priority
               key={currentIndex}
@@ -91,6 +135,16 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                     Crestox Grade: {fractal.crestoxGrade}
                 </Badge>
             )}
+
+            {fractal.isFlagged && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <div className="flex items-center gap-2 text-white bg-destructive/80 p-4 rounded-lg">
+                        <Flag className="h-8 w-8" />
+                        <span className="text-xl font-bold">FLAGGED FOR REVIEW</span>
+                    </div>
+                </div>
+            )}
+
 
             {fractal.images.length > 1 && (
                 <>
@@ -218,7 +272,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
               </Accordion>
             )}
 
-            {artist && (
+            {artist && !isAdmin && (
                 <div className="mt-6 border-t pt-6">
                     <Button size="lg" className="w-full" asChild>
                         <Link href={`/artist/${artist.id}`}>
@@ -227,6 +281,21 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                     </Button>
                      <p className="text-center text-xs text-muted-foreground mt-2">Collect a fractal from this artist's entire collection.</p>
                 </div>
+            )}
+            
+            {isAdmin && (
+              <Card className="mt-6 border-yellow-500/50">
+                <CardHeader>
+                  <CardTitle>Admin Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2">
+                    <Button onClick={() => setIsPriceDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit Price</Button>
+                    <Button variant={fractal.isFlagged ? "destructive" : "outline"} onClick={() => setIsFlagConfirmOpen(true)}>
+                        <Flag className="mr-2 h-4 w-4" />
+                        {fractal.isFlagged ? 'Unflag Artwork' : 'Flag Artwork'}
+                    </Button>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
@@ -244,6 +313,45 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
             </div>
           </div>
       )}
+
+      {/* Admin Dialogs */}
+      <Dialog open={isPriceDialogOpen} onOpenChange={setIsPriceDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Edit Artwork Price</DialogTitle>
+                  <DialogDescription>Manually set a new price for "{fractal.title}". This action will be recorded.</DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                  <Label htmlFor="new-price">New Price (₹)</Label>
+                  <Input id="new-price" type="number" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} />
+              </div>
+              <DialogFooter>
+                  <Button variant="ghost" onClick={() => setIsPriceDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleUpdatePrice} disabled={isUpdatingPrice}>
+                      {isUpdatingPrice && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Update Price
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+      <AlertDialog open={isFlagConfirmOpen} onOpenChange={setIsFlagConfirmOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      You are about to {fractal.isFlagged ? 'unflag' : 'flag'} this artwork. This will change its visibility and status on the platform.
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleFlagToggle} disabled={isFlagging}>
+                      {isFlagging && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Confirm
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
+
     </>
   );
 }

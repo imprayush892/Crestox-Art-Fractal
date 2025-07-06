@@ -28,24 +28,28 @@ const iconVariants = {
 
 
 function ProfilePageContent() {
-  const { isLoggedIn, isLoading } = useAuth();
+  const { isLoggedIn, isLoading, isAdmin } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultView = searchParams.get('view') === 'portfolio' ? 'portfolio' : 'collection';
 
 
   useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      router.push('/login?redirect=/profile');
+    if (!isLoading) {
+      if (isAdmin) {
+        router.push('/explore');
+      } else if (!isLoggedIn) {
+        router.push('/login?redirect=/profile');
+      }
     }
-  }, [isLoading, isLoggedIn, router]);
+  }, [isLoading, isLoggedIn, isAdmin, router]);
 
-  if (isLoading) {
+  if (isLoading || isAdmin) {
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
             <div className="flex flex-col items-center gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-muted-foreground">Loading Your Profile...</p>
+                <p className="text-muted-foreground">Loading Profile...</p>
             </div>
         </div>
     );

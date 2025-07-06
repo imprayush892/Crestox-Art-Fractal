@@ -2,7 +2,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, User, X, Wallet, Loader2 } from 'lucide-react';
+import { Menu, User, X, Wallet, Loader2, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -45,7 +45,7 @@ const getPublicUrl = (path: string) => {
 const monogramUrl = getPublicUrl('public/assets/crestox-monogram.png');
 
 export function Header() {
-  const { user, isLoggedIn, logout, artistProfile, isLoading } = useAuth();
+  const { user, isLoggedIn, logout, artistProfile, isLoading, isAdmin } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
@@ -77,9 +77,14 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
-            {isLoggedIn && (
+            {isLoggedIn && !isAdmin && (
               <Link href={profileLink.href} className="transition-colors text-foreground/60 hover:text-primary">
                 {profileLink.label}
+              </Link>
+            )}
+            {isAdmin && (
+               <Link href="/explore" className="transition-colors text-primary font-semibold hover:text-primary/80 flex items-center gap-2">
+                <Shield className="h-4 w-4" /> Admin Mode
               </Link>
             )}
              <Link href="/donate" className="transition-colors text-foreground/60 hover:text-primary">
@@ -92,11 +97,13 @@ export function Header() {
                 <Loader2 className="w-5 h-5 animate-spin"/>
             ) : isLoggedIn && user ? (
               <>
-                <div className="flex items-center gap-2">
-                    <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wallet className="w-5 h-5 text-primary"/></motion.div>
-                    <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')}</span>
-                    <span className="text-sm text-muted-foreground">CreCoins</span>
-                </div>
+                {!isAdmin && (
+                  <div className="flex items-center gap-2">
+                      <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wallet className="w-5 h-5 text-primary"/></motion.div>
+                      <span className="font-semibold">{user.walletBalance.toLocaleString('en-IN')}</span>
+                      <span className="text-sm text-muted-foreground">CreCoins</span>
+                  </div>
+                )}
                 <Button onClick={handleLogout} variant="secondary">Logout</Button>
                 <Avatar>
                   <AvatarImage src={artistProfile?.avatar} alt="User" data-ai-hint="user avatar" />
@@ -147,9 +154,14 @@ export function Header() {
                       {link.label}
                     </Link>
                   ))}
-                  {isLoggedIn && (
+                  {isLoggedIn && !isAdmin && (
                     <Link href={profileLink.href} onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
                       {profileLink.label}
+                    </Link>
+                  )}
+                  {isAdmin && (
+                     <Link href="/explore" onClick={closeMenu} className="text-lg font-medium transition-colors text-primary flex items-center gap-2">
+                       <Shield className="h-5 w-5" /> Admin Mode
                     </Link>
                   )}
                   <Link href="/donate" onClick={closeMenu} className="text-lg font-medium transition-colors hover:text-primary">
@@ -163,10 +175,12 @@ export function Header() {
                     </div>
                  ) : isLoggedIn && user ? (
                     <div className="flex flex-col gap-4">
-                        <div className="flex items-center gap-2 text-lg font-medium">
-                            <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wallet className="w-5 h-5"/></motion.div>
-                            <span>{user.walletBalance.toLocaleString('en-IN')} CreCoins</span>
-                        </div>
+                        {!isAdmin && (
+                          <div className="flex items-center gap-2 text-lg font-medium">
+                              <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wallet className="w-5 h-5"/></motion.div>
+                              <span>{user.walletBalance.toLocaleString('en-IN')} CreCoins</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 font-medium">
                             <Avatar>
                               <AvatarImage src={artistProfile?.avatar} alt="User" data-ai-hint="user avatar" />

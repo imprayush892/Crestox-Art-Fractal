@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap, DollarSign, History, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap, DollarSign, History, ChevronLeft, ChevronRight, Flag } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
@@ -55,9 +55,11 @@ const formatLargeNumber = (value: number): string => {
 
 interface SoldArtworkCardProps {
     artwork: PreviouslySoldArtwork;
+    artist: Artist;
 }
 
-function SoldArtworkCard({ artwork }: SoldArtworkCardProps) {
+function SoldArtworkCard({ artwork, artist }: SoldArtworkCardProps) {
+    const { isAdmin, flagArtistContent } = useAuth();
     const images = [artwork.artworkImage, artwork.proofOfSaleImage];
     const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -73,18 +75,39 @@ function SoldArtworkCard({ artwork }: SoldArtworkCardProps) {
         setCurrentIndex(newIndex);
     };
 
+    const currentImageUrl = images[currentIndex];
+    const isFlagged = artist.flaggedImageUrls?.includes(currentImageUrl);
+
+    const handleFlag = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        flagArtistContent(artist.id, currentImageUrl, !isFlagged);
+    };
+
     return (
         <Card className="overflow-hidden">
             <div className="relative group bg-muted/20">
                 <Image
                     width={500}
                     height={500}
-                    src={images[currentIndex]} 
+                    src={currentImageUrl} 
                     alt={artwork.name} 
-                    className="w-full h-auto transition-opacity duration-300"
+                    className={cn("w-full h-auto transition-opacity duration-300", isFlagged && "opacity-50 grayscale")}
                     data-ai-hint={currentIndex === 0 ? "artwork" : "document proof"}
                     key={`${artwork.name}-${currentIndex}`}
                 />
+                
+                {isFlagged && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <Flag className="h-10 w-10 text-destructive" />
+                  </div>
+                )}
+                
+                {isAdmin && (
+                  <Button size="icon" variant={isFlagged ? 'destructive' : 'secondary'} className="absolute top-2 right-2 h-8 w-8" onClick={handleFlag}>
+                    <Flag className="h-4 w-4" />
+                  </Button>
+                )}
+
 
                 <Button onClick={goToPrevious} size="icon" variant="ghost" className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 text-white hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
                     <motion.div variants={iconVariants} initial="hidden" animate="visible"><ChevronLeft /></motion.div>
@@ -122,7 +145,9 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
     collection,
     watchlist, 
     addToWatchlist, 
-    removeFromWatchlist 
+    removeFromWatchlist,
+    isAdmin,
+    flagArtistContent,
   } = useAuth();
   const router = useRouter();
   const [isCollecting, setIsCollecting] = useState(false);
@@ -510,19 +535,23 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     <CardContent>
                         {artist.awards.length > 0 ? (
                             <div className="columns-1 sm:columns-2 gap-6 space-y-6">
-                                {artist.awards.map((award, i) => (
+                                {artist.awards.map((award, i) => {
+                                  const isFlagged = award.image && artist.flaggedImageUrls?.includes(award.image);
+                                  return (
                                     <div key={i} className="break-inside-avoid">
-                                        <Card className="bg-muted/50 overflow-hidden">
+                                        <Card className="bg-muted/50 overflow-hidden relative group">
                                             {award.image && (
-                                                <div className="border-b">
+                                                <div className="border-b relative">
                                                     <Image 
                                                         src={award.image} 
                                                         alt={`Image for ${award.value}`} 
                                                         width={500}
                                                         height={300}
-                                                        className="w-full h-auto object-cover"
+                                                        className={cn("w-full h-auto object-cover", isFlagged && "opacity-50 grayscale")}
                                                         data-ai-hint="award certificate" 
                                                     />
+                                                    {isFlagged && <div className="absolute inset-0 flex items-center justify-center bg-black/50"><Flag className="h-10 w-10 text-destructive"/></div>}
+                                                    {isAdmin && <Button size="icon" variant={isFlagged ? 'destructive' : 'secondary'} className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100" onClick={() => flagArtistContent(artist.id, award.image!, !isFlagged)}><Flag className="h-4 w-4" /></Button>}
                                                 </div>
                                             )}
                                             <div className="p-4">
@@ -530,7 +559,8 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                             </div>
                                         </Card>
                                     </div>
-                                ))}
+                                  )
+                                })}
                             </div>
                         ) : <p className="text-sm text-muted-foreground">No awards listed.</p>}
                     </CardContent>
@@ -553,18 +583,23 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                         "grid gap-px",
                                                         ex.images.length > 1 ? "grid-cols-2" : "grid-cols-1"
                                                     )}>
-                                                        {ex.images.map((img, imgIdx) => (
-                                                            <div key={imgIdx}>
-                                                                <Image 
-                                                                    src={img} 
-                                                                    alt={`Image for ${ex.value}`} 
-                                                                    width={300} 
-                                                                    height={300} 
-                                                                    className="w-full h-auto object-cover"
-                                                                    data-ai-hint="exhibition photo" 
-                                                                />
-                                                            </div>
-                                                        ))}
+                                                        {ex.images.map((img, imgIdx) => {
+                                                            const isFlagged = artist.flaggedImageUrls?.includes(img);
+                                                            return (
+                                                              <div key={imgIdx} className="relative group">
+                                                                  <Image 
+                                                                      src={img} 
+                                                                      alt={`Image for ${ex.value}`} 
+                                                                      width={300} 
+                                                                      height={300} 
+                                                                      className={cn("w-full h-auto object-cover", isFlagged && "opacity-50 grayscale")}
+                                                                      data-ai-hint="exhibition photo" 
+                                                                  />
+                                                                  {isFlagged && <div className="absolute inset-0 flex items-center justify-center bg-black/50"><Flag className="h-10 w-10 text-destructive"/></div>}
+                                                                  {isAdmin && <Button size="icon" variant={isFlagged ? 'destructive' : 'secondary'} className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100" onClick={() => flagArtistContent(artist.id, img, !isFlagged)}><Flag className="h-4 w-4" /></Button>}
+                                                              </div>
+                                                          )
+                                                        })}
                                                     </div>
                                                 </div>
                                             )}
@@ -590,7 +625,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                     {artist.previouslySoldArtworks && artist.previouslySoldArtworks.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {artist.previouslySoldArtworks.map((artwork, i) => (
-                                <SoldArtworkCard key={i} artwork={artwork} />
+                                <SoldArtworkCard key={i} artwork={artwork} artist={artist} />
                             ))}
                         </div>
                     ) : (

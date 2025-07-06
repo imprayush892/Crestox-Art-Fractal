@@ -61,6 +61,7 @@ export interface Artist {
   kFactor: number;
   totalScoreWeightedValuation: number;
   sumOfScoresSquared: number;
+  flaggedImageUrls?: string[];
 }
 
 export interface Fractal {
@@ -91,6 +92,7 @@ export interface Fractal {
   timeEffort?: string;
   biographicalContext?: string;
   commissionPatronage?: string;
+  isFlagged?: boolean;
 }
 
 // Combined view of a holding for the logged-in user
