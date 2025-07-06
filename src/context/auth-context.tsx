@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup, orderBy } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup, orderBy, collection } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -62,6 +62,8 @@ interface AuthContextType {
   createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
   updateArtistProfile: (profileData: Partial<CreateArtistProfileData>) => Promise<void>;
   addArtwork: (artworkData: ArtworkFormValues, evaluationResult: SuccessfulEvaluation, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
+  requestManualArtworkValuation: (artworkData: ArtworkFormValues) => Promise<void>;
+  submitManualValuationAsAdmin: (artworkId: string, minPrice: number, maxPrice: number, grade: string) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
   reevaluateArtworkForGrading: (fractal: Fractal) => Promise<void>;
@@ -578,6 +580,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             crestoxPriceRange: evaluationResult.evaluation.crestoxPriceRange,
             editions: new_Fi,
             editionsAvailable: new_Fi,
+            status: 'active',
             ...(shouldApplyGrade && { crestoxGrade: evaluationResult.evaluation.grade }),
         };
         
@@ -612,6 +615,134 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       throw error;
     });
   };
+
+  const requestManualArtworkValuation = async (artworkData: ArtworkFormValues) => {
+    if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
+
+    const newFractalId = doc(firestoreCollection(db, 'fractals')).id;
+    const imageUrls = await Promise.all(
+        artworkData.images.map(async (file: File) => {
+            const storageRef = ref(storage, `artworks/${user.uid}/${newFractalId}/${uuidv4()}_${file.name}`);
+            await uploadBytes(storageRef, file);
+            return getDownloadURL(storageRef);
+        })
+    );
+    const heroImageUrl = imageUrls[artworkData.heroImageIndex > -1 ? artworkData.heroImageIndex : 0];
+
+    const { length, breadth, height, unit } = artworkData;
+    const artworkSize = { length, breadth, unit, ...(height && { height }) };
+
+    const newFractalData: Omit<Fractal, 'id' | 'price' | 'priceHistory'> & { id: string } = {
+        id: newFractalId,
+        artistId: artistProfile.id,
+        title: artworkData.title,
+        description: artworkData.description,
+        materials: artworkData.materials,
+        artworkSize,
+        images: imageUrls,
+        heroImage: heroImageUrl,
+        width: 600, 
+        height: 400,
+        aiHint: 'custom artwork',
+        subjectSignificance: artworkData.subjectSignificance || "",
+        personalSignificance: artworkData.personalSignificance || "",
+        timeEffort: artworkData.timeEffort || "",
+        biographicalContext: artworkData.biographicalContext || "",
+        commissionPatronage: artworkData.commissionPatronage || "",
+        status: 'pending_review',
+    };
+
+    await setDoc(doc(db, "fractals", newFractalId), newFractalData);
+
+    const adminQuery = query(collection(db, 'users'), where('email', '==', process.env.NEXT_PUBLIC_ADMIN_EMAIL));
+    const adminSnap = await getDocs(adminQuery);
+    if (adminSnap.empty) throw new Error("Admin account not found.");
+    const adminId = adminSnap.docs[0].id;
+
+    const notificationRef = doc(collection(db, `users/${adminId}/notifications`));
+    const notification: Omit<Notification, 'id'> = {
+        message: `${artistProfile.name} has submitted an artwork for manual valuation.`,
+        timestamp: new Date().toISOString(),
+        read: false,
+        type: 'manual_valuation_request',
+        relatedContent: {
+            title: `Artwork: ${artworkData.title}`,
+            url: `/portfolio/artwork/edit/${newFractalId}`,
+        }
+    };
+    await setDoc(notificationRef, notification);
+  };
+  
+  const submitManualValuationAsAdmin = async (artworkId: string, minPrice: number, maxPrice: number, grade: string) => {
+    if (!isAdmin) throw new Error("Unauthorized");
+    if (!db) throw new Error("Database not available");
+
+    await runTransaction(db, async (transaction) => {
+        const fractalRef = doc(db, "fractals", artworkId);
+        const fractalSnap = await transaction.get(fractalRef);
+        if (!fractalSnap.exists() || fractalSnap.data().status !== 'pending_review') {
+            throw new Error("Artwork not found or not pending review.");
+        }
+        const artworkData = fractalSnap.data() as Fractal;
+
+        const artistRef = doc(db, "artists", artworkData.artistId);
+        const artistSnap = await transaction.get(artistRef);
+        if (!artistSnap.exists()) throw new Error("Artist profile does not exist.");
+
+        const artistFractalsQuery = query(firestoreCollection(db, "fractals"), where("artistId", "==", artworkData.artistId), where("status", "==", "active"));
+        const existingActiveFractalsSnap = await getDocs(artistFractalsQuery);
+        const existingActiveFractals = existingActiveFractalsSnap.docs.map(doc => doc.data() as Fractal);
+
+        const finalPrice = Math.round((minPrice + maxPrice) / 2);
+        
+        const artworkUpdate = {
+            status: 'active',
+            price: finalPrice,
+            artistMinEstimate: minPrice,
+            artistMaxEstimate: maxPrice,
+            crestoxGrade: grade || null,
+            priceHistory: arrayUnion({ date: new Date().toISOString(), price: finalPrice }),
+        };
+        
+        const newActiveFractal = { ...artworkData, ...artworkUpdate };
+        const allActiveFractals = [...existingActiveFractals, newActiveFractal];
+
+        const V_new = allActiveFractals.reduce((sum, f) => sum + (f.price || 0), 0);
+        const F_new = allActiveFractals.reduce((sum, f) => sum + (f.editions || 0), 0);
+        const sum_SiVi_new = allActiveFractals.reduce((sum, f) => sum + ((f.aiScore || 50) * (f.price || 0)), 0);
+        const sum_S_squared_new = allActiveFractals.reduce((sum, f) => sum + Math.pow(f.aiScore || 50, 2), 0);
+        
+        const k_new = sum_SiVi_new > 0 ? V_new / sum_SiVi_new : 0;
+        const P_new = F_new > 0 ? V_new / F_new : 0;
+
+        transaction.update(fractalRef, artworkUpdate);
+        transaction.update(artistRef, {
+            totalPortfolioValue: V_new,
+            fractalPrice: P_new,
+            totalEditions: F_new,
+            kFactor: k_new,
+            totalScoreWeightedValuation: sum_SiVi_new,
+            sumOfScoresSquared: sum_S_squared_new,
+            priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_new }),
+            totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_new })
+        });
+        
+        const artistUserRef = doc(db, 'users', artistSnap.data().userId);
+        const artistNotificationRef = doc(collection(artistUserRef, 'notifications'));
+        const notification: Omit<Notification, 'id'> = {
+            message: `Your artwork "${artworkData.title}" has been evaluated and is now active.`,
+            timestamp: new Date().toISOString(),
+            read: false,
+            type: 'manual_valuation_completed',
+            relatedContent: {
+                title: `View Artwork: ${artworkData.title}`,
+                url: `/fractal/${artworkId}`,
+            }
+        };
+        transaction.set(artistNotificationRef, notification);
+    });
+  }
+
 
   const updateAndReevaluateArtwork = async (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => {
      if (!db || !artistProfile) throw new Error("Artist profile not found or database not available.");
@@ -1121,6 +1252,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     createArtistProfile,
     updateArtistProfile,
     addArtwork,
+    requestManualArtworkValuation,
+    submitManualValuationAsAdmin,
     updateAndReevaluateArtwork,
     updateArtworkDetails,
     reevaluateArtworkForGrading,

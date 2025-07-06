@@ -57,7 +57,15 @@ type SuccessfulEvaluation = Extract<EvaluationResult, { status: 'success' }>['ev
 
 
 export default function EditArtworkPage() {
-  const { isLoggedIn, artistProfile, fractals, updateAndReevaluateArtwork, updateArtworkDetails } = useAuth();
+  const { 
+    isLoggedIn, 
+    isAdmin,
+    artistProfile, 
+    fractals, 
+    updateAndReevaluateArtwork, 
+    updateArtworkDetails,
+    submitManualValuationAsAdmin
+  } = useAuth();
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -72,6 +80,11 @@ export default function EditArtworkPage() {
   const [manualReviewDetails, setManualReviewDetails] = useState({ concern: '', analysisForEmail: '' });
   const [isScorecardDialogOpen, setIsScorecardDialogOpen] = useState(false);
   const [isManualReviewConfirmDialogOpen, setIsManualReviewConfirmDialogOpen] = useState(false);
+  
+  const [adminMinPrice, setAdminMinPrice] = useState('');
+  const [adminMaxPrice, setAdminMaxPrice] = useState('');
+  const [adminGrade, setAdminGrade] = useState('');
+  const [isSubmittingAdminValuation, setIsSubmittingAdminValuation] = useState(false);
 
   const artworkId = typeof params.id === 'string' ? params.id : '';
   
@@ -84,16 +97,13 @@ export default function EditArtworkPage() {
     if (!isLoggedIn) {
       router.push(`/login?redirect=/portfolio/artwork/edit/${artworkId}`);
     }
-    if (isLoggedIn && !artistProfile) {
-        router.push('/portfolio/create');
-    }
-  }, [isLoggedIn, artistProfile, router, artworkId]);
+  }, [isLoggedIn, router, artworkId]);
 
   useEffect(() => {
-    if (fractals.length > 0 && artworkId && artistProfile) {
+    if (fractals.length > 0 && artworkId) {
       const foundArtwork = fractals.find(f => f.id === artworkId);
       if (foundArtwork) {
-        if (foundArtwork.artistId === artistProfile.id) {
+        if (isAdmin || foundArtwork.artistId === artistProfile?.id) {
           setArtwork(foundArtwork);
           form.reset({
             title: foundArtwork.title,
@@ -120,7 +130,7 @@ export default function EditArtworkPage() {
         notFound();
       }
     }
-  }, [fractals, artworkId, artistProfile, form]);
+  }, [fractals, artworkId, artistProfile, form, isAdmin]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -289,6 +299,33 @@ export default function EditArtworkPage() {
     router.push('/portfolio');
   };
 
+  const handleAdminValuationSubmit = async () => {
+    if (!submitManualValuationAsAdmin || !artwork) return;
+
+    const minPrice = Number(adminMinPrice);
+    const maxPrice = Number(adminMaxPrice);
+
+    if (isNaN(minPrice) || isNaN(maxPrice) || minPrice <= 0 || maxPrice <= minPrice) {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid Price',
+            description: 'Please enter a valid price range.'
+        });
+        return;
+    }
+    
+    setIsSubmittingAdminValuation(true);
+    try {
+      await submitManualValuationAsAdmin(artwork.id, minPrice, maxPrice, adminGrade);
+      toast({ title: "Valuation Submitted", description: "The artwork is now active."});
+      router.push('/explore');
+    } catch(e) {
+      toast({ variant: 'destructive', title: 'Valuation Failed', description: (e as Error).message });
+    } finally {
+      setIsSubmittingAdminValuation(false);
+    }
+  }
+
   if (!artwork) {
     return (
         <div className="container py-12 flex justify-center">
@@ -303,6 +340,8 @@ export default function EditArtworkPage() {
         </div>
     );
   }
+
+  const isPendingAdminReview = artwork?.status === 'pending_review' && isAdmin;
 
   return (
     <>
@@ -369,6 +408,48 @@ export default function EditArtworkPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+
+             {isPendingAdminReview && (
+              <Card className="mb-8 border-yellow-500 bg-yellow-500/10">
+                <CardHeader>
+                  <CardTitle>Admin Manual Valuation</CardTitle>
+                  <CardDescription>This artwork is pending review. Set the price range and grade to make it active.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="adminMinPrice">Min Price (₹)</Label>
+                      <Input id="adminMinPrice" type="number" value={adminMinPrice} onChange={e => setAdminMinPrice(e.target.value)} />
+                    </div>
+                     <div>
+                      <Label htmlFor="adminMaxPrice">Max Price (₹)</Label>
+                      <Input id="adminMaxPrice" type="number" value={adminMaxPrice} onChange={e => setAdminMaxPrice(e.target.value)} />
+                    </div>
+                  </div>
+                   <div>
+                      <Label htmlFor="adminGrade">Crestox Grade (Optional)</Label>
+                       <Select onValueChange={setAdminGrade} value={adminGrade}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AAA">AAA</SelectItem>
+                            <SelectItem value="AA">AA</SelectItem>
+                            <SelectItem value="A+">A+</SelectItem>
+                            <SelectItem value="A">A</SelectItem>
+                            <SelectItem value="A-">A-</SelectItem>
+                          </SelectContent>
+                      </Select>
+                    </div>
+                  <Button onClick={handleAdminValuationSubmit} disabled={isSubmittingAdminValuation}>
+                    {isSubmittingAdminValuation && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Submit Valuation & Activate
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+
             {isEvaluating && (
                 <div className="space-y-4 pt-4 flex flex-col items-center">
                     <Progress value={progress} className="w-full" />

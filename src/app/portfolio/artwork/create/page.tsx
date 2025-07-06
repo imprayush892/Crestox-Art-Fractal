@@ -62,7 +62,7 @@ type ArtworkSubmissionData = {
 
 
 export default function CreateArtworkPage() {
-  const { isLoggedIn, artistProfile, addArtwork, updateArtistProfile } = useAuth();
+  const { isLoggedIn, artistProfile, addArtwork, updateArtistProfile, requestManualArtworkValuation } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -303,34 +303,27 @@ export default function CreateArtworkPage() {
     router.push('/portfolio');
   };
   
-  const handleRequestManualValuation = () => {
-    const data = form.getValues();
-    const evaluation = evaluationResult;
-    if (!data || !evaluation || !artistProfile) return;
-
-    let analysisDetail = `MANUAL VALUATION REQUEST\n\n`;
-    analysisDetail += `Artwork ('${data.title}') has been submitted for manual valuation by the artist.\n\n`;
-    analysisDetail += `--- Provided Artwork Details ---\n`;
-    analysisDetail += `Title: ${data.title}\n`;
-    analysisDetail += `Description: ${data.description}\n`;
-    analysisDetail += `Artist Bio: ${artistProfile.bio}\n\n`;
-    analysisDetail += `--- AI Evaluation Summary ---\n`;
-    analysisDetail += `Final Score: ${evaluation.finalScore}\n`;
-    analysisDetail += `Crestox Grade: ${evaluation.grade}\n`;
-    analysisDetail += `Crestox Price Range: ₹${evaluation.crestoxPriceRange[0]} - ₹${evaluation.crestoxPriceRange[1]}\n`;
-
-    const subject = encodeURIComponent("Manual Valuation Request");
-    const body = encodeURIComponent(analysisDetail);
-    window.location.href = `mailto:Crestox@crestox.com?subject=${subject}&body=${body}`;
-    
+  const handleConfirmManualReviewRequest = async () => {
     setIsManualReviewConfirmDialogOpen(false);
-    toast({
-        title: "Manual Valuation Requested",
-        description: "Your email client has been opened. Please send the email to complete the request.",
-        duration: 8000
-    });
-    router.push('/portfolio');
-};
+    setIsSubmitting(true);
+    try {
+        await requestManualArtworkValuation(form.getValues());
+        toast({
+            title: "Submitted for Manual Review",
+            description: "Your artwork has been submitted. You will be notified once the review is complete."
+        });
+        router.push('/portfolio');
+    } catch (error) {
+        console.error("Error requesting manual valuation:", error);
+        toast({
+            variant: "destructive",
+            title: "Submission Failed",
+            description: error instanceof Error ? error.message : "An unknown error occurred."
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
 
   const handleCancelManualCheck = () => {
     setIsManualReviewDialogOpen(false);
@@ -359,14 +352,19 @@ export default function CreateArtworkPage() {
       <AlertDialog open={isManualReviewConfirmDialogOpen} onOpenChange={setIsManualReviewConfirmDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>Confirm Manual Valuation</AlertDialogTitle>
+                <AlertDialogTitle>Confirm Manual Valuation Request</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Only 3 manual valuations per artwork are free. After that, a small fee will be charged. Are you sure you want to proceed?
+                  This will submit your artwork to the Crestox team for a manual valuation. 
+                  The artwork will be saved as 'pending review' and will not be public until the valuation is complete.
+                  This process may take several business days.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleRequestManualValuation}>Continue</AlertDialogAction>
+                <AlertDialogAction onClick={handleConfirmManualReviewRequest} disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                  Continue
+                </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
