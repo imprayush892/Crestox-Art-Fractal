@@ -455,13 +455,15 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
       </div>
       
       <Tabs defaultValue="artworks" className="mb-12">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
-          <TabsTrigger value="artworks"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Palette /></motion.div>Artworks</TabsTrigger>
-          <TabsTrigger value="analytics"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><TrendingUp /></motion.div>Analytics</TabsTrigger>
-          <TabsTrigger value="achievements"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Award /></motion.div>Achievements</TabsTrigger>
-          <TabsTrigger value="sold"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><History /></motion.div>Previously Sold</TabsTrigger>
-          <TabsTrigger value="collectors"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Users /></motion.div>Collectors</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2 -mx-1">
+          <TabsList className="gap-1 w-max px-1">
+            <TabsTrigger value="artworks"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Palette /></motion.div>Artworks</TabsTrigger>
+            <TabsTrigger value="analytics"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><TrendingUp /></motion.div>Analytics</TabsTrigger>
+            <TabsTrigger value="achievements"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Award /></motion.div>Achievements</TabsTrigger>
+            <TabsTrigger value="sold"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><History /></motion.div>Previously Sold</TabsTrigger>
+            <TabsTrigger value="collectors"><motion.div variants={iconVariants} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mr-2"><Users /></motion.div>Collectors</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="artworks" className="mt-6">
             <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8">
                 {activeArtworks.map((fractal) => (
