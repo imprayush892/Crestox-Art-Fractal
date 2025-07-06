@@ -4,47 +4,51 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isAdmin() {
-      // IMPORTANT: Replace with your actual admin email address
-      return request.auth.token.email == 'admin@example.com';
+      return request.auth.token.email == "crestox@crestox.com";
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    // Users can read public data, but only manage their own private data
-    match /users/{userId} {
-      allow read: if true; // Public user data is readable
-      allow write: if request.auth.uid == userId || isAdmin();
-    }
-    
-    match /users/{userId}/holdings/{holdingId} {
-      allow read: if request.auth.uid == userId || isAdmin();
-      allow write: if request.auth.uid == userId || isAdmin();
-    }
-    
-    match /users/{userId}/privateHoldings/{holdingId} {
-       allow read, write: if request.auth.uid == userId || isAdmin();
-    }
-    
-    // Artists can be read by anyone, but only updated by their owner or admin
+    // Public collections are readable by anyone logged in
     match /artists/{artistId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update: if (resource.data.userId == request.auth.uid) || isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Fractals can be read by anyone, but writes are restricted.
-    match /fractals/{fractalId} {
-      allow read: if true;
-      // Writes are complex and handled by server-side logic (transactions in auth-context).
-      // This rule allows authenticated users (running the server action) and admins to write.
-      allow write: if request.auth != null || isAdmin();
+      allow read: if request.auth != null;
+      // Allow artists to create/update their own profiles
+      allow create, update: if request.auth.uid == resource.data.userId || isAdmin();
     }
     
-    // Resale listings can be read by anyone. Writes are restricted.
+    match /fractals/{fractalId} {
+      allow read: if request.auth != null;
+      // Allow artists to create/update their own fractals
+      allow create, update: if get(/databases/$(database)/documents/artists/$(request.resource.data.artistId)).data.userId == request.auth.uid || isAdmin();
+    }
+    
+    // Users can manage their own data
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      
+      // Holdings can be read and written by the owner
+      match /holdings/{holdingId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+      match /privateHoldings/{holdingId} {
+         allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+    
+    // Resale listings can be read by authenticated users.
+    // They can only be created or updated by the lister.
     match /resaleListings/{listingId} {
-        allow read: if true;
+        allow read: if request.auth != null;
         allow create: if request.auth.uid == request.resource.data.resellerId || isAdmin();
         allow update: if request.auth.uid == resource.data.resellerId || isAdmin();
-        allow delete: if isAdmin();
+    }
+
+    // As a failsafe, admin has full access to everything.
+    // This rule is placed last to be evaluated after more specific rules.
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
   }
 }

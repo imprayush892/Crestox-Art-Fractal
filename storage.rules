@@ -1,35 +1,49 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
     
     function isAdmin() {
-      // IMPORTANT: Replace with your admin email
-      return request.auth.token.email == 'admin@example.com';
-    }
-  
-    // Allow public read on all files
-    allow read: if true;
-    
-    // Users can write to their own designated folders
-    match /avatars/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId || isAdmin();
-    }
-    match /achievements/{userId}/{allPaths=**} {
-      allow write: if request.auth.uid == userId || isAdmin();
-    }
-    match /artworks/{userId}/{allPaths=**} {
-      allow write: if request.auth.uid == userId || isAdmin();
-    }
-     match /previouslySold/{userId}/{allPaths=**} {
-      allow write: if request.auth.uid == userId || isAdmin();
+      return request.auth.token.email == "crestox@crestox.com";
     }
     
-    // Admin can write to public/founder folders
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Public assets are readable by anyone
     match /public/{allPaths=**} {
+      allow read: if true;
       allow write: if isAdmin();
     }
-    match /founders/{allPaths=**} {
-      allow write: if isAdmin();
+    
+    // Avatars can be read by anyone, but only written by the owner or admin
+    match /avatars/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    
+    // Artworks can be read by anyone, but only written by the owner or admin
+    match /artworks/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    
+    // Achievements can be read by anyone, but only written by the owner or admin
+    match /achievements/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // Previously sold art proof can be read by anyone, but only written by the owner or admin
+    match /previouslySold/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // Allow admin full access to any other path as a fallback
+    match /{allPaths=**} {
+      allow read, write: if isAdmin();
     }
   }
 }
