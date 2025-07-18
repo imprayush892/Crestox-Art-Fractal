@@ -21,7 +21,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useAuth } from '@/context/auth-context';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Loader2, Wand2, ArrowLeft, Save, AlertTriangle } from 'lucide-react';
 import type { Fractal } from '@/lib/data';
 import { SafeImage as Image } from '@/components/ui/safe-image';
@@ -58,6 +58,7 @@ type SuccessfulEvaluation = Extract<EvaluationResult, { status: 'success' }>['ev
 
 
 export default function EditArtworkPage() {
+  const params = useParams();
   const { 
     isLoggedIn, 
     isAdmin,
@@ -68,11 +69,18 @@ export default function EditArtworkPage() {
     submitManualValuationAsAdmin,
     requestManualReevaluation,
   } = useAuth();
+  
+  const artworkId = typeof params.id === 'string' ? params.id : '';
+  const artwork = useMemo(() => fractals.find(f => f.id === artworkId), [fractals, artworkId]);
+
+  // Early exit if artwork not found or user is not authorized
+  if (!artwork || (!isAdmin && artwork.artistId !== artistProfile?.id)) {
+    notFound();
+  }
+
   const router = useRouter();
-  const params = useParams();
   const { toast } = useToast();
 
-  const [artwork, setArtwork] = useState<Fractal | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -86,12 +94,28 @@ export default function EditArtworkPage() {
   const [adminMaxPrice, setAdminMaxPrice] = useState('');
   const [adminGrade, setAdminGrade] = useState('');
   const [isSubmittingAdminValuation, setIsSubmittingAdminValuation] = useState(false);
-
-  const artworkId = typeof params.id === 'string' ? params.id : '';
   
   const form = useForm<EditArtworkFormValues>({
     resolver: zodResolver(editArtworkFormSchema),
     mode: "onChange",
+    defaultValues: {
+      title: artwork.title,
+      description: artwork.description,
+      materials: artwork.materials,
+      length: artwork.artworkSize.length,
+      breadth: artwork.artworkSize.breadth,
+      height: artwork.artworkSize.height,
+      unit: artwork.artworkSize.unit,
+      minEstimatedValue: artwork.artistMinEstimate || 100,
+      maxEstimatedValue: artwork.artistMaxEstimate || 1000,
+      editionsToIssue: 0,
+      subjectSignificance: artwork.subjectSignificance,
+      personalSignificance: artwork.personalSignificance,
+      timeEffort: artwork.timeEffort,
+      biographicalContext: artwork.biographicalContext,
+      commissionPatronage: artwork.commissionPatronage,
+      heroImage: artwork.heroImage,
+    },
   });
 
   useEffect(() => {
@@ -99,39 +123,6 @@ export default function EditArtworkPage() {
       router.push(`/login?redirect=/portfolio/artwork/edit/${artworkId}`);
     }
   }, [isLoggedIn, router, artworkId]);
-
-  useEffect(() => {
-    if (fractals.length > 0 && artworkId) {
-      const foundArtwork = fractals.find(f => f.id === artworkId);
-      if (foundArtwork) {
-        if (isAdmin || foundArtwork.artistId === artistProfile?.id) {
-          setArtwork(foundArtwork);
-          form.reset({
-            title: foundArtwork.title,
-            description: foundArtwork.description,
-            materials: foundArtwork.materials,
-            length: foundArtwork.artworkSize.length,
-            breadth: foundArtwork.artworkSize.breadth,
-            height: foundArtwork.artworkSize.height,
-            unit: foundArtwork.artworkSize.unit,
-            minEstimatedValue: foundArtwork.artistMinEstimate || 100,
-            maxEstimatedValue: foundArtwork.artistMaxEstimate || 1000,
-            editionsToIssue: 0,
-            subjectSignificance: foundArtwork.subjectSignificance,
-            personalSignificance: foundArtwork.personalSignificance,
-            timeEffort: foundArtwork.timeEffort,
-            biographicalContext: foundArtwork.biographicalContext,
-            commissionPatronage: foundArtwork.commissionPatronage,
-            heroImage: foundArtwork.heroImage,
-          });
-        } else {
-          notFound();
-        }
-      } else {
-        notFound();
-      }
-    }
-  }, [fractals, artworkId, artistProfile, form, isAdmin]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -304,21 +295,6 @@ export default function EditArtworkPage() {
     } finally {
       setIsSubmittingAdminValuation(false);
     }
-  }
-
-  if (!artwork) {
-    return (
-        <div className="container py-12 flex justify-center">
-             <Card className="w-full max-w-3xl">
-                <CardHeader>
-                    <CardTitle className="font-headline text-3xl">Loading Artwork...</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Loader2 className="mx-auto h-10 w-10 animate-spin" />
-                </CardContent>
-            </Card>
-        </div>
-    );
   }
 
   const isPendingAdminReview = artwork?.status === 'pending_review' && isAdmin;
