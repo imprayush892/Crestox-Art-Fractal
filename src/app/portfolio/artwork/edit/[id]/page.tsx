@@ -254,15 +254,11 @@ export default function EditArtworkPage() {
     if (!requestManualArtworkValuation || !artwork) return;
     setIsManualReviewConfirmDialogOpen(false);
     setIsSubmitting(true);
-    const data = form.getValues();
     try {
-        // This flow is for re-evaluation, so we don't need to create a new artwork
-        // We might need a separate function for re-evaluation manual requests in the future
-        // For now, we assume this is not a common path and just log it.
-        console.warn("Manual re-evaluation requested. This flow currently does not create a new DB entry.");
+        await requestManualArtworkValuation(form.getValues(), artworkId);
         toast({
-            title: "Manual Review Requested",
-            description: "Please contact support for manual re-evaluation."
+            title: "Submitted for Manual Review",
+            description: "Your artwork has been submitted. You will be notified once the review is complete."
         });
         router.push('/portfolio');
     } catch (error) {

@@ -62,7 +62,7 @@ interface AuthContextType {
   createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
   updateArtistProfile: (profileData: Partial<CreateArtistProfileData>) => Promise<void>;
   addArtwork: (artworkData: ArtworkFormValues, evaluationResult: SuccessfulEvaluation, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
-  requestManualArtworkValuation: (artworkData: ArtworkFormValues) => Promise<void>;
+  requestManualArtworkValuation: (artworkData: ArtworkFormValues | EditArtworkFormValues, artworkId?: string) => Promise<void>;
   submitManualValuationAsAdmin: (artworkId: string, minPrice: number, maxPrice: number, grade: string) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
@@ -616,24 +616,36 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     });
   };
 
-  const requestManualArtworkValuation = async (artworkData: ArtworkFormValues) => {
+  const requestManualArtworkValuation = async (artworkData: ArtworkFormValues | EditArtworkFormValues, artworkIdToUpdate?: string) => {
     if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
 
-    const newFractalId = doc(firestoreCollection(db, 'fractals')).id;
-    const imageUrls = await Promise.all(
-        artworkData.images.map(async (file: File) => {
-            const storageRef = ref(storage, `artworks/${user.uid}/${newFractalId}/${uuidv4()}_${file.name}`);
-            await uploadBytes(storageRef, file);
-            return getDownloadURL(storageRef);
-        })
-    );
-    const heroImageUrl = imageUrls[artworkData.heroImageIndex > -1 ? artworkData.heroImageIndex : 0];
+    let finalArtworkId = artworkIdToUpdate;
+    let imageUrls: string[] = [];
+    let heroImageUrl = '';
+
+    if (artworkIdToUpdate && 'heroImage' in artworkData && typeof artworkData.heroImage === 'string') {
+        const existingFractal = fractals.find(f => f.id === artworkIdToUpdate);
+        if (!existingFractal) throw new Error("Artwork to update not found.");
+        imageUrls = existingFractal.images;
+        heroImageUrl = artworkData.heroImage;
+    } else if ('images' in artworkData && Array.isArray(artworkData.images)) {
+        finalArtworkId = doc(firestoreCollection(db, 'fractals')).id;
+        imageUrls = await Promise.all(
+            artworkData.images.map(async (file: File) => {
+                const storageRef = ref(storage, `artworks/${user.uid}/${finalArtworkId}/${uuidv4()}_${file.name}`);
+                await uploadBytes(storageRef, file);
+                return getDownloadURL(storageRef);
+            })
+        );
+        heroImageUrl = imageUrls[artworkData.heroImageIndex > -1 ? artworkData.heroImageIndex : 0];
+    }
+
+    if (!finalArtworkId) throw new Error("Could not determine artwork ID.");
 
     const { length, breadth, height, unit } = artworkData;
     const artworkSize = { length, breadth, unit, ...(height && { height }) };
 
-    const newFractalData: Omit<Fractal, 'id' | 'price' | 'priceHistory' | 'editions' | 'editionsAvailable'> & { id: string } = {
-        id: newFractalId,
+    const fractalDataPayload = {
         artistId: artistProfile.id,
         title: artworkData.title,
         description: artworkData.description,
@@ -651,9 +663,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         commissionPatronage: artworkData.commissionPatronage || "",
         status: 'pending_review',
     };
+    
+    const fractalRef = doc(db, "fractals", finalArtworkId);
 
-    await setDoc(doc(db, "fractals", newFractalId), newFractalData);
+    if (artworkIdToUpdate) {
+        await updateDoc(fractalRef, fractalDataPayload);
+    } else {
+        await setDoc(fractalRef, { ...fractalDataPayload, id: finalArtworkId });
+    }
 
+    // Notify Admin
     const adminQuery = query(firestoreCollection(db, 'users'), where('email', '==', process.env.NEXT_PUBLIC_ADMIN_EMAIL));
     const adminSnap = await getDocs(adminQuery);
     if (adminSnap.empty) {
@@ -670,7 +689,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         type: 'manual_valuation_request',
         relatedContent: {
             title: `Artwork: ${artworkData.title}`,
-            url: `/portfolio/artwork/edit/${newFractalId}`,
+            url: `/portfolio/artwork/edit/${finalArtworkId}`,
         }
     };
     await setDoc(notificationRef, notification);
