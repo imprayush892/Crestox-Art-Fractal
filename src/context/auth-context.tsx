@@ -351,6 +351,40 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     await signOut(auth);
   };
 
+  const createAdminNotification = async (message: string, relatedContent: Notification['relatedContent']) => {
+    if (!db) throw new Error("Database not available.");
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    if (!adminEmail) {
+        console.error("Admin email not configured. Cannot send notification.");
+        return;
+    }
+    
+    try {
+        const usersRef = firestoreCollection(db, 'users');
+        const adminQuery = query(usersRef, where('email', '==', adminEmail), limit(1));
+        const adminSnapshot = await getDocs(adminQuery);
+
+        if (adminSnapshot.empty) {
+            console.warn(`Admin user with email ${adminEmail} not found.`);
+            return;
+        }
+        const adminId = adminSnapshot.docs[0].id;
+        
+        const notification: Omit<Notification, 'id'> = {
+            message,
+            timestamp: new Date().toISOString(),
+            read: false,
+            type: 'manual_valuation_request',
+            relatedContent,
+        };
+
+        const notificationRef = doc(firestoreCollection(db, `users/${adminId}/notifications`));
+        await setDoc(notificationRef, notification);
+    } catch (error) {
+        console.error("Failed to create admin notification:", error);
+    }
+  };
+
   const createArtistProfile = async (profileData: CreateArtistProfileData) => {
     if (!db || !user) throw new Error("User not authenticated or database not available.");
     
@@ -664,6 +698,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     const fractalRef = doc(db, "fractals", newFractalId);
     try {
         await setDoc(fractalRef, fractalDataPayload);
+        await createAdminNotification(`${artistProfile.name} requested a manual review for a new artwork.`, {
+            title: `Artwork: ${artworkData.title}`,
+            url: `/portfolio/artwork/edit/${newFractalId}`,
+        });
     } catch (error) {
        throw new Error(handleAuthError(error));
     }
@@ -673,10 +711,19 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
     const fractalRef = doc(db, "fractals", artworkId);
     try {
+      const fractalSnap = await getDoc(fractalRef);
+      if (!fractalSnap.exists()) throw new Error("Artwork not found.");
+      
       await updateDoc(fractalRef, {
         status: 'pending_review',
         description: reason,
       });
+
+      await createAdminNotification(`${artistProfile.name} requested a manual re-evaluation for an artwork.`, {
+          title: `Artwork: ${fractalSnap.data().title}`,
+          url: `/portfolio/artwork/edit/${artworkId}`,
+      });
+
     } catch (error) {
       throw new Error(handleAuthError(error));
     }
