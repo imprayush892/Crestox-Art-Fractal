@@ -353,23 +353,13 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   const createAdminNotification = async (message: string, relatedContent: Notification['relatedContent']) => {
     if (!db) throw new Error("Database not available.");
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-    if (!adminEmail) {
-        console.error("Admin email not configured. Cannot send notification.");
+    const adminUid = process.env.NEXT_PUBLIC_ADMIN_UID;
+    if (!adminUid) {
+        console.error("Admin UID not configured. Cannot send notification.");
         return;
     }
     
     try {
-        const usersRef = firestoreCollection(db, 'users');
-        const adminQuery = query(usersRef, where('email', '==', adminEmail), limit(1));
-        const adminSnapshot = await getDocs(adminQuery);
-
-        if (adminSnapshot.empty) {
-            console.warn(`Admin user with email ${adminEmail} not found.`);
-            return;
-        }
-        const adminId = adminSnapshot.docs[0].id;
-        
         const notification: Omit<Notification, 'id'> = {
             message,
             timestamp: new Date().toISOString(),
@@ -378,7 +368,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             relatedContent,
         };
 
-        const notificationRef = doc(firestoreCollection(db, `users/${adminId}/notifications`));
+        const notificationRef = doc(firestoreCollection(db, `users/${adminUid}/notifications`));
         await setDoc(notificationRef, notification);
     } catch (error) {
         console.error("Failed to create admin notification:", error);
