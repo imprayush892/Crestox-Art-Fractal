@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -133,9 +133,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       unsubscribeAllUsers();
       unsubscribeNotifications();
       
-      setIsAdmin(firebaseUser?.uid === process.env.NEXT_PUBLIC_ADMIN_UID);
-
       if (firebaseUser) {
+        setIsAdmin(firebaseUser.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL);
         setIsLoading(true);
         setIsCollectionLoading(true);
 
@@ -233,9 +232,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         
       } else {
         setUser(null);
+        setIsAdmin(false);
         setArtistProfile(null);
         setCollection([]);
         setAllUsers([]);
+        setNotifications([]);
         setIsLoading(false);
         setIsCollectionLoading(false);
       }
