@@ -73,7 +73,6 @@ export default function CreateArtworkPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
-  const [isManualReviewDialogOpen, setIsManualReviewDialogOpen] = useState(false);
   const [manualReviewDetails, setManualReviewDetails] = useState({ concern: '', analysisForEmail: '' });
   const [newMessage, setNewMessage] = useState("");
   const [artworkSubmissionData, setArtworkSubmissionData] = useState<ArtworkSubmissionData | null>(null);
@@ -194,8 +193,9 @@ export default function CreateArtworkPage() {
       if (result.status === 'success') {
           setEvaluationResult(result.evaluation);
       } else {
+          // If evaluation fails (e.g., plagiarism), prompt for manual review directly.
           setManualReviewDetails({ concern: result.concern, analysisForEmail: result.analysisForEmail });
-          setIsManualReviewDialogOpen(true);
+          setIsManualReviewConfirmDialogOpen(true);
       }
 
     } catch (error) {
@@ -288,20 +288,6 @@ export default function CreateArtworkPage() {
     setIsMessageDialogOpen(false);
     await finalizeArtworkSubmission(artworkSubmissionData, true);
   };
-
-  const handleSendForManualCheck = () => {
-    const subject = encodeURIComponent("Query for manual checking");
-    const body = encodeURIComponent(manualReviewDetails.analysisForEmail);
-    window.location.href = `mailto:Crestox@crestox.com?subject=${subject}&body=${body}`;
-    
-    setIsManualReviewDialogOpen(false);
-    toast({
-        title: "Manual Review Submitted",
-        description: "Your email client has been opened. Please send the email to complete the submission.",
-        duration: 8000
-    });
-    router.push('/portfolio');
-  };
   
   const handleConfirmManualReviewRequest = async () => {
     setIsManualReviewConfirmDialogOpen(false);
@@ -324,14 +310,6 @@ export default function CreateArtworkPage() {
         setIsSubmitting(false);
     }
   };
-
-  const handleCancelManualCheck = () => {
-    setIsManualReviewDialogOpen(false);
-    toast({
-        title: "Upload Cancelled",
-        description: "The artwork was not uploaded. You can make changes and try again.",
-    });
-  }
   
   if (!isLoggedIn || !artistProfile) {
     return null;
@@ -394,29 +372,6 @@ export default function CreateArtworkPage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={isManualReviewDialogOpen} onOpenChange={setIsManualReviewDialogOpen}>
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle className="font-headline text-2xl flex items-center gap-2">
-                    <motion.div variants={iconVariants} initial="hidden" animate="visible"><AlertTriangle className="text-destructive"/></motion.div> Manual Review Required
-                  </DialogTitle>
-                  <DialogDescription>
-                      Our AI has flagged this artwork for potential authenticity issues.
-                  </DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <p className="font-semibold">Reason:</p>
-                <p className="text-muted-foreground">{manualReviewDetails.concern}</p>
-                <p className="mt-4">You can submit this artwork for manual review by our team, or cancel the upload.</p>
-              </div>
-              <DialogFooter>
-                  <Button variant="outline" onClick={handleCancelManualCheck}>Cancel Upload</Button>
-                  <Button onClick={handleSendForManualCheck}>Send for Manual Check</Button>
-              </DialogFooter>
-          </DialogContent>
-      </Dialog>
-
 
       <div className="container py-12 flex justify-center">
         <Card className="w-full max-w-3xl">

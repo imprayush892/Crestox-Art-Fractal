@@ -31,7 +31,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type EditArtworkFormValues, editArtworkFormSchema } from '@/lib/data';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
@@ -65,7 +64,8 @@ export default function EditArtworkPage() {
     fractals, 
     updateAndReevaluateArtwork, 
     updateArtworkDetails,
-    submitManualValuationAsAdmin
+    submitManualValuationAsAdmin,
+    requestManualArtworkValuation
   } = useAuth();
   const router = useRouter();
   const params = useParams();
@@ -77,8 +77,6 @@ export default function EditArtworkPage() {
   const [progress, setProgress] = useState(0);
   const [evaluationResult, setEvaluationResult] = useState<SuccessfulEvaluation | null>(null);
 
-  const [isManualReviewDialogOpen, setIsManualReviewDialogOpen] = useState(false);
-  const [manualReviewDetails, setManualReviewDetails] = useState({ concern: '', analysisForEmail: '' });
   const [isScorecardDialogOpen, setIsScorecardDialogOpen] = useState(false);
   const [isManualReviewConfirmDialogOpen, setIsManualReviewConfirmDialogOpen] = useState(false);
   
@@ -188,8 +186,7 @@ export default function EditArtworkPage() {
         if (result.status === 'success') {
           setEvaluationResult(result.evaluation);
         } else {
-          setManualReviewDetails({ concern: result.concern, analysisForEmail: result.analysisForEmail });
-          setIsManualReviewDialogOpen(true);
+          setIsManualReviewConfirmDialogOpen(true);
         }
         
     } catch (error) {
@@ -253,51 +250,31 @@ export default function EditArtworkPage() {
     }
   };
   
-  const handleSendForManualCheck = () => {
-    const subject = encodeURIComponent("Query for manual checking (Re-evaluation)");
-    const body = encodeURIComponent(manualReviewDetails.analysisForEmail);
-    window.location.href = `mailto:Crestox@crestox.com?subject=${subject}&body=${body}`;
-    
-    setIsManualReviewDialogOpen(false);
-    toast({
-        title: "Manual Review Submitted",
-        description: "Your email client has been opened. Please send the email to complete the submission.",
-        duration: 8000
-    });
-    router.push('/portfolio');
-  };
-
-  const handleCancelManualCheck = () => {
-    setIsManualReviewDialogOpen(false);
-  };
-  
-  const handleRequestManualValuation = () => {
-    const data = form.getValues();
-    const evaluation = evaluationResult;
-    if (!data || !evaluation || !artistProfile || !artwork) return;
-
-    let analysisDetail = `MANUAL VALUATION REQUEST\n\n`;
-    analysisDetail += `Artwork ('${data.title}', ID: ${artwork.id}) has been submitted for manual valuation by the artist.\n\n`;
-    analysisDetail += `--- Provided Artwork Details ---\n`;
-    analysisDetail += `Title: ${data.title}\n`;
-    analysisDetail += `Description: ${data.description}\n`;
-    analysisDetail += `Artist Bio: ${artistProfile.bio}\n\n`;
-    analysisDetail += `--- AI Re-evaluation Summary ---\n`;
-    analysisDetail += `Final Score: ${evaluation.finalScore}\n`;
-    analysisDetail += `Crestox Grade: ${evaluation.grade}\n`;
-    analysisDetail += `Crestox Price Range: ₹${evaluation.crestoxPriceRange[0]} - ₹${evaluation.crestoxPriceRange[1]}\n`;
-
-    const subject = encodeURIComponent("Manual Valuation Request");
-    const body = encodeURIComponent(analysisDetail);
-    window.location.href = `mailto:Crestox@crestox.com?subject=${subject}&body=${body}`;
-    
+  const handleRequestManualValuation = async () => {
+    if (!requestManualArtworkValuation || !artwork) return;
     setIsManualReviewConfirmDialogOpen(false);
-    toast({
-        title: "Manual Valuation Requested",
-        description: "Your email client has been opened. Please send the email to complete the request.",
-        duration: 8000
-    });
-    router.push('/portfolio');
+    setIsSubmitting(true);
+    const data = form.getValues();
+    try {
+        // This flow is for re-evaluation, so we don't need to create a new artwork
+        // We might need a separate function for re-evaluation manual requests in the future
+        // For now, we assume this is not a common path and just log it.
+        console.warn("Manual re-evaluation requested. This flow currently does not create a new DB entry.");
+        toast({
+            title: "Manual Review Requested",
+            description: "Please contact support for manual re-evaluation."
+        });
+        router.push('/portfolio');
+    } catch (error) {
+        console.error("Error requesting manual valuation:", error);
+        toast({
+            variant: "destructive",
+            title: "Submission Failed",
+            description: error instanceof Error ? error.message : "An unknown error occurred."
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const handleAdminValuationSubmit = async () => {
@@ -361,36 +338,18 @@ export default function EditArtworkPage() {
             <AlertDialogHeader>
                 <AlertDialogTitle>Confirm Manual Valuation</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Only 3 manual valuations per artwork are free. After that, a small fee will be charged. Are you sure you want to proceed?
+                    This will submit the artwork for manual re-evaluation by the Crestox team. Are you sure you want to proceed?
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleRequestManualValuation}>Continue</AlertDialogAction>
+                <AlertDialogAction onClick={handleRequestManualValuation} disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                  Continue
+                </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Dialog open={isManualReviewDialogOpen} onOpenChange={setIsManualReviewDialogOpen}>
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle className="font-headline text-2xl flex items-center gap-2">
-                    <motion.div variants={iconVariants} initial="hidden" animate="visible"><AlertTriangle className="text-destructive"/></motion.div> Manual Review Required</DialogTitle>
-                  <DialogDescription>
-                      Our AI has flagged this artwork for potential authenticity issues during re-evaluation.
-                  </DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <p className="font-semibold">Reason:</p>
-                <p className="text-muted-foreground">{manualReviewDetails.concern}</p>
-                <p className="mt-4">You can submit this artwork for manual review by our team, or cancel and make changes.</p>
-              </div>
-              <DialogFooter>
-                  <Button variant="outline" onClick={handleCancelManualCheck}>Cancel</Button>
-                  <Button onClick={handleSendForManualCheck}>Send for Manual Check</Button>
-              </DialogFooter>
-          </DialogContent>
-      </Dialog>
     
       <div className="container py-12 flex justify-center">
         <Card className="w-full max-w-3xl">
