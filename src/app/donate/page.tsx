@@ -271,14 +271,16 @@ export default function DonatePage() {
         </div>
 
         <Tabs defaultValue="what-why-how" className="w-full">
-            <div className="w-full overflow-x-auto pb-2">
-                <TabsList className="gap-1 w-max">
-                    <TabsTrigger value="what-why-how">Crestox</TabsTrigger>
-                    <TabsTrigger value="partners">Founding Partners</TabsTrigger>
-                    <TabsTrigger value="advisory">Advisory Board</TabsTrigger>
-                    <TabsTrigger value="careers">Careers</TabsTrigger>
-                    <TabsTrigger value="legal">Tax & Legal</TabsTrigger>
-                </TabsList>
+            <div className="flex justify-center mb-8">
+                <div className="w-full max-w-5xl overflow-x-auto pb-2">
+                    <TabsList className="gap-1 w-max">
+                        <TabsTrigger value="what-why-how">Crestox</TabsTrigger>
+                        <TabsTrigger value="partners">Founding Partners</TabsTrigger>
+                        <TabsTrigger value="advisory">Advisory Board</TabsTrigger>
+                        <TabsTrigger value="careers">Careers</TabsTrigger>
+                        <TabsTrigger value="legal">Tax & Legal</TabsTrigger>
+                    </TabsList>
+                </div>
             </div>
 
             <TabsContent value="what-why-how">
