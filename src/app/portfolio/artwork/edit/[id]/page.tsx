@@ -37,7 +37,7 @@ import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
 import { EvaluationScorecardDialog } from '@/components/evaluation-scorecard-dialog';
 import { motion } from 'framer-motion';
-import { Dialog, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const iconVariants = {
   hidden: { scale: 0.5, opacity: 0, rotate: -30 },
