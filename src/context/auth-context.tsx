@@ -133,7 +133,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       unsubscribeAllUsers();
       unsubscribeNotifications();
       
-      setIsAdmin(firebaseUser?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL);
+      setIsAdmin(firebaseUser?.uid === process.env.NEXT_PUBLIC_ADMIN_UID);
 
       if (firebaseUser) {
         setIsLoading(true);
@@ -355,7 +355,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     if (!db) throw new Error("Database not available.");
     const adminUid = process.env.NEXT_PUBLIC_ADMIN_UID;
     if (!adminUid) {
-        console.error("Admin UID not configured. Cannot send notification.");
+        console.error("Admin UID not configured in .env. Cannot send notification.");
         return;
     }
     
