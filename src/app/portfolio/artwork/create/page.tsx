@@ -73,7 +73,6 @@ export default function CreateArtworkPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
-  const [manualReviewDetails, setManualReviewDetails] = useState({ concern: '', analysisForEmail: '' });
   const [newMessage, setNewMessage] = useState("");
   const [artworkSubmissionData, setArtworkSubmissionData] = useState<ArtworkSubmissionData | null>(null);
   const [isScorecardDialogOpen, setIsScorecardDialogOpen] = useState(false);
@@ -193,8 +192,6 @@ export default function CreateArtworkPage() {
       if (result.status === 'success') {
           setEvaluationResult(result.evaluation);
       } else {
-          // If evaluation fails (e.g., plagiarism), prompt for manual review directly.
-          setManualReviewDetails({ concern: result.concern, analysisForEmail: result.analysisForEmail });
           setIsManualReviewConfirmDialogOpen(true);
       }
 

@@ -623,21 +623,28 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     let imageUrls: string[] = [];
     let heroImageUrl = '';
 
+    // Handle case for updating an existing artwork
     if (artworkIdToUpdate && 'heroImage' in artworkData && typeof artworkData.heroImage === 'string') {
         const existingFractal = fractals.find(f => f.id === artworkIdToUpdate);
         if (!existingFractal) throw new Error("Artwork to update not found.");
         imageUrls = existingFractal.images;
         heroImageUrl = artworkData.heroImage;
-    } else if ('images' in artworkData && Array.isArray(artworkData.images)) {
+    } 
+    // Handle case for creating a new artwork
+    else if ('images' in artworkData && Array.isArray(artworkData.images)) {
         finalArtworkId = doc(firestoreCollection(db, 'fractals')).id;
-        imageUrls = await Promise.all(
-            artworkData.images.map(async (file: File) => {
-                const storageRef = ref(storage, `artworks/${user.uid}/${finalArtworkId}/${uuidv4()}_${file.name}`);
-                await uploadBytes(storageRef, file);
-                return getDownloadURL(storageRef);
-            })
-        );
-        heroImageUrl = imageUrls[artworkData.heroImageIndex > -1 ? artworkData.heroImageIndex : 0];
+        try {
+            imageUrls = await Promise.all(
+                artworkData.images.map(async (file: File) => {
+                    const storageRef = ref(storage, `artworks/${user.uid}/${finalArtworkId}/${uuidv4()}_${file.name}`);
+                    await uploadBytes(storageRef, file);
+                    return getDownloadURL(storageRef);
+                })
+            );
+            heroImageUrl = imageUrls[artworkData.heroImageIndex > -1 ? artworkData.heroImageIndex : 0];
+        } catch (error) {
+            throw new Error(handleAuthError(error));
+        }
     }
 
     if (!finalArtworkId) throw new Error("Could not determine artwork ID.");
@@ -666,11 +673,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     
     const fractalRef = doc(db, "fractals", finalArtworkId);
 
-    if (artworkIdToUpdate) {
-        await updateDoc(fractalRef, fractalDataPayload);
-    } else {
-        await setDoc(fractalRef, { ...fractalDataPayload, id: finalArtworkId });
+    try {
+      if (artworkIdToUpdate) {
+          await updateDoc(fractalRef, fractalDataPayload);
+      } else {
+          await setDoc(fractalRef, { ...fractalDataPayload, id: finalArtworkId });
+      }
+    } catch(error) {
+       throw new Error(handleAuthError(error));
     }
+
 
     // Notify Admin
     const adminQuery = query(firestoreCollection(db, 'users'), where('email', '==', process.env.NEXT_PUBLIC_ADMIN_EMAIL));
