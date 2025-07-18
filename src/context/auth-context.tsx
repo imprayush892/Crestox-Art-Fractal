@@ -632,7 +632,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     const { length, breadth, height, unit } = artworkData;
     const artworkSize = { length, breadth, unit, ...(height && { height }) };
 
-    const newFractalData: Omit<Fractal, 'id' | 'price' | 'priceHistory'> & { id: string } = {
+    const newFractalData: Omit<Fractal, 'id' | 'price' | 'priceHistory' | 'editions' | 'editionsAvailable'> & { id: string } = {
         id: newFractalId,
         artistId: artistProfile.id,
         title: artworkData.title,
@@ -656,7 +656,10 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
     const adminQuery = query(firestoreCollection(db, 'users'), where('email', '==', process.env.NEXT_PUBLIC_ADMIN_EMAIL));
     const adminSnap = await getDocs(adminQuery);
-    if (adminSnap.empty) throw new Error("Admin account not found.");
+    if (adminSnap.empty) {
+      console.warn("Admin account not found. Cannot send notification.");
+      return;
+    }
     const adminId = adminSnap.docs[0].id;
 
     const notificationRef = doc(firestoreCollection(db, `users/${adminId}/notifications`));
