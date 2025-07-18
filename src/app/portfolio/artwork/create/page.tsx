@@ -28,14 +28,14 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { artworkFormSchema, type ArtworkFormValues } from '@/lib/data';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import type { z } from 'zod';
 import type { EvaluationResult } from '@/ai/flows/evaluate-artwork-flow';
 import { EvaluationScorecardDialog } from '@/components/evaluation-scorecard-dialog';
 import { motion } from 'framer-motion';
+import { Label } from '@/components/ui/label';
 
 const iconVariants = {
   hidden: { scale: 0.5, opacity: 0, rotate: -30 },
@@ -62,7 +62,7 @@ type ArtworkSubmissionData = {
 
 
 export default function CreateArtworkPage() {
-  const { isLoggedIn, artistProfile, addArtwork, updateArtistProfile, requestManualArtworkValuation } = useAuth();
+  const { isLoggedIn, artistProfile, addArtwork, updateArtistProfile, requestManualArtworkCreation } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -77,6 +77,7 @@ export default function CreateArtworkPage() {
   const [artworkSubmissionData, setArtworkSubmissionData] = useState<ArtworkSubmissionData | null>(null);
   const [isScorecardDialogOpen, setIsScorecardDialogOpen] = useState(false);
   const [isManualReviewConfirmDialogOpen, setIsManualReviewConfirmDialogOpen] = useState(false);
+  const [manualReviewReason, setManualReviewReason] = useState("");
   
   const form = useForm<ArtworkFormValues>({
     resolver: zodResolver(artworkFormSchema),
@@ -287,10 +288,14 @@ export default function CreateArtworkPage() {
   };
   
   const handleConfirmManualReviewRequest = async () => {
+    if (!manualReviewReason.trim()) {
+      toast({variant: 'destructive', title: 'A reason is required.'});
+      return;
+    }
     setIsManualReviewConfirmDialogOpen(false);
     setIsSubmitting(true);
     try {
-        await requestManualArtworkValuation(form.getValues());
+        await requestManualArtworkCreation(form.getValues(), manualReviewReason);
         toast({
             title: "Submitted for Manual Review",
             description: "Your artwork has been submitted. You will be notified once the review is complete."
@@ -305,6 +310,7 @@ export default function CreateArtworkPage() {
         });
     } finally {
         setIsSubmitting(false);
+        setManualReviewReason("");
     }
   };
   
@@ -324,25 +330,35 @@ export default function CreateArtworkPage() {
         }}
       />
       
-      <AlertDialog open={isManualReviewConfirmDialogOpen} onOpenChange={setIsManualReviewConfirmDialogOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Confirm Manual Valuation Request</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will submit your artwork to the Crestox team for a manual valuation. 
+      <Dialog open={isManualReviewConfirmDialogOpen} onOpenChange={setIsManualReviewConfirmDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Confirm Manual Valuation Request</DialogTitle>
+                <DialogDescription>
+                  Provide a brief reason for requesting a manual valuation. This will submit your artwork to the Crestox team. 
                   The artwork will be saved as 'pending review' and will not be public until the valuation is complete.
-                  This process may take several business days.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmManualReviewRequest} disabled={isSubmitting}>
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-2">
+                <Label htmlFor="manual-review-reason">Reason</Label>
+                <Textarea
+                    id="manual-review-reason"
+                    value={manualReviewReason}
+                    onChange={(e) => setManualReviewReason(e.target.value)}
+                    placeholder="e.g., I believe the AI evaluation missed key aspects of my work..."
+                />
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="ghost" disabled={isSubmitting}>Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleConfirmManualReviewRequest} disabled={isSubmitting || !manualReviewReason.trim()}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                   Continue
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
         <DialogContent>

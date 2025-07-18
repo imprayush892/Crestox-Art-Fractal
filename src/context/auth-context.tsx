@@ -62,7 +62,8 @@ interface AuthContextType {
   createArtistProfile: (profileData: CreateArtistProfileData) => Promise<void>;
   updateArtistProfile: (profileData: Partial<CreateArtistProfileData>) => Promise<void>;
   addArtwork: (artworkData: ArtworkFormValues, evaluationResult: SuccessfulEvaluation, finalPrice: number, shouldApplyGrade: boolean) => Promise<void>;
-  requestManualArtworkValuation: (artworkData: ArtworkFormValues | EditArtworkFormValues, artworkId?: string) => Promise<void>;
+  requestManualArtworkCreation: (artworkData: ArtworkFormValues, reason: string) => Promise<void>;
+  requestManualReevaluation: (artworkId: string, reason: string) => Promise<void>;
   submitManualValuationAsAdmin: (artworkId: string, minPrice: number, maxPrice: number, grade: string) => Promise<void>;
   updateAndReevaluateArtwork: (artworkId: string, artworkData: EditArtworkFormValues, evaluationResult: EvaluationResult, useCrestoxPrice: boolean) => Promise<void>;
   updateArtworkDetails: (artworkId: string, data: EditArtworkFormValues) => Promise<void>;
@@ -616,51 +617,38 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     });
   };
 
-  const requestManualArtworkValuation = async (artworkData: ArtworkFormValues | EditArtworkFormValues, artworkIdToUpdate?: string) => {
+  const requestManualArtworkCreation = async (artworkData: ArtworkFormValues, reason: string) => {
     if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
 
-    let finalArtworkId = artworkIdToUpdate;
+    const newFractalId = doc(firestoreCollection(db, 'fractals')).id;
     let imageUrls: string[] = [];
     let heroImageUrl = '';
 
-    // Handle case for updating an existing artwork
-    if (artworkIdToUpdate && 'heroImage' in artworkData && typeof artworkData.heroImage === 'string') {
-        const existingFractal = fractals.find(f => f.id === artworkIdToUpdate);
-        if (!existingFractal) throw new Error("Artwork to update not found.");
-        imageUrls = existingFractal.images;
-        heroImageUrl = artworkData.heroImage;
-    } 
-    // Handle case for creating a new artwork
-    else if ('images' in artworkData && Array.isArray(artworkData.images)) {
-        finalArtworkId = doc(firestoreCollection(db, 'fractals')).id;
-        try {
-            imageUrls = await Promise.all(
-                artworkData.images.map(async (file: File) => {
-                    const storageRef = ref(storage, `artworks/${user.uid}/${finalArtworkId}/${uuidv4()}_${file.name}`);
-                    await uploadBytes(storageRef, file);
-                    return getDownloadURL(storageRef);
-                })
-            );
-            heroImageUrl = imageUrls[artworkData.heroImageIndex > -1 ? artworkData.heroImageIndex : 0];
-        } catch (error) {
-            throw new Error(handleAuthError(error));
-        }
+    try {
+        imageUrls = await Promise.all(
+            artworkData.images.map(async (file: File) => {
+                const storageRef = ref(storage, `artworks/${user.uid}/${newFractalId}/${uuidv4()}_${file.name}`);
+                await uploadBytes(storageRef, file);
+                return getDownloadURL(storageRef);
+            })
+        );
+        heroImageUrl = imageUrls[artworkData.heroImageIndex > -1 ? artworkData.heroImageIndex : 0];
+    } catch (error) {
+        throw new Error(handleAuthError(error));
     }
-
-    if (!finalArtworkId) throw new Error("Could not determine artwork ID.");
 
     const { length, breadth, height, unit } = artworkData;
     const artworkSize = { length, breadth, unit, ...(height && { height }) };
-
     const fractalDataPayload = {
+        id: newFractalId,
         artistId: artistProfile.id,
         title: artworkData.title,
-        description: artworkData.description,
+        description: reason,
         materials: artworkData.materials,
         artworkSize,
         images: imageUrls,
         heroImage: heroImageUrl,
-        width: 600, 
+        width: 600,
         height: 400,
         aiHint: 'custom artwork',
         subjectSignificance: artworkData.subjectSignificance || "",
@@ -669,44 +657,31 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         biographicalContext: artworkData.biographicalContext || "",
         commissionPatronage: artworkData.commissionPatronage || "",
         status: 'pending_review',
+        price: 0,
+        priceHistory: [],
     };
     
-    const fractalRef = doc(db, "fractals", finalArtworkId);
-
+    const fractalRef = doc(db, "fractals", newFractalId);
     try {
-      if (artworkIdToUpdate) {
-          await updateDoc(fractalRef, fractalDataPayload);
-      } else {
-          await setDoc(fractalRef, { ...fractalDataPayload, id: finalArtworkId });
-      }
-    } catch(error) {
+        await setDoc(fractalRef, fractalDataPayload);
+    } catch (error) {
        throw new Error(handleAuthError(error));
     }
-
-
-    // Notify Admin
-    const adminQuery = query(firestoreCollection(db, 'users'), where('email', '==', process.env.NEXT_PUBLIC_ADMIN_EMAIL));
-    const adminSnap = await getDocs(adminQuery);
-    if (adminSnap.empty) {
-      console.warn("Admin account not found. Cannot send notification.");
-      return;
-    }
-    const adminId = adminSnap.docs[0].id;
-
-    const notificationRef = doc(firestoreCollection(db, `users/${adminId}/notifications`));
-    const notification: Omit<Notification, 'id'> = {
-        message: `${artistProfile.name} has submitted an artwork for manual valuation.`,
-        timestamp: new Date().toISOString(),
-        read: false,
-        type: 'manual_valuation_request',
-        relatedContent: {
-            title: `Artwork: ${artworkData.title}`,
-            url: `/portfolio/artwork/edit/${finalArtworkId}`,
-        }
-    };
-    await setDoc(notificationRef, notification);
   };
-  
+
+  const requestManualReevaluation = async (artworkId: string, reason: string) => {
+    if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
+    const fractalRef = doc(db, "fractals", artworkId);
+    try {
+      await updateDoc(fractalRef, {
+        status: 'pending_review',
+        description: reason,
+      });
+    } catch (error) {
+      throw new Error(handleAuthError(error));
+    }
+  };
+
   const submitManualValuationAsAdmin = async (artworkId: string, minPrice: number, maxPrice: number, grade: string) => {
     if (!isAdmin) throw new Error("Unauthorized");
     if (!db) throw new Error("Database not available");
@@ -729,16 +704,16 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         const finalPrice = Math.round((minPrice + maxPrice) / 2);
         
-        const artworkUpdate = {
+        const artworkUpdate: Partial<Fractal> = {
             status: 'active',
             price: finalPrice,
             artistMinEstimate: minPrice,
             artistMaxEstimate: maxPrice,
-            crestoxGrade: grade || null,
-            priceHistory: arrayUnion({ date: new Date().toISOString(), price: finalPrice }),
+            crestoxGrade: grade || undefined,
+            priceHistory: arrayUnion({ date: new Date().toISOString(), price: finalPrice }) as any,
         };
         
-        const newActiveFractal = { ...artworkData, ...artworkUpdate };
+        const newActiveFractal = { ...artworkData, ...artworkUpdate } as Fractal;
         const allActiveFractals = [...existingActiveFractals, newActiveFractal];
 
         const V_new = allActiveFractals.reduce((sum, f) => sum + (f.price || 0), 0);
@@ -761,19 +736,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_new })
         });
         
-        const artistUserRef = doc(db, 'users', artistSnap.data().userId);
-        const artistNotificationRef = doc(firestoreCollection(artistUserRef, 'notifications'));
-        const notification: Omit<Notification, 'id'> = {
-            message: `Your artwork "${artworkData.title}" has been evaluated and is now active.`,
-            timestamp: new Date().toISOString(),
-            read: false,
-            type: 'manual_valuation_completed',
-            relatedContent: {
-                title: `View Artwork: ${artworkData.title}`,
-                url: `/fractal/${artworkId}`,
-            }
-        };
-        transaction.set(artistNotificationRef, notification);
     });
   }
 
@@ -1286,7 +1248,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     createArtistProfile,
     updateArtistProfile,
     addArtwork,
-    requestManualArtworkValuation,
+    requestManualArtworkCreation,
+    requestManualReevaluation,
     submitManualValuationAsAdmin,
     updateAndReevaluateArtwork,
     updateArtworkDetails,

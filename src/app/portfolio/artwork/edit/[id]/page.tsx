@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
 import { EvaluationScorecardDialog } from '@/components/evaluation-scorecard-dialog';
 import { motion } from 'framer-motion';
+import { Dialog, DialogClose } from '@/components/ui/dialog';
 
 const iconVariants = {
   hidden: { scale: 0.5, opacity: 0, rotate: -30 },
@@ -65,7 +66,7 @@ export default function EditArtworkPage() {
     updateAndReevaluateArtwork, 
     updateArtworkDetails,
     submitManualValuationAsAdmin,
-    requestManualArtworkValuation
+    requestManualReevaluation,
   } = useAuth();
   const router = useRouter();
   const params = useParams();
@@ -79,6 +80,7 @@ export default function EditArtworkPage() {
 
   const [isScorecardDialogOpen, setIsScorecardDialogOpen] = useState(false);
   const [isManualReviewConfirmDialogOpen, setIsManualReviewConfirmDialogOpen] = useState(false);
+  const [manualReviewReason, setManualReviewReason] = useState("");
   
   const [adminMinPrice, setAdminMinPrice] = useState('');
   const [adminMaxPrice, setAdminMaxPrice] = useState('');
@@ -251,11 +253,14 @@ export default function EditArtworkPage() {
   };
   
   const handleRequestManualValuation = async () => {
-    if (!requestManualArtworkValuation || !artwork) return;
+    if (!requestManualReevaluation || !artwork || !manualReviewReason.trim()) {
+        toast({variant: 'destructive', title: 'A reason is required.'});
+        return;
+    };
     setIsManualReviewConfirmDialogOpen(false);
     setIsSubmitting(true);
     try {
-        await requestManualArtworkValuation(form.getValues(), artworkId);
+        await requestManualReevaluation(artwork.id, manualReviewReason);
         toast({
             title: "Submitted for Manual Review",
             description: "Your artwork has been submitted. You will be notified once the review is complete."
@@ -270,6 +275,7 @@ export default function EditArtworkPage() {
         });
     } finally {
         setIsSubmitting(false);
+        setManualReviewReason("");
     }
   };
 
@@ -329,23 +335,34 @@ export default function EditArtworkPage() {
         }}
       />
 
-      <AlertDialog open={isManualReviewConfirmDialogOpen} onOpenChange={setIsManualReviewConfirmDialogOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Confirm Manual Valuation</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This will submit the artwork for manual re-evaluation by the Crestox team. Are you sure you want to proceed?
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleRequestManualValuation} disabled={isSubmitting}>
+      <Dialog open={isManualReviewConfirmDialogOpen} onOpenChange={setIsManualReviewConfirmDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Confirm Manual Valuation</DialogTitle>
+                <DialogDescription>
+                    Provide a brief reason for requesting a manual re-evaluation. This will submit the artwork to the Crestox team. The artwork will be saved as 'pending review' and will not be public until the valuation is complete.
+                </DialogDescription>
+            </DialogHeader>
+             <div className="py-2">
+                <Label htmlFor="manual-review-reason">Reason</Label>
+                <Textarea
+                    id="manual-review-reason"
+                    value={manualReviewReason}
+                    onChange={(e) => setManualReviewReason(e.target.value)}
+                    placeholder="e.g., I believe the AI missed the cultural significance of this piece..."
+                />
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="ghost" disabled={isSubmitting}>Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleRequestManualValuation} disabled={isSubmitting || !manualReviewReason.trim()}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                  Continue
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                  Submit for Review
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     
       <div className="container py-12 flex justify-center">
         <Card className="w-full max-w-3xl">
@@ -369,7 +386,7 @@ export default function EditArtworkPage() {
               <Card className="mb-8 border-yellow-500 bg-yellow-500/10">
                 <CardHeader>
                   <CardTitle>Admin Manual Valuation</CardTitle>
-                  <CardDescription>This artwork is pending review. Set the price range and grade to make it active.</CardDescription>
+                  <CardDescription>This artwork is pending review. Set the price range and grade to make it active. Review reason: <em className="text-foreground">{artwork.description}</em></CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
