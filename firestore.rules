@@ -13,40 +13,62 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // This admin check is a placeholder. For a production app,
-    // using custom claims is the recommended approach.
     function isAdmin() {
-      return request.auth.token.email == "crestox@crestox.com";
+      // Check for a custom claim 'admin' on the auth token.
+      // This must be set via the Firebase Admin SDK.
+      return request.auth.token.admin == true;
     }
 
+    // This function checks if a non-owner update on a user document
+    // is a valid seller payout from a transaction. It uses a blacklist approach
+    // to ensure sensitive fields are not changed, while allowing transactional fields to update.
     function isSellerPayout() {
       let before = resource.data;
       let after = request.resource.data;
+
+      // Ensure sensitive fields are unchanged
       let isSensitiveDataSafe = before.email == after.email &&
                                 before.firstName == after.firstName &&
                                 before.lastName == after.lastName;
+
+      // Ensure wallet balance only increases
       let isBalanceCorrect = after.walletBalance >= before.walletBalance;
+
       return isAuthenticated() && isSensitiveDataSafe && isBalanceCorrect;
     }
 
+    // This function checks if a non-owner update on a resale listing
+    // is a valid purchase transaction.
     function isValidListingUpdate() {
-      let before = resource.data;
-      let after = request.resource.data;
-      let coreDataUnchanged = before.artistId == after.artistId &&
-                              before.resellerId == after.resellerId &&
-                              before.initialPrice == after.initialPrice &&
-                              before.minPrice == after.minPrice &&
-                              before.periodSeconds == after.periodSeconds;
-      let quantityDecreased = after.quantity < before.quantity;
-      let holdingsDecreased = after.holdingIds.size() < before.holdingIds.size();
-      let statusValid = (after.status == 'active' && quantityDecreased) || 
-                        (after.status == 'completed' && after.quantity == 0);
-      return isAuthenticated() && coreDataUnchanged && statusValid && holdingsDecreased;
+        let before = resource.data;
+        let after = request.resource.data;
+
+        // Core data must not change
+        let coreDataUnchanged = before.artistId == after.artistId &&
+                                before.resellerId == after.resellerId &&
+                                before.initialPrice == after.initialPrice &&
+                                before.minPrice == after.minPrice &&
+                                before.periodSeconds == after.periodSeconds;
+
+        // Transactional data must change correctly
+        let quantityDecreased = after.quantity < before.quantity;
+        let holdingsDecreased = after.holdingIds.size() < before.holdingIds.size();
+        let statusValid = (after.status == 'active' && quantityDecreased) || 
+                          (after.status == 'completed' && after.quantity == 0);
+
+        return isAuthenticated() &&
+               coreDataUnchanged &&
+               statusValid &&
+               holdingsDecreased;
     }
 
+    // This function checks if a non-owner update on an artist document
+    // is a valid transactional financial update.
     function isArtistFinancialUpdate() {
       let before = resource.data;
       let after = request.resource.data;
+      
+      // Ensure artist identity fields are not changed by a transaction
       return before.userId == after.userId &&
              before.name == after.name &&
              before.avatar == after.avatar &&
@@ -55,16 +77,17 @@ service cloud.firestore {
 
     // --- Notification Rules ---
     match /admin_notifications/{notificationId} {
-      allow create: if isAuthenticated(); // Users can notify admin
-      allow read, update, delete: if isAdmin(); // Only admins can read/modify
+      allow create: if isAuthenticated(); // Any authenticated user can notify the admin
+      allow read, update, delete: if isAdmin(); // Only admins can manage these notifications
     }
 
     match /users/{userId}/notifications/{notificationId} {
-      allow create: if isAdmin(); // Only admins can notify users
-      allow read, update: if isOwner(userId); // Users can read/update their own notifications
+      allow create: if isAdmin(); // Only admins can create notifications for users
+      allow read, update: if isOwner(userId); // Users can only manage their own notifications
     }
 
     // --- Collection Group Rules ---
+    // This allows the "Collectors" tab query to work.
     match /{path=**}/holdings/{holdingId} {
       allow read: if isAuthenticated();
     }
@@ -73,43 +96,53 @@ service cloud.firestore {
     match /artists/{artistId} {
       allow get, list: if true;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Allow artist to update their own profile, or allow a transaction to update financial fields.
       allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isArtistFinancialUpdate());
     }
 
     match /fractals/{fractalId} {
       allow read: if true;
+      // Allow updates during transactions by any authenticated user.
       allow create, update: if isAuthenticated();
     }
 
     match /resaleListings/{listingId} {
       allow read: if true;
       allow create: if isAuthenticated() && isOwner(request.resource.data.resellerId);
+      // Allow updates only under specific, secure conditions
       allow update: if 
+        // Allow the owner to cancel the listing
         (isOwner(resource.data.resellerId) && request.resource.data.status == 'cancelled') ||
+        // Allow a buyer to update the listing during a purchase
         isValidListingUpdate();
     }
 
     // --- User Data ---
     match /users/{userId} {
       allow get: if isAuthenticated();
+      // NOTE: list permission is required for the app to find user profiles by ID.
       allow list: if isAuthenticated(); 
       allow create: if isOwner(userId);
+      // Allow user to update their own data, or allow a transaction to update a seller's data.
       allow update: if isOwner(userId) || isSellerPayout();
 
+      // --- User-Specific Subcollections ---
       match /holdings/{holdingId} {
         allow get: if isAuthenticated(); 
         allow list: if isOwner(userId);
         allow create, update: if isOwner(userId);
+        // NOTE: Permissive delete is required for the client-side transaction to transfer holdings.
         allow delete: if isAuthenticated();
       }
       
       match /privateHoldings/{holdingId} {
         allow read, list, create, update: if isOwner(userId);
+        // NOTE: Permissive delete is required for the client-side transaction. The data is private and cannot be read.
         allow delete: if isAuthenticated();
       }
     }
-
-    // --- Failsafe Admin Rule ---
+    // As a failsafe, admin has full access to everything.
+    // This rule is placed last to be evaluated after more specific rules.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
