@@ -4,68 +4,58 @@ import type { ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 
 // --- Static, Permanent Mock Data ---
 
-const getPublicUrl = (path: string) => {
-    const storageBucket = "crestox-giok1.firebasestorage.app";
-    // Manually construct the URL. Path should be like 'MockArtWork/Artist One/artwork1.jpg'
-    return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
-};
-
-// Define the 8 artists with Indian/Gujarati names
+// Hardcoding the full, correct public URLs for reliability.
 const staticArtists = [
-    { id: 'mock-artist-1', name: 'Priya Patel', folder: 'Artist One' },
-    { id: 'mock-artist-2', name: 'Rohan Mehta', folder: 'Artist Two' },
-    { id: 'mock-artist-3', name: 'Aarav Shah', folder: 'Artist Three' },
-    { id: 'mock-artist-4', name: 'Isha Joshi', folder: 'Artist Four' },
-    { id: 'mock-artist-5', name: 'Kian Desai', folder: 'Artist Five' },
-    { id: 'mock-artist-6', name: 'Mira Trivedi', folder: 'Artist Six' },
-    { id: 'mock-artist-7', name: 'Arjun Dave', folder: 'Artist Seven' },
-    { id: 'mock-artist-8', name: 'Diya Sharma', folder: 'Artist Eight' },
+    { id: 'mock-artist-1', name: 'Priya Patel', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartist-avatar.jpg?alt=media' },
+    { id: 'mock-artist-2', name: 'Rohan Mehta', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistTwo%2Fartist-avatar.jpg?alt=media' },
+    { id: 'mock-artist-3', name: 'Aarav Shah', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartist-avatar.jpg?alt=media' },
+    { id: 'mock-artist-4', name: 'Isha Joshi', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFour%2Fartist-avatar.jpg?alt=media' },
+    { id: 'mock-artist-5', name: 'Kian Desai', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFive%2Fartist-avatar.jpg?alt=media' },
+    { id: 'mock-artist-6', name: 'Mira Trivedi', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartist-avatar.jpg?alt=media' },
+    { id: 'mock-artist-7', name: 'Arjun Dave', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSeven%2Fartist-avatar.jpg?alt=media' },
+    { id: 'mock-artist-8', name: 'Diya Sharma', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistEight%2Fartist-avatar.jpg?alt=media' },
 ];
 
-// Define the artworks for each artist
 const staticArtworks = [
     // Priya Patel (Artist One)
-    { artistId: 'mock-artist-1', filename: 'artwork1.jpg' },
-    { artistId: 'mock-artist-1', filename: 'artwork2.jpg' },
-    { artistId: 'mock-artist-1', filename: 'artwork3.jpg' },
-    { artistId: 'mock-artist-1', filename: 'artwork4.jpg' },
+    { artistId: 'mock-artist-1', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork1.jpg?alt=media' },
+    { artistId: 'mock-artist-1', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork2.jpg?alt=media' },
+    { artistId: 'mock-artist-1', title: 'Artwork 3', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork3.jpg?alt=media' },
+    { artistId: 'mock-artist-1', title: 'Artwork 4', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork4.jpg?alt=media' },
     
     // Rohan Mehta (Artist Two)
-    { artistId: 'mock-artist-2', filename: 'artwork1.jpg' },
-    { artistId: 'mock-artist-2', filename: 'artwork2.jpg' },
+    { artistId: 'mock-artist-2', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistTwo%2Fartwork1.jpg?alt=media' },
+    { artistId: 'mock-artist-2', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistTwo%2Fartwork2.jpg?alt=media' },
     
     // Aarav Shah (Artist Three)
-    { artistId: 'mock-artist-3', filename: 'artwork1.jpg' },
-    { artistId: 'mock-artist-3', filename: 'artwork2.jpg' },
-    { artistId: 'mock-artist-3', filename: 'artwork3.jpg' },
+    { artistId: 'mock-artist-3', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartwork1.jpg?alt=media' },
+    { artistId: 'mock-artist-3', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartwork2.jpg?alt=media' },
+    { artistId: 'mock-artist-3', title: 'Artwork 3', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartwork3.jpg?alt=media' },
     
     // Isha Joshi (Artist Four)
-    { artistId: 'mock-artist-4', filename: 'artwork1.jpg' },
+    { artistId: 'mock-artist-4', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFour%2Fartwork1.jpg?alt=media' },
     
     // Kian Desai (Artist Five)
-    { artistId: 'mock-artist-5', filename: 'artwork1.jpg' },
-    { artistId: 'mock-artist-5', filename: 'artwork2.jpg' },
+    { artistId: 'mock-artist-5', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFive%2Fartwork1.jpg?alt=media' },
+    { artistId: 'mock-artist-5', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFive%2Fartwork2.jpg?alt=media' },
     
     // Mira Trivedi (Artist Six)
-    { artistId: 'mock-artist-6', filename: 'artwork1.jpg' },
-    { artistId: 'mock-artist-6', filename: 'artwork2.jpg' },
-    { artistId: 'mock-artist-6', filename: 'artwork3.jpg' },
+    { artistId: 'mock-artist-6', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartwork1.jpg?alt=media' },
+    { artistId: 'mock-artist-6', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartwork2.jpg?alt=media' },
+    { artistId: 'mock-artist-6', title: 'Artwork 3', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartwork3.jpg?alt=media' },
     
     // Arjun Dave (Artist Seven)
-    { artistId: 'mock-artist-7', filename: 'artwork1.jpg' },
+    { artistId: 'mock-artist-7', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSeven%2Fartwork1.jpg?alt=media' },
     
     // Diya Sharma (Artist Eight)
-    { artistId: 'mock-artist-8', filename: 'artwork1.jpg' },
-    { artistId: 'mock-artist-8', filename: 'artwork2.jpg' },
+    { artistId: 'mock-artist-8', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistEight%2Fartwork1.jpg?alt=media' },
+    { artistId: 'mock-artist-8', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistEight%2Fartwork2.jpg?alt=media' },
 ];
 
 
 // --- Generate Data Structures from Static Source ---
 
 const generatedFractals = staticArtworks.map((artwork, index) => {
-    const artistFolder = staticArtists.find(a => a.id === artwork.artistId)?.folder;
-    if (!artistFolder) return null; // Should not happen
-
     const price = Math.floor(Math.random() * (250 - 15 + 1) + 15) * 100;
     const aiScore = Math.floor(Math.random() * (95 - 45 + 1) + 45);
     let crestoxGrade = 'A-';
@@ -75,16 +65,12 @@ const generatedFractals = staticArtworks.map((artwork, index) => {
     else if (aiScore > 40) crestoxGrade = 'A';
 
     const editions = Math.floor(Math.random() * 40 + 10) * 5;
-    const imageUrl = getPublicUrl(`MockArtWork/${artistFolder}/${artwork.filename}`);
     
-    // Use filename as title, removing extension
-    const title = artwork.filename.replace(/\.[^/.]+$/, "");
-
     return {
         id: `fractal-mock-${index + 1}`,
-        title: title.charAt(0).toUpperCase() + title.slice(1), // Capitalize first letter
-        images: [imageUrl],
-        heroImage: imageUrl,
+        title: artwork.title,
+        images: [artwork.url],
+        heroImage: artwork.url,
         artistId: artwork.artistId,
         description: 'A captivating piece from the artist\'s collection, showcasing a unique blend of color and form.',
         materials: 'Digital Render on Archival Paper',
@@ -112,12 +98,11 @@ const generatedArtists = staticArtists.map(artist => {
     const totalScoreWeightedValuation = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) * f.price), 0);
     const sumOfScoresSquared = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) ** 2), 0);
     const kFactor = totalScoreWeightedValuation > 0 ? totalPortfolioValue / totalScoreWeightedValuation : 0;
-    const avatarUrl = getPublicUrl(`MockArtWork/${artist.folder}/artist-avatar.jpg`);
 
     return {
         id: artist.id,
         name: artist.name,
-        avatar: avatarUrl,
+        avatar: artist.avatar,
         bio: `An esteemed artist from Gujarat, known for a unique and captivating style that blends traditional motifs with modern digital techniques.`,
         artistMessage: `Thank you for supporting my creative journey. Each piece is a part of my story, and I am glad to share it with you.`,
         fractalPrice,
