@@ -6,22 +6,23 @@ import type { ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 
 // Helper function to build the full, correct public URL for Firebase Storage images.
 // This function correctly encodes filenames to handle spaces and special characters.
-const getFirebaseImageUrl = (artistFolder: string, artworkFileName: string) => {
+const getFirebaseImageUrl = (artistFolder: string, artworkTitle: string) => {
     const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'crestox-giok1.firebasestorage.app';
+    const filename = `${artworkTitle}.png`;
     // Correctly constructs the URL, encoding the file path for safety.
-    return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/MockArtWork%2F${encodeURIComponent(artistFolder)}%2F${encodeURIComponent(artworkFileName)}?alt=media`;
+    return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/MockArtWork%2F${encodeURIComponent(artistFolder)}%2F${encodeURIComponent(filename)}?alt=media`;
 };
 
 // Based on the user-provided structure.
 const staticArtists = [
-    { id: 'mock-artist-1', folder: 'Artist One', name: 'Priya Patel', avatar: getFirebaseImageUrl('Artist One', 'artist-avatar.png') },
-    { id: 'mock-artist-2', folder: 'Artist Two', name: 'Rohan Mehta', avatar: getFirebaseImageUrl('Artist Two', 'artist-avatar.png') },
-    { id: 'mock-artist-3', folder: 'Artist Three', name: 'Aarav Shah', avatar: getFirebaseImageUrl('Artist Three', 'artist-avatar.png') },
-    { id: 'mock-artist-4', folder: 'Artist Four', name: 'Isha Joshi', avatar: getFirebaseImageUrl('Artist Four', 'artist-avatar.png') },
-    { id: 'mock-artist-5', folder: 'Artist Five', name: 'Kian Desai', avatar: getFirebaseImageUrl('Artist Five', 'artist-avatar.png') },
-    { id: 'mock-artist-6', folder: 'Artist Six', name: 'Mira Trivedi', avatar: getFirebaseImageUrl('Artist Six', 'artist-avatar.png') },
-    { id: 'mock-artist-7', folder: 'Artist Seven', name: 'Arjun Dave', avatar: getFirebaseImageUrl('Artist Seven', 'artist-avatar.png') },
-    { id: 'mock-artist-8', folder: 'Artist Eight', name: 'Diya Sharma', avatar: getFirebaseImageUrl('Artist Eight', 'artist-avatar.png') },
+    { id: 'mock-artist-1', folder: 'Artist One', name: 'Priya Patel', avatar: getFirebaseImageUrl('Artist One', 'artist-avatar') },
+    { id: 'mock-artist-2', folder: 'Artist Two', name: 'Rohan Mehta', avatar: getFirebaseImageUrl('Artist Two', 'artist-avatar') },
+    { id: 'mock-artist-3', folder: 'Artist Three', name: 'Aarav Shah', avatar: getFirebaseImageUrl('Artist Three', 'artist-avatar') },
+    { id: 'mock-artist-4', folder: 'Artist Four', name: 'Isha Joshi', avatar: getFirebaseImageUrl('Artist Four', 'artist-avatar') },
+    { id: 'mock-artist-5', folder: 'Artist Five', name: 'Kian Desai', avatar: getFirebaseImageUrl('Artist Five', 'artist-avatar') },
+    { id: 'mock-artist-6', folder: 'Artist Six', name: 'Mira Trivedi', avatar: getFirebaseImageUrl('Artist Six', 'artist-avatar') },
+    { id: 'mock-artist-7', folder: 'Artist Seven', name: 'Arjun Dave', avatar: getFirebaseImageUrl('Artist Seven', 'artist-avatar') },
+    { id: 'mock-artist-8', folder: 'Artist Eight', name: 'Diya Sharma', avatar: getFirebaseImageUrl('Artist Eight', 'artist-avatar') },
 ];
 
 const staticArtworks = [
@@ -65,9 +66,7 @@ const staticArtworks = [
 // --- Generate Data Structures from Static Source ---
 
 const generatedFractals = staticArtworks.map((artwork, index) => {
-    // The filename is the title with ".png" appended.
-    const filename = `${artwork.title}.png`;
-    const imageUrl = getFirebaseImageUrl(artwork.folder, filename);
+    const imageUrl = getFirebaseImageUrl(artwork.folder, artwork.title);
     const price = Math.floor(Math.random() * (250 - 15 + 1) + 15) * 100;
     const aiScore = Math.floor(Math.random() * (95 - 45 + 1) + 45);
     let crestoxGrade = 'A-';
@@ -317,7 +316,7 @@ export interface CollectorInfo {
 
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpeg", "image/png", "image/webp"];
 
 export const artworkFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters.").max(100),
@@ -404,5 +403,7 @@ export type NewArtworkData = {
     biographicalContext?: string;
     commissionPatronage?: string;
 }
+
+    
 
     
