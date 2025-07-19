@@ -121,31 +121,22 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     let unsubscribeAllUsers: () => void = () => {};
     let unsubscribeNotifications: () => void = () => {};
     let unsubscribeResaleListings: () => void = () => {};
-    let unsubscribeArtists: () => void = () => {};
-    let unsubscribeFractals: () => void = () => {};
+
+    // --- CRITICAL CHANGE: The live data listeners for artists and fractals are removed ---
+    // This prevents the static data from being overwritten by Firestore on page load.
+    // setArtists(initialArtists);
+    // setFractals(initialFractals);
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      // Unsubscribe from all previous listeners
+      // Unsubscribe from all previous user-specific listeners
       unsubscribeUser();
       unsubscribeArtist();
       unsubscribeHoldings();
       unsubscribeAllUsers();
       unsubscribeNotifications();
       unsubscribeResaleListings();
-      unsubscribeArtists();
-      unsubscribeFractals();
 
-      // Listen to public collections regardless of auth state
-       unsubscribeArtists = onSnapshot(firestoreCollection(db, "artists"), (snapshot) => {
-          const liveArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
-          setArtists(liveArtists);
-      }, (error) => console.error("Error fetching artists:", error));
-
-      unsubscribeFractals = onSnapshot(firestoreCollection(db, "fractals"), (snapshot) => {
-          const liveFractals = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Fractal[];
-          setFractals(liveFractals);
-      }, (error) => console.error("Error fetching fractals:", error));
-      
+      // Listen to public resale listings regardless of auth state
       unsubscribeResaleListings = onSnapshot(firestoreCollection(db, "resaleListings"), (snapshot) => {
         const fetchedListings = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as ResaleListing[];
         setResaleListings(fetchedListings);

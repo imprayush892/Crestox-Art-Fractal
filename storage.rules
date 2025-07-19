@@ -13,12 +13,12 @@ service firebase.storage {
       allow read: if true;
     }
 		 
-    // Allow public read access for specific folders containing public assets.
+     // Allow public read access for specific folders containing public assets.
     match /founders/{imageName} {
       allow read: if true;
     }
-    
-    // Allow public read for mock artwork used for demonstration.
+
+    // Allow public read for mock artwork
     match /MockArtWork/{allPaths=**} {
       allow read: if true;
     }

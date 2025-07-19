@@ -33,13 +33,14 @@ async function getDataFromCollection<T>(collectionName: string): Promise<T[]> {
 export async function getInitialArtists(): Promise<Artist[]> {
   const artistsFromDb = await getDataFromCollection<Artist>('artists');
   
-  const combined = [...artistsFromDb];
-  const existingIds = new Set(artistsFromDb.map(a => a.id));
+  // Start with the static mock data as the base
+  const combined = [...mockArtists];
+  const existingMockIds = new Set(mockArtists.map(a => a.id));
 
-  // Merge with mock data, avoiding duplicates
-  for (const mockArtist of mockArtists) {
-    if (!existingIds.has(mockArtist.id)) {
-      combined.push(mockArtist);
+  // Add artists from the database, but only if they don't have a mock ID
+  for (const dbArtist of artistsFromDb) {
+    if (!existingMockIds.has(dbArtist.id)) {
+      combined.push(dbArtist);
     }
   }
 
@@ -49,17 +50,16 @@ export async function getInitialArtists(): Promise<Artist[]> {
 export async function getInitialFractals(): Promise<Fractal[]> {
   const fractalsFromDb = await getDataFromCollection<Fractal>('fractals');
   
-  const combined = [...fractalsFromDb];
-  const existingIds = new Set(fractalsFromDb.map(f => f.id));
+  // Start with the static mock data as the base
+  const combined = [...mockFractals];
+  const existingMockIds = new Set(mockFractals.map(f => f.id));
 
-  // Merge with mock data, avoiding duplicates
-  for (const mockFractal of mockFractals) {
-    if (!existingIds.has(mockFractal.id)) {
-      combined.push(mockFractal);
+  // Add fractals from the database, but only if they don't have a mock ID
+  for (const dbFractal of fractalsFromDb) {
+    if (!existingMockIds.has(dbFractal.id)) {
+      combined.push(dbFractal);
     }
   }
 
   return combined;
 }
-
-    
