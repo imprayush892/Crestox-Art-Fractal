@@ -15,25 +15,25 @@ const getFirebaseImageUrl = (artistFolder: string, artworkTitle: string) => {
 
 // Based on the user-provided structure.
 const staticArtists = [
-    { id: 'mock-artist-1', folder: 'Artist One', name: 'Priya Patel', avatar: getFirebaseImageUrl('Artist One', 'artist-avatar') },
-    { id: 'mock-artist-2', folder: 'Artist Two', name: 'Rohan Mehta', avatar: getFirebaseImageUrl('Artist Two', 'artist-avatar') },
-    { id: 'mock-artist-3', folder: 'Artist Three', name: 'Aarav Shah', avatar: getFirebaseImageUrl('Artist Three', 'artist-avatar') },
-    { id: 'mock-artist-4', folder: 'Artist Four', name: 'Isha Joshi', avatar: getFirebaseImageUrl('Artist Four', 'artist-avatar') },
-    { id: 'mock-artist-5', folder: 'Artist Five', name: 'Kian Desai', avatar: getFirebaseImageUrl('Artist Five', 'artist-avatar') },
-    { id: 'mock-artist-6', folder: 'Artist Six', name: 'Mira Trivedi', avatar: getFirebaseImageUrl('Artist Six', 'artist-avatar') },
-    { id: 'mock-artist-7', folder: 'Artist Seven', name: 'Arjun Dave', avatar: getFirebaseImageUrl('Artist Seven', 'artist-avatar') },
-    { id: 'mock-artist-8', folder: 'Artist Eight', name: 'Diya Sharma', avatar: getFirebaseImageUrl('Artist Eight', 'artist-avatar') },
+    { id: 'mock-artist-1', folder: 'Artist One', name: 'Priya Patel' },
+    { id: 'mock-artist-2', folder: 'Artist Two', name: 'Rohan Mehta' },
+    { id: 'mock-artist-3', folder: 'Artist Three', name: 'Aarav Shah' },
+    { id: 'mock-artist-4', folder: 'Artist Four', name: 'Isha Joshi' },
+    { id: 'mock-artist-5', folder: 'Artist Five', name: 'Kian Desai' },
+    { id: 'mock-artist-6', folder: 'Artist Six', name: 'Mira Trivedi' },
+    { id: 'mock-artist-7', folder: 'Artist Seven', name: 'Arjun Dave' },
+    { id: 'mock-artist-8', folder: 'Artist Eight', name: 'Diya Sharma' },
 ];
 
 const staticArtworks = [
-    // Priya Patel (Artist One) - Using exact filenames from screenshot
+    // Priya Patel (Artist One)
     { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Cheriyal Village Festival' },
     { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Krishna Radha Miniature' },
     { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Moonlit Palace Miniature' },
     { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Royal Court Miniature' },
     { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Royal Procession Miniature' },
 
-    // Rohan Mehta (Artist Two) - Assuming similar naming convention
+    // Rohan Mehta (Artist Two)
     { artistId: 'mock-artist-2', folder: 'Artist Two', title: 'Celestial Vision' },
     { artistId: 'mock-artist-2', folder: 'Artist Two', title: 'Crimson Nebula' },
     
@@ -109,11 +109,12 @@ const generatedArtists = staticArtists.map(artist => {
     const totalScoreWeightedValuation = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) * f.price), 0);
     const sumOfScoresSquared = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) ** 2), 0);
     const kFactor = totalScoreWeightedValuation > 0 ? totalPortfolioValue / totalScoreWeightedValuation : 0;
+    const avatarUrl = getFirebaseImageUrl(artist.folder, 'artist-avatar');
 
     return {
         id: artist.id,
         name: artist.name,
-        avatar: artist.avatar,
+        avatar: avatarUrl,
         bio: `An esteemed artist from Gujarat, known for a unique and captivating style that blends traditional motifs with modern digital techniques.`,
         artistMessage: `Thank you for supporting my creative journey. Each piece is a part of my story, and I am glad to share it with you.`,
         fractalPrice,
@@ -403,6 +404,8 @@ export type NewArtworkData = {
     biographicalContext?: string;
     commissionPatronage?: string;
 }
+
+    
 
     
 
