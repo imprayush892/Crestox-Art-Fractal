@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -13,8 +14,12 @@ service cloud.firestore {
     }
 
     function isAdmin() {
+      // This will need to be configured via custom claims in your Firebase project.
+      // For testing, you can check for a specific UID.
+      // return request.auth.uid == 'YOUR_ADMIN_UID';
       return request.auth.token.admin == true;
     }
+
 
     // This function checks if a non-owner update on a user document
     // is a valid seller payout from a transaction. It uses a blacklist approach
@@ -72,6 +77,7 @@ service cloud.firestore {
              before.bio == after.bio;
     }
 
+
     // --- Collection Group Rules ---
     // This allows the "Collectors" tab query to work.
     match /{path=**}/holdings/{holdingId} {
@@ -83,14 +89,14 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       // Allow artist to update their own profile, or allow a transaction to update financial fields.
-      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isArtistFinancialUpdate() || isAdmin());
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isArtistFinancialUpdate());
     }
 
     match /fractals/{fractalId} {
       allow read: if true;
       allow create: if isAuthenticated();
-      // Allow updates during transactions or by an admin
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      // Allow an artist to update their own fractal. Admin access is handled by the failsafe rule.
+      allow update: if isAuthenticated() && isOwner(resource.data.artistId);
     }
 
     match /resaleListings/{listingId} {
@@ -126,11 +132,6 @@ service cloud.firestore {
         allow read, list, create, update: if isOwner(userId);
         // NOTE: Permissive delete is required for the client-side transaction. The data is private and cannot be read.
         allow delete: if isAuthenticated();
-      }
-
-      match /notifications/{notificationId} {
-        allow create: if isAdmin();
-        allow read, update: if isOwner(userId);
       }
     }
     // As a failsafe, admin has full access to everything.
