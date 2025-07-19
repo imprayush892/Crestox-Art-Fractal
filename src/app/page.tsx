@@ -45,7 +45,7 @@ export default function Home() {
     if (fractals.length > 0) {
       const activeFractals = fractals.filter(f => f.status !== 'pending_review');
       const shuffled = [...activeFractals].sort(() => 0.5 - Math.random());
-      setDisplayedFractals(shuffled.slice(0, 100));
+      setDisplayedFractals(shuffled);
       setIsLoading(false);
     }
   }, [fractals]); 
