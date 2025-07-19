@@ -789,3 +789,5 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
     </>
   );
 }
+
+    

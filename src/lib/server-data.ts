@@ -61,3 +61,5 @@ export async function getInitialFractals(): Promise<Fractal[]> {
 
   return combined;
 }
+
+    

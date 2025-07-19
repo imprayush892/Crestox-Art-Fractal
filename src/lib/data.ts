@@ -407,3 +407,5 @@ export type NewArtworkData = {
     biographicalContext?: string;
     commissionPatronage?: string;
 }
+
+    
