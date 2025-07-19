@@ -2,88 +2,96 @@
 import { z } from 'zod';
 import type { ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 
-// --- Static, Correct Data ---
-
-const staticArtists = [
-    { id: 'artist-1', name: 'Anik Singha' },
-    { id: 'artist-2', name: 'Arindam Bhowmick' },
-    { id: 'artist-3', name: 'Bipul Roy' },
-    { id: 'artist-4', name: 'Mrinmoy Mridha' },
-    { id: 'artist-5', name: 'Rabi Dey' },
-    { id: 'artist-6', name: 'Shubham DUTTA' },
-    { id: 'artist-7', name: 'Shuvranshu Mondal' },
-    { id: 'artist-8', name: 'Supratim Naskar' },
-];
-
-const staticArtworks = [
-    // Anik Singha
-    { artistId: 'artist-1', filename: 'Anik Singha - 1.jpg' },
-    { artistId: 'artist-1', filename: 'Anik Singha - 2.jpg' },
-    { artistId: 'artist-1', filename: 'Anik Singha - 3.jpg' },
-    { artistId: 'artist-1', filename: 'Anik Singha - 4.jpg' },
-    // Arindam Bhowmick
-    { artistId: 'artist-2', filename: 'Arindam Bhowmick - 1.jpg' },
-    { artistId: 'artist-2', filename: 'Arindam Bhowmick - 2.jpg' },
-    { artistId: 'artist-2', filename: 'Arindam Bhowmick - 3.jpg' },
-    // Bipul Roy
-    { artistId: 'artist-3', filename: 'Bipul Roy - 1.jpg' },
-    { artistId: 'artist-3', filename: 'Bipul Roy - 2.jpg' },
-    { artistId: 'artist-3', filename: 'Bipul Roy - 3.jpg' },
-    { artistId: 'artist-3', filename: 'Bipul Roy - 4.jpg' },
-    // Mrinmoy Mridha
-    { artistId: 'artist-4', filename: 'Mrinmoy Mridha - 1.jpg' },
-    { artistId: 'artist-4', filename: 'Mrinmoy Mridha - 2.jpg' },
-    { artistId: 'artist-4', filename: 'Mrinmoy Mridha - 3.jpg' },
-    // Rabi Dey
-    { artistId: 'artist-5', filename: 'Rabi Dey - 1.jpg' },
-    { artistId: 'artist-5', filename: 'Rabi Dey - 2.jpg' },
-    { artistId: 'artist-5', filename: 'Rabi Dey - 3.jpg' },
-    // Shubham DUTTA
-    { artistId: 'artist-6', filename: 'Shubham DUTTA - 1.jpg' },
-    { artistId: 'artist-6', filename: 'Shubham DUTTA - 2.jpg' },
-    // Shuvranshu Mondal
-    { artistId: 'artist-7', filename: 'Shuvranshu Mondal - 1.jpg' },
-    { artistId: 'artist-7', filename: 'Shuvranshu Mondal - 2.jpg' },
-    { artistId: 'artist-7', filename: 'Shuvranshu Mondal - 3.jpg' },
-    { artistId: 'artist-7', filename: 'Shuvranshu Mondal - 4.jpg' },
-    { artistId: 'artist-7', filename: 'Shuvranshu Mondal - 5.jpg' },
-    // Supratim Naskar
-    { artistId: 'artist-8', filename: 'Supratim Naskar - 1.jpg' },
-    { artistId: 'artist-8', filename: 'Supratim Naskar - 2.jpg' },
-    { artistId: 'artist-8', filename: 'Supratim Naskar - 3.jpg' },
-];
+// --- Static, Permanent Mock Data ---
 
 const getPublicUrl = (path: string) => {
-    const storageBucket = "crestox-giok1.appspot.com";
+    const storageBucket = "crestox-giok1.firebasestorage.app";
+    // Manually construct the URL. Path should be like 'MockArtWork/Artist One/artwork1.jpg'
     return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
 };
 
-// --- Generated Data from Static Source ---
+// Define the 8 artists with Indian/Gujarati names
+const staticArtists = [
+    { id: 'mock-artist-1', name: 'Priya Patel', folder: 'Artist One' },
+    { id: 'mock-artist-2', name: 'Rohan Mehta', folder: 'Artist Two' },
+    { id: 'mock-artist-3', name: 'Aarav Shah', folder: 'Artist Three' },
+    { id: 'mock-artist-4', name: 'Isha Joshi', folder: 'Artist Four' },
+    { id: 'mock-artist-5', name: 'Kian Desai', folder: 'Artist Five' },
+    { id: 'mock-artist-6', name: 'Mira Trivedi', folder: 'Artist Six' },
+    { id: 'mock-artist-7', name: 'Arjun Dave', folder: 'Artist Seven' },
+    { id: 'mock-artist-8', name: 'Diya Sharma', folder: 'Artist Eight' },
+];
+
+// Define the artworks for each artist
+const staticArtworks = [
+    // Priya Patel (Artist One)
+    { artistId: 'mock-artist-1', filename: 'artwork1.jpg' },
+    { artistId: 'mock-artist-1', filename: 'artwork2.jpg' },
+    { artistId: 'mock-artist-1', filename: 'artwork3.jpg' },
+    { artistId: 'mock-artist-1', filename: 'artwork4.jpg' },
+    
+    // Rohan Mehta (Artist Two)
+    { artistId: 'mock-artist-2', filename: 'artwork1.jpg' },
+    { artistId: 'mock-artist-2', filename: 'artwork2.jpg' },
+    
+    // Aarav Shah (Artist Three)
+    { artistId: 'mock-artist-3', filename: 'artwork1.jpg' },
+    { artistId: 'mock-artist-3', filename: 'artwork2.jpg' },
+    { artistId: 'mock-artist-3', filename: 'artwork3.jpg' },
+    
+    // Isha Joshi (Artist Four)
+    { artistId: 'mock-artist-4', filename: 'artwork1.jpg' },
+    
+    // Kian Desai (Artist Five)
+    { artistId: 'mock-artist-5', filename: 'artwork1.jpg' },
+    { artistId: 'mock-artist-5', filename: 'artwork2.jpg' },
+    
+    // Mira Trivedi (Artist Six)
+    { artistId: 'mock-artist-6', filename: 'artwork1.jpg' },
+    { artistId: 'mock-artist-6', filename: 'artwork2.jpg' },
+    { artistId: 'mock-artist-6', filename: 'artwork3.jpg' },
+    
+    // Arjun Dave (Artist Seven)
+    { artistId: 'mock-artist-7', filename: 'artwork1.jpg' },
+    
+    // Diya Sharma (Artist Eight)
+    { artistId: 'mock-artist-8', filename: 'artwork1.jpg' },
+    { artistId: 'mock-artist-8', filename: 'artwork2.jpg' },
+];
+
+
+// --- Generate Data Structures from Static Source ---
 
 const generatedFractals = staticArtworks.map((artwork, index) => {
-    const price = Math.floor(Math.random() * (150 - 5 + 1) + 5) * 10;
-    const aiScore = Math.floor(Math.random() * (95 - 30 + 1) + 30);
-    let crestoxGrade = 'A-';
-    if (aiScore > 80) crestoxGrade = 'AAA';
-    else if (aiScore > 60) crestoxGrade = 'AA';
-    else if (aiScore > 40) crestoxGrade = 'A+';
-    else if (aiScore > 20) crestoxGrade = 'A';
+    const artistFolder = staticArtists.find(a => a.artistId === artwork.artistId)?.folder;
+    if (!artistFolder) return null; // Should not happen
 
-    const editions = Math.floor(Math.random() * 19 + 1) * 5;
-    const imageUrl = getPublicUrl(`artworks/${artwork.filename}`);
+    const price = Math.floor(Math.random() * (250 - 15 + 1) + 15) * 100;
+    const aiScore = Math.floor(Math.random() * (95 - 45 + 1) + 45);
+    let crestoxGrade = 'A-';
+    if (aiScore > 85) crestoxGrade = 'AAA';
+    else if (aiScore > 70) crestoxGrade = 'AA';
+    else if (aiScore > 55) crestoxGrade = 'A+';
+    else if (aiScore > 40) crestoxGrade = 'A';
+
+    const editions = Math.floor(Math.random() * 40 + 10) * 5;
+    const imageUrl = getPublicUrl(`MockArtWork/${artistFolder}/${artwork.filename}`);
+    
+    // Use filename as title, removing extension
+    const title = artwork.filename.replace(/\.[^/.]+$/, "");
 
     return {
-        id: `fractal-${index + 1}`,
-        title: artwork.filename.replace('.jpg', '').replace(/ - \d+$/, ''),
+        id: `fractal-mock-${index + 1}`,
+        title: title.charAt(0).toUpperCase() + title.slice(1), // Capitalize first letter
         images: [imageUrl],
         heroImage: imageUrl,
         artistId: artwork.artistId,
-        description: 'This is a beautiful piece of art from the collection.',
-        materials: 'Digital Print on Canvas',
-        artworkSize: { length: 800, breadth: 600, unit: 'px' as const },
-        aiHint: 'fine art painting',
-        width: 800,
-        height: 600,
+        description: 'A captivating piece from the artist\'s collection, showcasing a unique blend of color and form.',
+        materials: 'Digital Render on Archival Paper',
+        artworkSize: { length: 1920, breadth: 1080, unit: 'px' as const },
+        aiHint: 'abstract digital art',
+        width: 1920,
+        height: 1080,
         price,
         priceHistory: [{ date: new Date().toISOString(), price: price }],
         status: 'active' as const,
@@ -92,25 +100,27 @@ const generatedFractals = staticArtworks.map((artwork, index) => {
         aiScore,
         crestoxGrade,
     };
-});
+}).filter(Boolean) as Fractal[];
+
 
 const generatedArtists = staticArtists.map(artist => {
     const artistFractals = generatedFractals.filter(f => f.artistId === artist.id);
     const totalPortfolioValue = artistFractals.reduce((sum, f) => sum + f.price, 0);
     const totalEditions = artistFractals.reduce((sum, f) => sum + (f.editions || 0), 0);
     const availableEditions = artistFractals.reduce((sum, f) => sum + (f.editionsAvailable || 0), 0);
-    const fractalPrice = totalEditions > 0 ? Math.round((totalPortfolioValue / totalEditions) * 100) / 100 : 0;
+    const fractalPrice = totalEditions > 0 ? Math.round((totalPortfolioValue / totalEditions)) : 0;
     const totalScoreWeightedValuation = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) * f.price), 0);
     const sumOfScoresSquared = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) ** 2), 0);
     const kFactor = totalScoreWeightedValuation > 0 ? totalPortfolioValue / totalScoreWeightedValuation : 0;
+    const avatarUrl = getPublicUrl(`MockArtWork/${artist.folder}/artist-avatar.jpg`);
 
     return {
         id: artist.id,
         name: artist.name,
-        avatar: getPublicUrl(`artists/${artist.name}.jpg`),
-        bio: `An esteemed artist known for a unique and captivating style.`,
-        artistMessage: `Thank you for supporting my creative journey.`,
-        fractalPrice: fractalPrice,
+        avatar: avatarUrl,
+        bio: `An esteemed artist from Gujarat, known for a unique and captivating style that blends traditional motifs with modern digital techniques.`,
+        artistMessage: `Thank you for supporting my creative journey. Each piece is a part of my story, and I am glad to share it with you.`,
+        fractalPrice,
         priceHistory: [{ date: new Date().toISOString(), price: fractalPrice }],
         totalPortfolioValue,
         totalPortfolioValueHistory: [{ date: new Date().toISOString(), value: totalPortfolioValue }],
@@ -121,6 +131,7 @@ const generatedArtists = staticArtists.map(artist => {
         sumOfScoresSquared,
         awards: [],
         exhibitions: [],
+        location: 'Gujarat, India',
     };
 });
 

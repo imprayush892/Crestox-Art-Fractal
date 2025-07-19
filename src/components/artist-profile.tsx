@@ -219,11 +219,13 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
 
   const availablePercentage = artist.totalEditions > 0 ? (artist.availableEditions / artist.totalEditions) * 100 : 0;
   
+  const isMockArtist = artist.id.startsWith('mock-artist-');
+
   const isCollectible = useMemo(() => {
-    if (isOwnProfile) return false;
+    if (isOwnProfile || isMockArtist) return false;
     // Artworks can be collected if the artist has no art yet OR if they have art AND a message.
     return artistFractals.length === 0 || !!artist.artistMessage;
-  }, [artist, artistFractals, isOwnProfile]);
+  }, [artist, artistFractals, isOwnProfile, isMockArtist]);
 
   const handleCollectClick = () => {
     if (!isLoggedIn) {
@@ -450,7 +452,12 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                             </motion.div>
                         </Button>
                       </div>
-                       {!isCollectible && (
+                       {isMockArtist && (
+                          <p className="text-xs text-center text-muted-foreground mt-2">
+                              This is a demonstration artist profile. Collection is disabled.
+                          </p>
+                       )}
+                       {!isCollectible && !isMockArtist && (
                           <p className="text-xs text-center text-destructive mt-2">
                               This artist's fractals are not available for collection until they provide a message to their collectors.
                           </p>
