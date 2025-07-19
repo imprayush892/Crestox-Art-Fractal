@@ -219,7 +219,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
               <CardContent>
                   <ChartContainer 
                       config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
-                      className="h-[300px] w-full"
+                      className="aspect-video w-full"
                   >
                       <LineChart data={artworkValueHistory} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                           <CartesianGrid vertical={false} strokeDasharray="3 3" />
