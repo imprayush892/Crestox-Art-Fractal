@@ -14,12 +14,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // This will need to be configured via custom claims in your Firebase project.
-      // For testing, you can check for a specific UID.
-      // return request.auth.uid == 'YOUR_ADMIN_UID';
+      // Check for a custom claim on the auth token.
+      // This must be set via the Firebase Admin SDK.
       return request.auth.token.admin == true;
     }
-
 
     // This function checks if a non-owner update on a user document
     // is a valid seller payout from a transaction. It uses a blacklist approach
@@ -88,15 +86,14 @@ service cloud.firestore {
     match /artists/{artistId} {
       allow get, list: if true;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      // Allow artist to update their own profile, or allow a transaction to update financial fields.
-      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isArtistFinancialUpdate());
+      // Allow artist to update their own profile, a transaction to update financials, OR an admin to update anything.
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isArtistFinancialUpdate() || isAdmin());
     }
 
     match /fractals/{fractalId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      // Allow an artist to update their own fractal. Admin access is handled by the failsafe rule.
-      allow update: if isAuthenticated() && isOwner(resource.data.artistId);
+      // Allow updates during transactions by any authenticated user.
+      allow create, update: if isAuthenticated();
     }
 
     match /resaleListings/{listingId} {
