@@ -17,8 +17,8 @@ service firebase.storage {
     match /founders/{imageName} {
       allow read: if true;
     }
-
-    // Allow public read for mock artwork
+    
+    // Allow public read for mock artwork used for demonstration.
     match /MockArtWork/{allPaths=**} {
       allow read: if true;
     }

@@ -116,31 +116,58 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   useEffect(() => {
     let unsubscribeUser: () => void = () => {};
-    let unsubscribeArtist: () => void = () => {};
+    let unsubscribeArtistProfile: () => void = () => {};
     let unsubscribeHoldings: () => void = () => {};
     let unsubscribeAllUsers: () => void = () => {};
     let unsubscribeNotifications: () => void = () => {};
-    let unsubscribeResaleListings: () => void = () => {};
+    
+    // --- Data Listeners ---
+    const unsubscribeArtists = onSnapshot(firestoreCollection(db, "artists"), (snapshot) => {
+        const artistsFromDb = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Artist));
+        setArtists(currentArtists => {
+            const combined = [...currentArtists];
+            const existingIds = new Set(currentArtists.map(a => a.id));
+            artistsFromDb.forEach(dbArtist => {
+                if (!existingIds.has(dbArtist.id)) {
+                    combined.push(dbArtist);
+                } else {
+                    const index = combined.findIndex(a => a.id === dbArtist.id);
+                    if (index !== -1) combined[index] = dbArtist; // Update existing
+                }
+            });
+            return combined;
+        });
+    });
 
-    // --- CRITICAL CHANGE: The live data listeners for artists and fractals are removed ---
-    // This prevents the static data from being overwritten by Firestore on page load.
-    // setArtists(initialArtists);
-    // setFractals(initialFractals);
+    const unsubscribeFractals = onSnapshot(firestoreCollection(db, "fractals"), (snapshot) => {
+        const fractalsFromDb = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Fractal));
+        setFractals(currentFractals => {
+            const combined = [...currentFractals];
+            const existingIds = new Set(currentFractals.map(f => f.id));
+            fractalsFromDb.forEach(dbFractal => {
+                if (!existingIds.has(dbFractal.id)) {
+                    combined.push(dbFractal);
+                } else {
+                    const index = combined.findIndex(f => f.id === dbFractal.id);
+                    if (index !== -1) combined[index] = dbFractal; // Update existing
+                }
+            });
+            return combined;
+        });
+    });
+
+    const unsubscribeResaleListings = onSnapshot(firestoreCollection(db, "resaleListings"), (snapshot) => {
+        const fetchedListings = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as ResaleListing[];
+        setResaleListings(fetchedListings);
+    });
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       // Unsubscribe from all previous user-specific listeners
       unsubscribeUser();
-      unsubscribeArtist();
+      unsubscribeArtistProfile();
       unsubscribeHoldings();
       unsubscribeAllUsers();
       unsubscribeNotifications();
-      unsubscribeResaleListings();
-
-      // Listen to public resale listings regardless of auth state
-      unsubscribeResaleListings = onSnapshot(firestoreCollection(db, "resaleListings"), (snapshot) => {
-        const fetchedListings = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as ResaleListing[];
-        setResaleListings(fetchedListings);
-      });
       
       if (firebaseUser) {
         setIsLoading(true);
@@ -156,47 +183,20 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             const userData = userDoc.data() as User;
             setUser(userData);
 
-            // --- Robust Artist Profile Loading ---
-            let foundArtistProfile = false;
-
-            // 1. Fast Path: Use the direct link if it exists.
             if (userData.artistProfile?.id) {
               const artistRef = doc(db, 'artists', userData.artistProfile.id);
-              unsubscribeArtist = onSnapshot(artistRef, (artistDoc) => {
+              unsubscribeArtistProfile = onSnapshot(artistRef, (artistDoc) => {
                 if (artistDoc.exists()) {
                   setArtistProfile({ id: artistDoc.id, ...artistDoc.data() } as ArtistProfile);
-                  foundArtistProfile = true;
                 } else {
                   console.warn("Artist document link is broken, resetting profile.");
                   setArtistProfile(null);
                 }
               });
             } else {
-              // 2. Fallback & Self-Heal: If no direct link, query to find the profile.
-              const artistsQuery = query(firestoreCollection(db, 'artists'), where("userId", "==", firebaseUser.uid));
-              const artistQuerySnapshot = await getDocs(artistsQuery);
-
-              if (!artistQuerySnapshot.empty) {
-                const artistDoc = artistQuerySnapshot.docs[0];
-                const artistData = { id: artistDoc.id, ...artistDoc.data() } as ArtistProfile;
-                setArtistProfile(artistData);
-                foundArtistProfile = true;
-
-                // Self-Heal: Repair the missing artist profile link for user:", firebaseUser.uid);
-                await updateDoc(userRef, {
-                  artistProfile: {
-                    id: artistData.id,
-                    avatar: artistData.avatar,
-                    name: artistData.name,
-                  }
-                }).catch(err => console.error("Failed to repair user document:", err));
-
-              } else {
-                setArtistProfile(null);
-              }
+              setArtistProfile(null);
             }
             
-            // --- Other Data Listeners ---
             const publicHoldingsRef = firestoreCollection(db, 'users', firebaseUser.uid, 'holdings');
             unsubscribeHoldings = onSnapshot(publicHoldingsRef, async (publicSnapshot) => {
                 const publicHoldings = publicSnapshot.docs.map(d => ({ id: d.id, ...d.data() })) as (PublicHolding & {id: string})[];
@@ -253,7 +253,17 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      unsubscribeArtists();
+      unsubscribeFractals();
+      unsubscribeResaleListings();
+      unsubscribeUser();
+      unsubscribeArtistProfile();
+      unsubscribeHoldings();
+      unsubscribeAllUsers();
+      unsubscribeNotifications();
+    };
   }, []);
   
   const getCollectorsForArtist = async (artistId: string) => {
