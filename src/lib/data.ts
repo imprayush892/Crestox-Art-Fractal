@@ -2,6 +2,136 @@
 import { z } from 'zod';
 import type { ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 
+// --- Static, Correct Data ---
+
+const staticArtists = [
+    { id: 'artist-1', name: 'Anik Singha' },
+    { id: 'artist-2', name: 'Arindam Bhowmick' },
+    { id: 'artist-3', name: 'Bipul Roy' },
+    { id: 'artist-4', name: 'Mrinmoy Mridha' },
+    { id: 'artist-5', name: 'Rabi Dey' },
+    { id: 'artist-6', name: 'Shubham DUTTA' },
+    { id: 'artist-7', name: 'Shuvranshu Mondal' },
+    { id: 'artist-8', name: 'Supratim Naskar' },
+];
+
+const staticArtworks = [
+    // Anik Singha
+    { artistId: 'artist-1', filename: 'Anik Singha - 1.jpg' },
+    { artistId: 'artist-1', filename: 'Anik Singha - 2.jpg' },
+    { artistId: 'artist-1', filename: 'Anik Singha - 3.jpg' },
+    { artistId: 'artist-1', filename: 'Anik Singha - 4.jpg' },
+    // Arindam Bhowmick
+    { artistId: 'artist-2', filename: 'Arindam Bhowmick - 1.jpg' },
+    { artistId: 'artist-2', filename: 'Arindam Bhowmick - 2.jpg' },
+    { artistId: 'artist-2', filename: 'Arindam Bhowmick - 3.jpg' },
+    // Bipul Roy
+    { artistId: 'artist-3', filename: 'Bipul Roy - 1.jpg' },
+    { artistId: 'artist-3', filename: 'Bipul Roy - 2.jpg' },
+    { artistId: 'artist-3', filename: 'Bipul Roy - 3.jpg' },
+    { artistId: 'artist-3', filename: 'Bipul Roy - 4.jpg' },
+    // Mrinmoy Mridha
+    { artistId: 'artist-4', filename: 'Mrinmoy Mridha - 1.jpg' },
+    { artistId: 'artist-4', filename: 'Mrinmoy Mridha - 2.jpg' },
+    { artistId: 'artist-4', filename: 'Mrinmoy Mridha - 3.jpg' },
+    // Rabi Dey
+    { artistId: 'artist-5', filename: 'Rabi Dey - 1.jpg' },
+    { artistId: 'artist-5', filename: 'Rabi Dey - 2.jpg' },
+    { artistId: 'artist-5', filename: 'Rabi Dey - 3.jpg' },
+    // Shubham DUTTA
+    { artistId: 'artist-6', filename: 'Shubham DUTTA - 1.jpg' },
+    { artistId: 'artist-6', filename: 'Shubham DUTTA - 2.jpg' },
+    // Shuvranshu Mondal
+    { artistId: 'artist-7', filename: 'Shuvranshu Mondal - 1.jpg' },
+    { artistId: 'artist-7', filename: 'Shuvranshu Mondal - 2.jpg' },
+    { artistId: 'artist-7', filename: 'Shuvranshu Mondal - 3.jpg' },
+    { artistId: 'artist-7', filename: 'Shuvranshu Mondal - 4.jpg' },
+    { artistId: 'artist-7', filename: 'Shuvranshu Mondal - 5.jpg' },
+    // Supratim Naskar
+    { artistId: 'artist-8', filename: 'Supratim Naskar - 1.jpg' },
+    { artistId: 'artist-8', filename: 'Supratim Naskar - 2.jpg' },
+    { artistId: 'artist-8', filename: 'Supratim Naskar - 3.jpg' },
+];
+
+const getPublicUrl = (path: string) => {
+    const storageBucket = "crestox-giok1.appspot.com";
+    return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
+};
+
+// --- Generated Data from Static Source ---
+
+const generatedFractals = staticArtworks.map((artwork, index) => {
+    const price = Math.floor(Math.random() * (150 - 5 + 1) + 5) * 10;
+    const aiScore = Math.floor(Math.random() * (95 - 30 + 1) + 30);
+    let crestoxGrade = 'A-';
+    if (aiScore > 80) crestoxGrade = 'AAA';
+    else if (aiScore > 60) crestoxGrade = 'AA';
+    else if (aiScore > 40) crestoxGrade = 'A+';
+    else if (aiScore > 20) crestoxGrade = 'A';
+
+    const editions = Math.floor(Math.random() * 19 + 1) * 5;
+    const imageUrl = getPublicUrl(`artworks/${artwork.filename}`);
+
+    return {
+        id: `fractal-${index + 1}`,
+        title: artwork.filename.replace('.jpg', '').replace(/ - \d+$/, ''),
+        images: [imageUrl],
+        heroImage: imageUrl,
+        artistId: artwork.artistId,
+        description: 'This is a beautiful piece of art from the collection.',
+        materials: 'Digital Print on Canvas',
+        artworkSize: { length: 800, breadth: 600, unit: 'px' as const },
+        aiHint: 'fine art painting',
+        width: 800,
+        height: 600,
+        price,
+        priceHistory: [{ date: new Date().toISOString(), price: price }],
+        status: 'active' as const,
+        editions,
+        editionsAvailable: editions,
+        aiScore,
+        crestoxGrade,
+    };
+});
+
+const generatedArtists = staticArtists.map(artist => {
+    const artistFractals = generatedFractals.filter(f => f.artistId === artist.id);
+    const totalPortfolioValue = artistFractals.reduce((sum, f) => sum + f.price, 0);
+    const totalEditions = artistFractals.reduce((sum, f) => sum + (f.editions || 0), 0);
+    const availableEditions = artistFractals.reduce((sum, f) => sum + (f.editionsAvailable || 0), 0);
+    const fractalPrice = totalEditions > 0 ? Math.round((totalPortfolioValue / totalEditions) * 100) / 100 : 0;
+    const totalScoreWeightedValuation = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) * f.price), 0);
+    const sumOfScoresSquared = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) ** 2), 0);
+    const kFactor = totalScoreWeightedValuation > 0 ? totalPortfolioValue / totalScoreWeightedValuation : 0;
+
+    return {
+        id: artist.id,
+        name: artist.name,
+        avatar: getPublicUrl(`artists/${artist.name}.jpg`),
+        bio: `An esteemed artist known for a unique and captivating style.`,
+        artistMessage: `Thank you for supporting my creative journey.`,
+        fractalPrice: fractalPrice,
+        priceHistory: [{ date: new Date().toISOString(), price: fractalPrice }],
+        totalPortfolioValue,
+        totalPortfolioValueHistory: [{ date: new Date().toISOString(), value: totalPortfolioValue }],
+        totalEditions,
+        availableEditions,
+        kFactor,
+        totalScoreWeightedValuation,
+        sumOfScoresSquared,
+        awards: [],
+        exhibitions: [],
+    };
+});
+
+
+// --- Exports ---
+
+export const artists: Artist[] = generatedArtists;
+export const fractals: Fractal[] = generatedFractals;
+
+
+// --- Zod Schemas and Other Interfaces (Unchanged) ---
 
 export interface AIScorecardBreakdown {
   id: number;
@@ -266,243 +396,3 @@ export type NewArtworkData = {
     biographicalContext?: string;
     commissionPatronage?: string;
 }
-
-// RemoveCandy start
-// --- Data Generation ---
-
-const firstNames = ['Aether', 'Lux', 'Helena', 'Julian', 'Orion', 'Celeste', 'Kai', 'Lyra', 'Jasper', 'Seraphina', 'Axel', 'Aurora', 'Ronan', 'Elara', 'Silas', 'Nova', 'Felix', 'Astrid', 'Leo', 'Iris'];
-const lastNames = ['Synthesis', 'Recursion', 'Flux', 'Prism', 'Vector', 'Matrix', 'Quasar', 'Nebula', 'Byte', 'Pixel', 'Cipher', 'Genesis', 'Echo', 'Mirage', 'Vertex', 'Core', 'Node', 'Render', 'Shader', 'Mesh'];
-const bios = [
-  'An algorithmic artist exploring chaotic beauty in mathematical structures.',
-  'Finds the universe in equations, mimicking organic forms from nature.',
-  'A digital painter who uses code as a brush to create vibrant, abstract landscapes.',
-  'Focuses on the interplay of light and shadow in generative art.',
-  'Explores the geometry of nature through recursive algorithms.',
-  'Creates mesmerizing patterns that evoke a sense of infinite complexity.',
-  'A pioneer in AI-assisted art, collaborating with machines to create new forms.',
-  'Blends traditional art principles with cutting-edge technology.',
-  'Their work is a meditation on the nature of reality and perception.',
-  'Specializes in creating immersive, large-scale digital installations.'
-];
-const artistMessages = [
-    'To my collectors, thank you for believing in the vision. Each fractal you hold is a piece of a larger journey we are on together. Your support fuels the exploration of these digital worlds.',
-    'I am deeply grateful for your support. My art is an exploration of the unseen patterns that govern our world, and by collecting it, you become part of that discovery.',
-    'Thank you for joining me on this artistic voyage. I hope these fractals bring a sense of wonder and complexity to your life, as they have to mine during their creation.',
-    'Every collector is a patron of the digital renaissance. Your appreciation for this new form of art allows me and others to continue pushing the boundaries of creativity and technology.',
-];
-
-const locations = ['Berlin, Germany', 'Tokyo, Japan', 'New York, USA', 'London, UK', 'Virtual Realm', 'Cyber City', 'The Void'];
-const styles = ['Generative', 'Abstract', 'Algorithmic', 'Surreal', 'Minimalist', 'Glitch Art'];
-const awardsData = [
-    { value: 'Winner of the 2023 Algorithmic Art Prize.' },
-    { value: 'Recipient of the "Innovator in Code" grant.' },
-];
-const exhibitionsData = [
-    { value: 'Featured in the "Digital Dreams" exhibition at the Modern Art Gallery.' },
-    { value: 'Solo show at The Techne Art Center, 2024.' },
-];
-
-const fractalAdjectives = ['Quantum', 'Cosmic', 'Galactic', 'Ephemeral', 'Crystalline', 'Solar', 'Veridian', 'Abyssal', 'Axiomatic', 'Digital', 'Chromatic', 'Ethereal', 'Chaotic', 'Frozen', 'Celestial', 'Prismatic', 'Lucid', 'Obsidian', 'Golden', 'Silent', 'Pulsing', 'Nebulous', 'Luminous', 'Woven', 'Glimmering'];
-const fractalNouns = ['Bloom', 'Web', 'Flare', 'Depth', 'Maze', 'Edge', 'Petal', 'Theory', 'Flame', 'Spiral', 'Matrix', 'Mechanics', 'Echo', 'Dream', 'Cascade', 'Rift', 'Monolith', 'Serenity', 'Vortex', 'Symmetry', 'Tapestry', 'Equation', 'Nebula', 'Singularity', 'Horizon'];
-const fractalDescriptions = [
-  'A swirling nebula of color, where new universes blossom from a central point.',
-  'An intricate lattice of light that spiders across the canvas, connecting all things.',
-  'A moment of intense energy erupting from a star, captured in fractal form.',
-  'Plunges the viewer into the deep, mysterious blues of an alien ocean floor.',
-  'A complex, labyrinthine pattern that evokes the feeling of a digital forest.',
-  'Sharp, clean lines that explore the stark beauty of mathematical proofs.',
-  'A delicate, unfolding form resembling a flower petal from another dimension.',
-  'A visual representation of the butterfly effect, where chaos finds order.',
-  'Contrasting cool and fiery hues battle for dominance in a pattern of beautiful conflict.',
-  'A calming, hypnotic journey into a logarithmic form found throughout nature.',
-  'A geometric landscape dominated by deep hues, resembling a network of crystals.',
-  'This fractal maps the orbital paths of unknown planets, an astronomical chart of the imagination.',
-  'The visual sound of a single moment, rippling outwards through spacetime.',
-  'A piece that seems to shift and change, a lucid dream caught in digital amber.',
-  'An endless waterfall of light and color, frozen in a single, breathtaking instant.'
-];
-const aiHints = [
-  'nebula space', 'crystal lattice', 'sun fire', 'deep ocean', 'green maze', 'geometric shapes', 'flower petal', 'abstract chaos', 'fire ice', 'shell spiral', 'red crystal', 'planets orbit', 'sound wave', 'dreamy abstract', 'waterfall light'
-];
-
-const getRandom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-const randomInt = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
-
-const shuffleArray = <T>(array: T[]): T[] => {
-  const newArray = [...array];
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-  return newArray;
-};
-
-const generatePriceHistory = (initialPrice: number): { date: string; price: number }[] => {
-    const history: { date: string; price: number }[] = [];
-    let currentDate = new Date();
-    currentDate.setFullYear(currentDate.getFullYear() - 1);
-    let currentPrice = initialPrice * (Math.random() * 0.4 + 0.8);
-
-    for (let i = 0; i < 5; i++) {
-        history.push({
-            date: currentDate.toISOString().split('T')[0],
-            price: Math.round(currentPrice * 100) / 100,
-        });
-        currentDate.setMonth(currentDate.getMonth() + randomInt(2, 3));
-        currentPrice *= (Math.random() * 0.4 + 0.9);
-    }
-     history.push({ date: new Date().toISOString().split('T')[0], price: Math.round(initialPrice * 100) / 100 });
-    return history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-}
-
-const generateTotalValueHistory = (initialValue: number): { date: string; value: number }[] => {
-    const history: { date:string; value: number }[] = [];
-    let currentDate = new Date();
-    currentDate.setFullYear(currentDate.getFullYear() - 1);
-    let currentValue = initialValue * (Math.random() * 0.4 + 0.8);
-
-    for (let i = 0; i < 5; i++) {
-        history.push({
-            date: currentDate.toISOString().split('T')[0],
-            value: Math.round(currentValue),
-        });
-        currentDate.setMonth(currentDate.getMonth() + randomInt(2,3));
-        currentValue *= (Math.random() * 0.4 + 0.9);
-    }
-    history.push({ date: new Date().toISOString().split('T')[0], value: Math.round(initialValue) });
-    return history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-}
-
-// Step 1: Generate artists without price-dependent fields.
-const tempArtists = (() => {
-    const allPossibleNames: string[] = [];
-    firstNames.forEach(firstName => {
-        lastNames.forEach(lastName => {
-        allPossibleNames.push(`${firstName} ${lastName}`);
-        });
-    });
-
-    const shuffledNames = shuffleArray(allPossibleNames);
-    const selectedNames = shuffledNames.slice(0, 20);
-
-    return selectedNames.map((name, index) => {
-        const totalEditions = randomInt(1, 10) * 1000;
-        const slug = name.replace(/\s+/g, '').toLowerCase();
-        return {
-            id: `artist-${index + 1}`,
-            name,
-            avatar: `https://placehold.co/100x100.png`,
-            bio: getRandom(bios),
-            artistMessage: getRandom(artistMessages),
-            location: getRandom(locations),
-            university: 'University of Digital Arts',
-            website: `https://example.com/${slug}`,
-            style: `${getRandom(styles)}, ${getRandom(styles)}`,
-            awards: [getRandom(awardsData)],
-            exhibitions: [getRandom(exhibitionsData)],
-            twitter: `https://twitter.com/${slug}`,
-            instagram: `https://instagram.com/${slug}`,
-            totalEditions,
-            availableEditions: randomInt(100, totalEditions),
-        }
-    });
-})();
-
-
-// Step 2: Generate fractals, assigning them to the temp artists.
-const tempFractals: Omit<Fractal, 'priceHistory'>[] = (() => {
-    const allPossibleTitles = new Set<string>();
-    while (allPossibleTitles.size < 500) {
-        const title = `${getRandom(fractalAdjectives)} ${getRandom(fractalNouns)}`;
-        allPossibleTitles.add(title);
-    }
-    const shuffledTitles = Array.from(allPossibleTitles);
-
-    return shuffledTitles.map((title, index) => {
-        const width = randomInt(5, 9) * 100;
-        const height = randomInt(5, 9) * 100;
-        const price = randomInt(5, 150) * 10;
-        const editions = randomInt(1, 20) * 5;
-        const aiScore = randomInt(30, 95);
-        let crestoxGrade = 'A-';
-        if (aiScore > 80) crestoxGrade = 'AAA';
-        else if (aiScore > 60) crestoxGrade = 'AA';
-        else if (aiScore > 40) crestoxGrade = 'A+';
-        else if (aiScore > 20) crestoxGrade = 'A';
-        
-        const aiHint = getRandom(aiHints);
-        const numImages = randomInt(1,3);
-        const images = Array.from({length: numImages}, (_, i) => `https://placehold.co/${width}x${height}.png`);
-
-        return {
-            id: `fractal-${String(index + 1).padStart(3, '0')}`,
-            title,
-            images: images,
-            heroImage: images[0],
-            artistId: getRandom(tempArtists).id,
-            description: getRandom(fractalDescriptions),
-            materials: 'Digital Render',
-            artworkSize: { length: width, breadth: height, unit: 'px' },
-            aiHint,
-            width,
-            height,
-            price,
-            editions: editions,
-            editionsAvailable: randomInt(0, editions),
-            aiScore,
-            crestoxGrade,
-            status: 'active' as const,
-            artistMinEstimate: Math.round(price * 0.8),
-            artistMaxEstimate: Math.round(price * 1.2),
-            subjectSignificance: 'This piece explores the intersection of nature and technology.',
-            personalSignificance: 'Created during a period of intense personal growth and discovery.'
-        };
-    });
-})();
-
-// Step 3: Calculate derived portfolio values and create final artists array.
-const finalArtists: Artist[] = tempArtists.map(artistData => {
-    const artistFractals = tempFractals.filter(f => f.artistId === artistData.id);
-    
-    const totalPortfolioValue = artistFractals.reduce((sum, f) => sum + f.price, 0);
-    const totalScoreWeightedValuation = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) * f.price), 0);
-    const sumOfScoresSquared = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) ** 2), 0);
-    
-    const kFactor = totalScoreWeightedValuation > 0 ? totalPortfolioValue / totalScoreWeightedValuation : 0;
-    
-    const initialFractalPrice = artistData.totalEditions > 0 ? totalPortfolioValue / artistData.totalEditions : 0; 
-    const roundedFractalPrice = Math.round(initialFractalPrice * 100) / 100;
-
-    return {
-        ...artistData,
-        fractalPrice: roundedFractalPrice,
-        priceHistory: generatePriceHistory(roundedFractalPrice),
-        totalPortfolioValue: totalPortfolioValue,
-        totalPortfolioValueHistory: generateTotalValueHistory(totalPortfolioValue),
-        kFactor,
-        totalScoreWeightedValuation,
-        sumOfScoresSquared,
-    };
-});
-
-export const fractals: Fractal[] = tempFractals.map(f => ({
-    ...f,
-    priceHistory: generatePriceHistory(f.price)
-}));
-export const artists: Artist[] = finalArtists;
-// RemoveCandy end
-
-
-    
-    
-
-
-
-
-
-    
-
-
-
-
-

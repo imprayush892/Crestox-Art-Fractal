@@ -9,7 +9,6 @@ import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser, PrivateHolding, PublicHolding, CollectorInfo, Award, Exhibition, PreviouslySoldArtwork, Notification, AdminNotification } from '@/lib/data';
 import type { EvaluationResult, ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
-import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
 
 type SuccessfulEvaluation = Extract<EvaluationResult, { status: 'success' }>;
@@ -101,12 +100,6 @@ const handleAuthError = (error: any): string => {
   }
 };
 
-const sanitizeArtist = (artist: Artist): Artist => ({
-  ...artist,
-  totalEditions: Number(artist.totalEditions || 0),
-  availableEditions: Number(artist.availableEditions || 0),
-});
-
 export function AuthProvider({ children, initialArtists, initialFractals }: { children: ReactNode, initialArtists: Artist[], initialFractals: Fractal[] }) {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
@@ -114,7 +107,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCollectionLoading, setIsCollectionLoading] = useState(true);
-  const [artists, setArtists] = useState<Artist[]>(initialArtists.map(sanitizeArtist));
+  const [artists, setArtists] = useState<Artist[]>(initialArtists);
   const [fractals, setFractals] = useState<Fractal[]>(initialFractals);
   const [collection, setCollection] = useState<OwnedFractal[]>([]);
   const [resaleListings, setResaleListings] = useState<ResaleListing[]>([]);
@@ -127,6 +120,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     let unsubscribeHoldings: () => void = () => {};
     let unsubscribeAllUsers: () => void = () => {};
     let unsubscribeNotifications: () => void = () => {};
+    let unsubscribeResaleListings: () => void = () => {};
+    let unsubscribeArtists: () => void = () => {};
+    let unsubscribeFractals: () => void = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       // Unsubscribe from all previous listeners
@@ -135,6 +131,25 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       unsubscribeHoldings();
       unsubscribeAllUsers();
       unsubscribeNotifications();
+      unsubscribeResaleListings();
+      unsubscribeArtists();
+      unsubscribeFractals();
+
+      // Listen to public collections regardless of auth state
+       unsubscribeArtists = onSnapshot(firestoreCollection(db, "artists"), (snapshot) => {
+          const liveArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
+          setArtists(liveArtists);
+      }, (error) => console.error("Error fetching artists:", error));
+
+      unsubscribeFractals = onSnapshot(firestoreCollection(db, "fractals"), (snapshot) => {
+          const liveFractals = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Fractal[];
+          setFractals(liveFractals);
+      }, (error) => console.error("Error fetching fractals:", error));
+      
+      unsubscribeResaleListings = onSnapshot(firestoreCollection(db, "resaleListings"), (snapshot) => {
+        const fetchedListings = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as ResaleListing[];
+        setResaleListings(fetchedListings);
+      });
       
       if (firebaseUser) {
         setIsLoading(true);
@@ -249,58 +264,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
     return () => unsubscribeAuth();
   }, []);
-
-  // Effect for public, non-user-specific data
-  useEffect(() => {
-    if (!db) return;
-    
-    const artistsUnsub = onSnapshot(firestoreCollection(db, "artists"), (snapshot) => {
-        const liveArtists = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Artist[];
-        
-        const combined = [...liveArtists];
-        const existingIds = new Set(liveArtists.map(a => a.id));
-
-        for (const mockArtist of initialArtists) {
-            if (!existingIds.has(mockArtist.id)) {
-                combined.push(mockArtist);
-            }
-        }
-        
-        setArtists(combined.map(sanitizeArtist));
-    }, (error) => {
-        console.error("Error fetching artists, falling back to initial data.", error);
-        setArtists(initialArtists.map(sanitizeArtist));
-    });
-
-    const fractalsUnsub = onSnapshot(firestoreCollection(db, "fractals"), (snapshot) => {
-        const liveFractals = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as Fractal[];
-        
-        const combined = [...liveFractals];
-        const existingIds = new Set(liveFractals.map(f => f.id));
-
-        for (const mockFractal of initialFractals) {
-            if (!existingIds.has(mockFractal.id)) {
-                combined.push(mockFractal);
-            }
-        }
-
-        setFractals(combined);
-    }, (error) => {
-        console.error("Error fetching fractals, falling back to initial data.", error);
-        setFractals(initialFractals);
-    });
-
-    const resaleUnsub = onSnapshot(firestoreCollection(db, "resaleListings"), (snapshot) => {
-        const fetchedListings = snapshot.docs.map(d => ({ ...d.data(), id: d.id })) as ResaleListing[];
-        setResaleListings(fetchedListings);
-    });
-
-    return () => {
-        artistsUnsub();
-        fractalsUnsub();
-        resaleUnsub();
-    };
-  }, [initialArtists, initialFractals]);
   
   const getCollectorsForArtist = async (artistId: string) => {
       if (!db || !user) throw new Error("Not authenticated.");
