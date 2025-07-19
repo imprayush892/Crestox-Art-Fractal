@@ -1,44 +1,117 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Allow public read for artists and fractals
+
+    // --- Helper Functions ---
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // This admin check is a placeholder. For a production app,
+    // using custom claims is the recommended approach.
+    function isAdmin() {
+      return request.auth.token.email == "crestox@crestox.com";
+    }
+
+    function isSellerPayout() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let isSensitiveDataSafe = before.email == after.email &&
+                                before.firstName == after.firstName &&
+                                before.lastName == after.lastName;
+      let isBalanceCorrect = after.walletBalance >= before.walletBalance;
+      return isAuthenticated() && isSensitiveDataSafe && isBalanceCorrect;
+    }
+
+    function isValidListingUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let coreDataUnchanged = before.artistId == after.artistId &&
+                              before.resellerId == after.resellerId &&
+                              before.initialPrice == after.initialPrice &&
+                              before.minPrice == after.minPrice &&
+                              before.periodSeconds == after.periodSeconds;
+      let quantityDecreased = after.quantity < before.quantity;
+      let holdingsDecreased = after.holdingIds.size() < before.holdingIds.size();
+      let statusValid = (after.status == 'active' && quantityDecreased) || 
+                        (after.status == 'completed' && after.quantity == 0);
+      return isAuthenticated() && coreDataUnchanged && statusValid && holdingsDecreased;
+    }
+
+    function isArtistFinancialUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.userId == after.userId &&
+             before.name == after.name &&
+             before.avatar == after.avatar &&
+             before.bio == after.bio;
+    }
+
+    // --- Notification Rules ---
+    match /admin_notifications/{notificationId} {
+      allow create: if isAuthenticated(); // Users can notify admin
+      allow read, update, delete: if isAdmin(); // Only admins can read/modify
+    }
+
+    match /users/{userId}/notifications/{notificationId} {
+      allow create: if isAdmin(); // Only admins can notify users
+      allow read, update: if isOwner(userId); // Users can read/update their own notifications
+    }
+
+    // --- Collection Group Rules ---
+    match /{path=**}/holdings/{holdingId} {
+      allow read: if isAuthenticated();
+    }
+
+    // --- Public Collections ---
     match /artists/{artistId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow get, list: if true;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isArtistFinancialUpdate());
     }
 
     match /fractals/{fractalId} {
       allow read: if true;
-      allow write: if request.auth != null; // More specific rules might be needed
+      allow create, update: if isAuthenticated();
     }
-    
-    // Users can read/write their own data
+
+    match /resaleListings/{listingId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isOwner(request.resource.data.resellerId);
+      allow update: if 
+        (isOwner(resource.data.resellerId) && request.resource.data.status == 'cancelled') ||
+        isValidListingUpdate();
+    }
+
+    // --- User Data ---
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Holdings are complex. For now, allow owner to manage.
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated(); 
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isSellerPayout();
+
       match /holdings/{holdingId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow get: if isAuthenticated(); 
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId);
+        allow delete: if isAuthenticated();
       }
+      
       match /privateHoldings/{holdingId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-      match /notifications/{notificationId} {
-         allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, list, create, update: if isOwner(userId);
+        allow delete: if isAuthenticated();
       }
     }
 
-    // Resale listings can be read by anyone, written by owner
-    match /resaleListings/{listingId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == request.resource.data.resellerId;
-    }
-    
-    // Admin notifications can be created by any user, but only read/updated by admin.
-    match /admin_notifications/{notificationId} {
-      allow read, update: if request.auth != null && request.auth.token.email == "crestox@crestox.com";
-      allow create: if request.auth != null;
+    // --- Failsafe Admin Rule ---
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
   }
 }
