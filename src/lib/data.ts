@@ -63,7 +63,7 @@ const staticArtworks = [
 // --- Generate Data Structures from Static Source ---
 
 const generatedFractals = staticArtworks.map((artwork, index) => {
-    const artistFolder = staticArtists.find(a => a.artistId === artwork.artistId)?.folder;
+    const artistFolder = staticArtists.find(a => a.id === artwork.artistId)?.folder;
     if (!artistFolder) return null; // Should not happen
 
     const price = Math.floor(Math.random() * (250 - 15 + 1) + 15) * 100;
