@@ -2,46 +2,50 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
+
     function isAdmin() {
-      return request.auth.token.email == "crestox@crestox.com";
-    }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+      return request.auth.token.admin == true;
     }
 
-    // Public assets are readable by anyone
+    // Allow public read access to all files in the 'public' folder.
+    // This is useful for assets like the company wordmark.
     match /public/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin();
+    }
+		 
+     // Allow public read access for specific folders containing public assets.
+    match /founders/{imageName} {
+      allow read: if true;
     }
     
-    // Avatars can be read by anyone, but only written by the owner or admin
+    // Avatars can be read by anyone.
+    // Only the authenticated user can write to their own avatar directory.
     match /avatars/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isOwner(userId) || isAdmin();
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Artworks can be read by anyone, but only written by the owner or admin
+
+    // Artwork images can be read by anyone.
+    // Writes are restricted to the owner of the user directory.
     match /artworks/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isOwner(userId) || isAdmin();
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Achievements can be read by anyone, but only written by the owner or admin
+
+    // Achievement images (awards, exhibitions) can be read by anyone.
+    // Writes are restricted to the authenticated user's own directory.
     match /achievements/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isOwner(userId) || isAdmin();
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Previously sold art proof can be read by anyone, but only written by the owner or admin
+    // Previously sold artwork images can be read by anyone.
+    // Writes are restricted to the authenticated user's own directory.
     match /previouslySold/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isOwner(userId) || isAdmin();
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Allow admin full access to any other path as a fallback
+		 // Allow admin full access to any other path as a fallback
     match /{allPaths=**} {
       allow read, write: if isAdmin();
     }
