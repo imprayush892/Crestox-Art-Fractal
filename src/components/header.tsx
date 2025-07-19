@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { SafeImage as Image } from '@/components/ui/safe-image';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ThemeToggle } from './theme-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

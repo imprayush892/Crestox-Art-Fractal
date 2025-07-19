@@ -23,7 +23,7 @@ import { Loader2, User, PlusCircle, Trash2, Twitter, Instagram, Linkedin, Upload
 import type { Artist, CreateArtistProfileData } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Card } from './ui/card';
-import { SafeImage as Image } from '@/components/ui/safe-image';
+import Image from 'next/image';
 
 interface ArtistSettingsFormProps {
   artist: Artist;

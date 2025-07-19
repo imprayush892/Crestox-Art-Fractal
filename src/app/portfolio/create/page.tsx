@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState, useRef } from 'react';
 import { Loader2, PlusCircle, Trash2, Twitter, Instagram, Linkedin, User, Upload, ImageIcon, DollarSign } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { SafeImage as Image } from '@/components/ui/safe-image';
+import Image from 'next/image';
 import type { CreateArtistProfileData } from '@/lib/data';
 import { motion } from 'framer-motion';
 

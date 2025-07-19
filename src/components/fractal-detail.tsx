@@ -2,7 +2,7 @@
 'use client';
 
 import type { Artist, Fractal, ArtworkSize } from '@/lib/data';
-import { SafeImage as Image } from '@/components/ui/safe-image';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';

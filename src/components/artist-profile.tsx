@@ -18,7 +18,7 @@ import { InvestmentDialog } from './investment-dialog';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { ArtistCollectorsList } from './artist-collectors-list';
-import { SafeImage as Image } from '@/components/ui/safe-image';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Progress } from './ui/progress';
 import { motion } from 'framer-motion';
