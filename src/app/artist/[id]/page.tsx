@@ -18,7 +18,8 @@ export default function ArtistProfilePage() {
   }
   
   const artistFractals = useMemo(() => {
-    return fractals.filter(f => f.artistId === artist.id && f.status !== 'pending_review');
+    // FIX: Show all fractals for a given artist on their profile page.
+    return fractals.filter(f => f.artistId === artist.id);
   }, [artist.id, fractals]);
 
   return (
