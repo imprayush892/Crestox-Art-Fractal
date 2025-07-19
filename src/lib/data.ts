@@ -81,6 +81,7 @@ const staticArtworks = [
 // --- Generate Data Structures from Static Source ---
 
 const generatedFractals = staticArtworks.map((artwork, index) => {
+    // THIS IS THE FIX: The URL is now generated from the artwork's specific title.
     const imageUrl = getFirebaseImageUrl(artwork.folder, artwork.title);
     const price = Math.floor(Math.random() * (250 - 15 + 1) + 15) * 100;
     const aiScore = Math.floor(Math.random() * (95 - 45 + 1) + 45);
@@ -419,5 +420,7 @@ export type NewArtworkData = {
     biographicalContext?: string;
     commissionPatronage?: string;
 }
+
+    
 
     
