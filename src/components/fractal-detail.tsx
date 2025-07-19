@@ -221,7 +221,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                       config={{ value: { label: "Value", color: "hsl(var(--primary))" } }} 
                       className="h-[300px] w-full"
                   >
-                      <LineChart data={artworkValueHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <LineChart data={artworkValueHistory} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                           <CartesianGrid vertical={false} strokeDasharray="3 3" />
                           <XAxis
                               dataKey="date"
@@ -235,7 +235,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                               axisLine={false}
                               tickMargin={8}
                               tickFormatter={(value) => `₹${(value as number).toLocaleString()}`}
-                              width={80}
+                              width={60}
                           />
                           <Tooltip
                               cursor={{
