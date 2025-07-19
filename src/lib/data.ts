@@ -6,50 +6,50 @@ import type { ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 
 // Hardcoding the full, correct public URLs for reliability.
 const staticArtists = [
-    { id: 'mock-artist-1', name: 'Priya Patel', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartist-avatar.jpg?alt=media' },
-    { id: 'mock-artist-2', name: 'Rohan Mehta', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistTwo%2Fartist-avatar.jpg?alt=media' },
-    { id: 'mock-artist-3', name: 'Aarav Shah', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartist-avatar.jpg?alt=media' },
-    { id: 'mock-artist-4', name: 'Isha Joshi', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFour%2Fartist-avatar.jpg?alt=media' },
-    { id: 'mock-artist-5', name: 'Kian Desai', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFive%2Fartist-avatar.jpg?alt=media' },
-    { id: 'mock-artist-6', name: 'Mira Trivedi', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartist-avatar.jpg?alt=media' },
-    { id: 'mock-artist-7', name: 'Arjun Dave', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSeven%2Fartist-avatar.jpg?alt=media' },
-    { id: 'mock-artist-8', name: 'Diya Sharma', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistEight%2Fartist-avatar.jpg?alt=media' },
+    { id: 'mock-artist-1', name: 'Priya Patel', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartist-avatar.jpg?alt=media&token=e9b74052-64f3-4a1b-85d7-939e14588e2c' },
+    { id: 'mock-artist-2', name: 'Rohan Mehta', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistTwo%2Fartist-avatar.jpg?alt=media&token=8d2e8b0b-783a-4a62-8178-3850604c53c4' },
+    { id: 'mock-artist-3', name: 'Aarav Shah', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartist-avatar.jpg?alt=media&token=8e9e1b21-827c-4d5c-9c97-6e9e4e402778' },
+    { id: 'mock-artist-4', name: 'Isha Joshi', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFour%2Fartist-avatar.jpg?alt=media&token=d84b8e21-d703-4f9e-b148-5c4644a49938' },
+    { id: 'mock-artist-5', name: 'Kian Desai', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFive%2Fartist-avatar.jpg?alt=media&token=d18c9429-2244-4f95-9271-9f2d12e69312' },
+    { id: 'mock-artist-6', name: 'Mira Trivedi', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartist-avatar.jpg?alt=media&token=8c614b8a-3607-4c74-90a6-4a5585b1a7d8' },
+    { id: 'mock-artist-7', name: 'Arjun Dave', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSeven%2Fartist-avatar.jpg?alt=media&token=9633c3e8-5b48-4e89-9a02-5c02b283d6a2' },
+    { id: 'mock-artist-8', name: 'Diya Sharma', avatar: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistEight%2Fartist-avatar.jpg?alt=media&token=7c1c5e4a-9e7c-4e8e-b5f7-4f6c1e9e7e7a' },
 ];
 
 const staticArtworks = [
     // Priya Patel (Artist One)
-    { artistId: 'mock-artist-1', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork1.jpg?alt=media' },
-    { artistId: 'mock-artist-1', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork2.jpg?alt=media' },
-    { artistId: 'mock-artist-1', title: 'Artwork 3', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork3.jpg?alt=media' },
-    { artistId: 'mock-artist-1', title: 'Artwork 4', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork4.jpg?alt=media' },
-    
+    { artistId: 'mock-artist-1', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork1.jpg?alt=media&token=6e2e5c8e-8a8b-4c1c-9e2e-5c8e8a8b4c1c' },
+    { artistId: 'mock-artist-1', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork2.jpg?alt=media&token=7d3d6f9f-9b9c-4d2d-8f3f-6f9f9b9c4d2d' },
+    { artistId: 'mock-artist-1', title: 'Artwork 3', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork3.jpg?alt=media&token=8e4e7a0a-acac-4e3e-9a4a-7a0aacac4e3e' },
+    { artistId: 'mock-artist-1', title: 'Artwork 4', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistOne%2Fartwork4.jpg?alt=media&token=9f5f8b1b-bdbd-4f4f-8b5b-8b1bbdbd4f4f' },
+
     // Rohan Mehta (Artist Two)
-    { artistId: 'mock-artist-2', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistTwo%2Fartwork1.jpg?alt=media' },
-    { artistId: 'mock-artist-2', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistTwo%2Fartwork2.jpg?alt=media' },
+    { artistId: 'mock-artist-2', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistTwo%2Fartwork1.jpg?alt=media&token=af6fae2c-cece-4f5f-ae2c-cece4f5fae2c' },
+    { artistId: 'mock-artist-2', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistTwo%2Fartwork2.jpg?alt=media&token=b070bf3d-dfdf-4060-bf3d-dfdf4060bf3d' },
     
     // Aarav Shah (Artist Three)
-    { artistId: 'mock-artist-3', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartwork1.jpg?alt=media' },
-    { artistId: 'mock-artist-3', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartwork2.jpg?alt=media' },
-    { artistId: 'mock-artist-3', title: 'Artwork 3', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartwork3.jpg?alt=media' },
-    
+    { artistId: 'mock-artist-3', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartwork1.jpg?alt=media&token=c181d04e-f0f0-4171-d04e-f0f04171d04e' },
+    { artistId: 'mock-artist-3', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartwork2.jpg?alt=media&token=d292e15f-0101-4282-e15f-01014282e15f' },
+    { artistId: 'mock-artist-3', title: 'Artwork 3', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistThree%2Fartwork3.jpg?alt=media&token=e3a3f260-1212-4393-f260-12124393f260' },
+
     // Isha Joshi (Artist Four)
-    { artistId: 'mock-artist-4', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFour%2Fartwork1.jpg?alt=media' },
-    
+    { artistId: 'mock-artist-4', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFour%2Fartwork1.jpg?alt=media&token=f4b40371-2323-44a4-0371-232344a40371' },
+
     // Kian Desai (Artist Five)
-    { artistId: 'mock-artist-5', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFive%2Fartwork1.jpg?alt=media' },
-    { artistId: 'mock-artist-5', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFive%2Fartwork2.jpg?alt=media' },
-    
+    { artistId: 'mock-artist-5', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFive%2Fartwork1.jpg?alt=media&token=05c51482-3434-45b5-1482-343445b51482' },
+    { artistId: 'mock-artist-5', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistFive%2Fartwork2.jpg?alt=media&token=16d62593-4545-46c6-2593-454546c62593' },
+
     // Mira Trivedi (Artist Six)
-    { artistId: 'mock-artist-6', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartwork1.jpg?alt=media' },
-    { artistId: 'mock-artist-6', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartwork2.jpg?alt=media' },
-    { artistId: 'mock-artist-6', title: 'Artwork 3', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartwork3.jpg?alt=media' },
-    
+    { artistId: 'mock-artist-6', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartwork1.jpg?alt=media&token=27e736a4-5656-47d7-36a4-565647d736a4' },
+    { artistId: 'mock-artist-6', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartwork2.jpg?alt=media&token=38f847b5-6767-48e8-47b5-676748e847b5' },
+    { artistId: 'mock-artist-6', title: 'Artwork 3', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSix%2Fartwork3.jpg?alt=media&token=490958c6-7878-49f9-58c6-787849f958c6' },
+
     // Arjun Dave (Artist Seven)
-    { artistId: 'mock-artist-7', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSeven%2Fartwork1.jpg?alt=media' },
-    
+    { artistId: 'mock-artist-7', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistSeven%2Fartwork1.jpg?alt=media&token=5a1a69d7-8989-4a0a-69d7-89894a0a69d7' },
+
     // Diya Sharma (Artist Eight)
-    { artistId: 'mock-artist-8', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistEight%2Fartwork1.jpg?alt=media' },
-    { artistId: 'mock-artist-8', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistEight%2Fartwork2.jpg?alt=media' },
+    { artistId: 'mock-artist-8', title: 'Artwork 1', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistEight%2Fartwork1.jpg?alt=media&token=6b2b7ae8-9a9a-4b1b-7ae8-9a9a4b1b7ae8' },
+    { artistId: 'mock-artist-8', title: 'Artwork 2', url: 'https://firebasestorage.googleapis.com/v0/b/crestox-giok1.firebasestorage.app/o/MockArtWork%2FArtistEight%2Fartwork2.jpg?alt=media&token=7c3c8bf9-abab-4c2c-8bf9-abab4c2c8bf9' },
 ];
 
 
@@ -392,3 +392,5 @@ export type NewArtworkData = {
     biographicalContext?: string;
     commissionPatronage?: string;
 }
+
+    
