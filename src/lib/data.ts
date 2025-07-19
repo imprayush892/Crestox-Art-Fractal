@@ -7,68 +7,67 @@ import type { ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 // Helper function to build the full, correct public URL for Firebase Storage images.
 // This function correctly encodes filenames to handle spaces and special characters.
 const getFirebaseImageUrl = (artistFolder: string, artworkFileName: string) => {
-    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    if (!storageBucket) {
-        // This fallback should ideally not be used if the env var is set correctly.
-        return `https://placehold.co/600x400.png`;
-    }
+    const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'crestox-giok1.firebasestorage.app';
     // Correctly constructs the URL, encoding the file path for safety.
-    return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/MockArtWork%2F${artistFolder}%2F${encodeURIComponent(artworkFileName)}?alt=media`;
+    return `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/MockArtWork%2F${encodeURIComponent(artistFolder)}%2F${encodeURIComponent(artworkFileName)}?alt=media`;
 };
 
-
+// Based on the user-provided structure.
 const staticArtists = [
-    { id: 'mock-artist-1', folder: 'ArtistOne', name: 'Priya Patel', avatar: getFirebaseImageUrl('ArtistOne', 'artist-avatar.png') },
-    { id: 'mock-artist-2', folder: 'ArtistTwo', name: 'Rohan Mehta', avatar: getFirebaseImageUrl('ArtistTwo', 'artist-avatar.png') },
-    { id: 'mock-artist-3', folder: 'ArtistThree', name: 'Aarav Shah', avatar: getFirebaseImageUrl('ArtistThree', 'artist-avatar.png') },
-    { id: 'mock-artist-4', folder: 'ArtistFour', name: 'Isha Joshi', avatar: getFirebaseImageUrl('ArtistFour', 'artist-avatar.png') },
-    { id: 'mock-artist-5', folder: 'ArtistFive', name: 'Kian Desai', avatar: getFirebaseImageUrl('ArtistFive', 'artist-avatar.png') },
-    { id: 'mock-artist-6', folder: 'ArtistSix', name: 'Mira Trivedi', avatar: getFirebaseImageUrl('ArtistSix', 'artist-avatar.png') },
-    { id: 'mock-artist-7', folder: 'ArtistSeven', name: 'Arjun Dave', avatar: getFirebaseImageUrl('ArtistSeven', 'artist-avatar.png') },
-    { id: 'mock-artist-8', folder: 'ArtistEight', name: 'Diya Sharma', avatar: getFirebaseImageUrl('ArtistEight', 'artist-avatar.png') },
+    { id: 'mock-artist-1', folder: 'Artist One', name: 'Priya Patel', avatar: getFirebaseImageUrl('Artist One', 'artist-avatar.png') },
+    { id: 'mock-artist-2', folder: 'Artist Two', name: 'Rohan Mehta', avatar: getFirebaseImageUrl('Artist Two', 'artist-avatar.png') },
+    { id: 'mock-artist-3', folder: 'Artist Three', name: 'Aarav Shah', avatar: getFirebaseImageUrl('Artist Three', 'artist-avatar.png') },
+    { id: 'mock-artist-4', folder: 'Artist Four', name: 'Isha Joshi', avatar: getFirebaseImageUrl('Artist Four', 'artist-avatar.png') },
+    { id: 'mock-artist-5', folder: 'Artist Five', name: 'Kian Desai', avatar: getFirebaseImageUrl('Artist Five', 'artist-avatar.png') },
+    { id: 'mock-artist-6', folder: 'Artist Six', name: 'Mira Trivedi', avatar: getFirebaseImageUrl('Artist Six', 'artist-avatar.png') },
+    { id: 'mock-artist-7', folder: 'Artist Seven', name: 'Arjun Dave', avatar: getFirebaseImageUrl('Artist Seven', 'artist-avatar.png') },
+    { id: 'mock-artist-8', folder: 'Artist Eight', name: 'Diya Sharma', avatar: getFirebaseImageUrl('Artist Eight', 'artist-avatar.png') },
 ];
 
 const staticArtworks = [
-    // Priya Patel (Artist One)
-    { artistId: 'mock-artist-1', folder: 'ArtistOne', title: 'Cosmic Dance' },
-    { artistId: 'mock-artist-1', folder: 'ArtistOne', title: 'Ethereal Bloom' },
-    { artistId: 'mock-artist-1', folder: 'ArtistOne', title: 'Geometric Serenity' },
-    { artistId: 'mock-artist-1', folder: 'ArtistOne', title: 'Liquid Dreams' },
+    // Priya Patel (Artist One) - Using exact filenames from screenshot
+    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Cheriyal Village Festival' },
+    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Krishna Radha Miniature' },
+    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Moonlit Palace Miniature' },
+    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Royal Court Miniature' },
+    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Royal Procession Miniature' },
 
-    // Rohan Mehta (Artist Two)
-    { artistId: 'mock-artist-2', folder: 'ArtistTwo', title: 'Celestial Vision' },
-    { artistId: 'mock-artist-2', folder: 'ArtistTwo', title: 'Crimson Nebula' },
+    // Rohan Mehta (Artist Two) - Assuming similar naming convention
+    { artistId: 'mock-artist-2', folder: 'Artist Two', title: 'Celestial Vision' },
+    { artistId: 'mock-artist-2', folder: 'Artist Two', title: 'Crimson Nebula' },
     
     // Aarav Shah (Artist Three)
-    { artistId: 'mock-artist-3', folder: 'ArtistThree', title: 'Azure Depths' },
-    { artistId: 'mock-artist-3', folder: 'ArtistThree', title: 'Golden Spiral' },
-    { artistId: 'mock-artist-3', folder: 'ArtistThree', title: 'Verdant Growth' },
+    { artistId: 'mock-artist-3', folder: 'Artist Three', title: 'Azure Depths' },
+    { artistId: 'mock-artist-3', folder: 'Artist Three', title: 'Golden Spiral' },
+    { artistId: 'mock-artist-3', folder: 'Artist Three', title: 'Verdant Growth' },
 
     // Isha Joshi (Artist Four)
-    { artistId: 'mock-artist-4', folder: 'ArtistFour', title: 'Symmetric Soul' },
+    { artistId: 'mock-artist-4', folder: 'Artist Four', title: 'Symmetric Soul' },
 
     // Kian Desai (Artist Five)
-    { artistId: 'mock-artist-5', folder: 'ArtistFive', title: 'Fractal Flame' },
-    { artistId: 'mock-artist-5', folder: 'ArtistFive', title: 'Crystal Cavern' },
+    { artistId: 'mock-artist-5', folder: 'Artist Five', title: 'Fractal Flame' },
+    { artistId: 'mock-artist-5', folder: 'Artist Five', title: 'Crystal Cavern' },
 
     // Mira Trivedi (Artist Six)
-    { artistId: 'mock-artist-6', folder: 'ArtistSix', title: 'Mystic Garden' },
-    { artistId: 'mock-artist-6', folder: 'ArtistSix', title: 'Oceanic Embrace' },
-    { artistId: 'mock-artist-6', folder: 'ArtistSix', title: 'Starlight Path' },
+    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Mystic Garden' },
+    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Oceanic Embrace' },
+    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Starlight Path' },
 
     // Arjun Dave (Artist Seven)
-    { artistId: 'mock-artist-7', folder: 'ArtistSeven', title: 'Digital Phoenix' },
+    { artistId: 'mock-artist-7', folder: 'Artist Seven', title: 'Digital Phoenix' },
 
     // Diya Sharma (Artist Eight)
-    { artistId: 'mock-artist-8', folder: 'ArtistEight', title: 'Chromatic Echo' },
-    { artistId: 'mock-artist-8', folder: 'ArtistEight', title: 'Solaris' },
+    { artistId: 'mock-artist-8', folder: 'Artist Eight', title: 'Chromatic Echo' },
+    { artistId: 'mock-artist-8', folder: 'Artist Eight', title: 'Solaris' },
 ];
 
 
 // --- Generate Data Structures from Static Source ---
 
 const generatedFractals = staticArtworks.map((artwork, index) => {
-    const imageUrl = getFirebaseImageUrl(artwork.folder, `${artwork.title}.png`);
+    // The filename is the title with ".png" appended.
+    const filename = `${artwork.title}.png`;
+    const imageUrl = getFirebaseImageUrl(artwork.folder, filename);
     const price = Math.floor(Math.random() * (250 - 15 + 1) + 15) * 100;
     const aiScore = Math.floor(Math.random() * (95 - 45 + 1) + 45);
     let crestoxGrade = 'A-';
@@ -88,7 +87,7 @@ const generatedFractals = staticArtworks.map((artwork, index) => {
         description: 'A captivating piece from the artist\'s collection, showcasing a unique blend of color and form.',
         materials: 'Digital Render on Archival Paper',
         artworkSize: { length: 1080, breadth: 1080, unit: 'px' as const },
-        aiHint: 'abstract digital art',
+        aiHint: 'traditional indian art',
         width: 1080,
         height: 1080,
         price,
