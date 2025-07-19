@@ -26,40 +26,55 @@ const staticArtists = [
 ];
 
 const staticArtworks = [
-    // Priya Patel (Artist One)
-    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Cheriyal Village Festival' },
-    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Krishna Radha Miniature' },
-    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Moonlit Palace Miniature' },
-    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Royal Court Miniature' },
+    // Artist One
     { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Royal Procession Miniature' },
+    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Krishna Radha Miniature' },
+    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Royal Court Miniature' },
+    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Moonlit Palace Miniature' },
+    { artistId: 'mock-artist-1', folder: 'Artist One', title: 'Cheriyal Village Festival' },
 
-    // Rohan Mehta (Artist Two)
-    { artistId: 'mock-artist-2', folder: 'Artist Two', title: 'Celestial Vision' },
-    { artistId: 'mock-artist-2', folder: 'Artist Two', title: 'Crimson Nebula' },
+    // Artist Two
+    { artistId: 'mock-artist-2', folder: 'Artist Two', title: 'Dance Movement Abstract' },
+    { artistId: 'mock-artist-2', folder: 'Artist Two', title: 'Temple Geometry Abstract' },
+    { artistId: 'mock-artist-2', folder: 'Artist Two', title: 'Lotus Meditation Abstract' },
+    { artistId: 'mock-artist-2', folder: 'Artist Two', title: 'Textile Pattern Abstract' },
+
+    // Artist Three
+    { artistId: 'mock-artist-3', folder: 'Artist Three', title: 'Madhubani Village Life' },
+    { artistId: 'mock-artist-3', folder: 'Artist Three', title: 'Gond Forest Spirits' },
+    { artistId: 'mock-artist-3', folder: 'Artist Three', title: 'Warli Harvest Dance' },
+    { artistId: 'mock-artist-3', folder: 'Artist Three', title: 'Tribal Geometry Abstract' },
+
+    // Artist Four
+    { artistId: 'mock-artist-4', folder: 'Artist Four', title: 'Urban Mughal Abstract' },
+    { artistId: 'mock-artist-4', folder: 'Artist Four', title: 'Bauhaus Indian Architecture' },
+
+    // Artist Five
+    { artistId: 'mock-artist-5', folder: 'Artist Five', title: 'Kalamkari Epic Tale' },
+    { artistId: 'mock-artist-5', folder: 'Artist Five', title: 'Pattachitra Krishna Leela' },
+    { artistId: 'mock-artist-5', folder: 'Artist Five', title: 'Phad Heroic Legend' },
+
+    // Artist Six
+    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Urban Holi Moment' },
+    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Tribal Elder Portrait' },
+    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Varanasi Dawn Panorama' },
+    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Ellora Nataraja Relief' },
+    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Hoysala Procession Frieze' },
     
-    // Aarav Shah (Artist Three)
-    { artistId: 'mock-artist-3', folder: 'Artist Three', title: 'Azure Depths' },
-    { artistId: 'mock-artist-3', folder: 'Artist Three', title: 'Golden Spiral' },
-    { artistId: 'mock-artist-3', folder: 'Artist Three', title: 'Verdant Growth' },
-
-    // Isha Joshi (Artist Four)
-    { artistId: 'mock-artist-4', folder: 'Artist Four', title: 'Symmetric Soul' },
-
-    // Kian Desai (Artist Five)
-    { artistId: 'mock-artist-5', folder: 'Artist Five', title: 'Fractal Flame' },
-    { artistId: 'mock-artist-5', folder: 'Artist Five', title: 'Crystal Cavern' },
-
-    // Mira Trivedi (Artist Six)
-    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Mystic Garden' },
-    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Oceanic Embrace' },
-    { artistId: 'mock-artist-6', folder: 'Artist Six', title: 'Starlight Path' },
-
-    // Arjun Dave (Artist Seven)
-    { artistId: 'mock-artist-7', folder: 'Artist Seven', title: 'Digital Phoenix' },
-
-    // Diya Sharma (Artist Eight)
-    { artistId: 'mock-artist-8', folder: 'Artist Eight', title: 'Chromatic Echo' },
-    { artistId: 'mock-artist-8', folder: 'Artist Eight', title: 'Solaris' },
+    // Artist Seven
+    { artistId: 'mock-artist-7', folder: 'Artist Seven', title: 'Bollywood Heritage Collage' },
+    { artistId: 'mock-artist-7', folder: 'Artist Seven', title: 'Architectural Heritage Collage' },
+    { artistId: 'mock-artist-7', folder: 'Artist Seven', title: 'Performing Arts Collage' },
+    { artistId: 'mock-artist-7', folder: 'Artist Seven', title: 'Spice Heritage Collage' },
+    { artistId: 'mock-artist-7', folder: 'Artist Seven', title: 'Adornment Heritage Collage' },
+    { artistId: 'mock-artist-7', folder: 'Artist Seven', title: 'Spiritual Landscape Collage' },
+    { artistId: 'mock-artist-7', folder: 'Artist Seven', title: 'Festival Heritage Collage' },
+    
+    // Artist Eight
+    { artistId: 'mock-artist-8', folder: 'Artist Eight', title: 'Cubist Dance Mudras' },
+    { artistId: 'mock-artist-8', folder: 'Artist Eight', title: 'Constructivist Textile Patterns' },
+    { artistId: 'mock-artist-8', folder: 'Artist Eight', title: 'De Stijl Kolam Patterns' },
+    { artistId: 'mock-artist-8', folder: 'Artist Eight', title: 'Suprematist Indian Geometry' },
 ];
 
 
@@ -404,9 +419,5 @@ export type NewArtworkData = {
     biographicalContext?: string;
     commissionPatronage?: string;
 }
-
-    
-
-    
 
     
