@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { Button } from './ui/button';
-import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap, DollarSign, History, ChevronLeft, ChevronRight, Flag, Loader2 } from 'lucide-react';
+import { CheckCircle, Layers, ShoppingCart, Star, MapPin, Link as LinkIcon, Palette, Award, Building2, Twitter, Instagram, Linkedin, Edit, Share2, Users, TrendingUp, GraduationCap, DollarSign, History, ChevronLeft, ChevronRight, Flag, Loader2, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import React, { useState, useMemo } from 'react';
@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { Progress } from './ui/progress';
 import { motion } from 'framer-motion';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 
@@ -191,6 +192,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
     removeFromWatchlist,
     isAdmin,
     flagArtistContent,
+    deleteArtistAchievement,
   } = useAuth();
   const router = useRouter();
   const [isCollecting, setIsCollecting] = useState(false);
@@ -200,6 +202,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
   const [flaggedContent, setFlaggedContent] = useState<{imageUrl: string, isFlagged: boolean, type: string} | null>(null);
   const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
   const [flagReason, setFlagReason] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isOwnProfile = artistProfile?.id === artist.id;
   
@@ -216,7 +219,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
 
   const availablePercentage = artist.totalEditions > 0 ? (artist.availableEditions / artist.totalEditions) * 100 : 0;
   
-  const activeArtworks = useMemo(() => artistFractals.filter(f => f.status !== 'pending_review'), [artistFractals]);
+  const activeArtworks = useMemo(() => artistFractals.filter(f => f.status === 'active'), [artistFractals]);
 
   const isCollectible = useMemo(() => {
     if (isOwnProfile) return false;
@@ -289,7 +292,19 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
     } finally {
         setIsFlagging(false);
     }
-};
+  };
+  
+  const handleDeleteAchievement = async (type: 'award' | 'exhibition', item: any) => {
+    setIsDeleting(true);
+    try {
+      await deleteArtistAchievement(artist.id, type, item);
+      toast({ title: "Item Removed", description: "The achievement has been deleted." });
+    } catch(err: any) {
+       toast({ variant: "destructive", title: "Deletion Failed", description: err.message });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const fractalPriceHistory = artist.priceHistory.map(p => ({ date: p.date, value: p.price }));
   const totalValueHistory = artist.totalPortfolioValueHistory.map(p => ({ date: p.date, value: p.value }));
@@ -650,8 +665,24 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                     {isAdmin && <Button size="icon" variant={isFlagged ? 'destructive' : 'secondary'} className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100" onClick={() => openFlagDialog(award.image!, !!isFlagged, 'Award Image')}><Flag className="h-4 w-4" /></Button>}
                                                 </div>
                                             )}
-                                            <div className="p-4">
-                                                <p className="text-sm text-foreground/80 font-medium">{award.value}</p>
+                                            <div className="p-4 flex justify-between items-start">
+                                                <p className="text-sm text-foreground/80 font-medium flex-1">{award.value}</p>
+                                                {isAdmin && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader><AlertDialogTitle>Delete Award?</AlertDialogTitle><AlertDialogDescription>This will permanently remove the award "{award.value}" from the artist's profile.</AlertDialogDescription></AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDeleteAchievement('award', award)} disabled={isDeleting}>
+                                                                    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Delete
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
                                             </div>
                                         </Card>
                                     </div>
@@ -699,8 +730,24 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                                                     </div>
                                                 </div>
                                             )}
-                                            <div className="p-4">
-                                                <p className="text-sm text-foreground/80 font-medium">{ex.value}</p>
+                                            <div className="p-4 flex justify-between items-start">
+                                                <p className="text-sm text-foreground/80 font-medium flex-1">{ex.value}</p>
+                                                 {isAdmin && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader><AlertDialogTitle>Delete Exhibition?</AlertDialogTitle><AlertDialogDescription>This will permanently remove the exhibition "{ex.value}" from the artist's profile.</AlertDialogDescription></AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDeleteAchievement('exhibition', ex)} disabled={isDeleting}>
+                                                                    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Delete
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
                                             </div>
                                         </Card>
                                     </div>

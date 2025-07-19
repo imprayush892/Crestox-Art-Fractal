@@ -14,7 +14,7 @@ import { FractalCard } from '@/components/fractal-card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { format } from 'date-fns';
-import { Star, ChevronLeft, ChevronRight, Edit, Flag, Loader2, Clock } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Edit, Flag, Loader2, Clock, Check, XCircle, Shield } from 'lucide-react';
 import React, { useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from './ui/textarea';
 import { notFound } from 'next/navigation';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 const iconVariants = {
@@ -67,10 +68,10 @@ const formatSize = (size: ArtworkSize) => {
 };
 
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
-  const { user, isAdmin, updateFractalPriceAsAdmin, flagArtwork } = useAuth();
+  const { user, isAdmin, updateFractalPriceAsAdmin, flagArtwork, updateArtworkStatus } = useAuth();
   const { toast } = useToast();
   
-  if (fractal.status === 'pending_review' && !isAdmin && user?.uid !== artist?.userId) {
+  if (fractal.status !== 'active' && !isAdmin && user?.uid !== artist?.userId) {
       notFound();
   }
   
@@ -81,6 +82,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
   const [isPriceDialogOpen, setIsPriceDialogOpen] = useState(false);
   const [newPrice, setNewPrice] = useState<string>(fractal.price.toString());
   const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const [isFlagging, setIsFlagging] = useState(false);
   const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
@@ -106,6 +108,19 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
         setIsUpdatingPrice(false);
     }
   };
+
+  const handleUpdateStatus = async (newStatus: 'pending_review' | 'active' | 'private') => {
+    setIsUpdatingStatus(true);
+    try {
+      await updateArtworkStatus(fractal.id, newStatus);
+      toast({ title: "Status Updated", description: `Artwork is now ${newStatus}.` });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: "Status Update Failed", description: error.message });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
 
   const handleFlagSubmit = async () => {
     if (!flagReason) {
@@ -151,6 +166,12 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                  <Badge variant="destructive" className="absolute top-4 right-4 text-base py-1 px-3 shadow-lg">
                     <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Clock className="w-4 h-4" /></motion.div>
                     Pending Review
+                </Badge>
+            )}
+             {fractal.status === 'private' && (
+                 <Badge variant="secondary" className="absolute top-4 right-4 text-base py-1 px-3 shadow-lg">
+                    <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Shield className="w-4 h-4" /></motion.div>
+                    Private
                 </Badge>
             )}
 
@@ -312,12 +333,32 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                 <CardHeader>
                   <CardTitle>Admin Actions</CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-2">
-                    <Button onClick={() => setIsPriceDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit Price</Button>
-                    <Button variant={fractal.isFlagged ? "destructive" : "outline"} onClick={() => setIsFlagDialogOpen(true)}>
-                        <Flag className="mr-2 h-4 w-4" />
-                        {fractal.isFlagged ? 'Unflag Artwork' : 'Flag Artwork'}
-                    </Button>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2">
+                      <Button onClick={() => setIsPriceDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit Price</Button>
+                      <Button variant={fractal.isFlagged ? "destructive" : "outline"} onClick={() => setIsFlagDialogOpen(true)}>
+                          <Flag className="mr-2 h-4 w-4" />
+                          {fractal.isFlagged ? 'Unflag Artwork' : 'Flag Artwork'}
+                      </Button>
+                  </div>
+                  <div>
+                    <Label>Status</Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between" disabled={isUpdatingStatus}>
+                          {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                          <span>
+                            {fractal.status === 'pending_review' ? 'Pending Review' : fractal.status === 'active' ? 'Active (Public)' : 'Private (Hidden)'}
+                          </span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                        <DropdownMenuItem onClick={() => handleUpdateStatus('active')}><Check className="mr-2 h-4 w-4"/>Active (Public)</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateStatus('pending_review')}><Clock className="mr-2 h-4 w-4"/>Pending Review</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateStatus('private')}><XCircle className="mr-2 h-4 w-4"/>Private (Hidden)</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </CardContent>
               </Card>
             )}

@@ -73,6 +73,8 @@ interface AuthContextType {
   flagArtwork: (fractalId: string, flag: boolean, reason: string) => Promise<void>;
   flagArtistContent: (artistId: string, imageUrl: string, flag: boolean, reason: string) => Promise<void>;
   markNotificationsAsRead: () => Promise<void>;
+  deleteArtistAchievement: (artistId: string, type: 'award' | 'exhibition', item: Award | Exhibition) => Promise<void>;
+  updateArtworkStatus: (fractalId: string, status: 'pending_review' | 'active' | 'private') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -235,11 +237,11 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         
       } else {
         setUser(null);
-        setIsAdmin(false);
         setArtistProfile(null);
         setCollection([]);
         setAllUsers([]);
         setNotifications([]);
+        setIsAdmin(false);
         setIsLoading(false);
         setIsCollectionLoading(false);
       }
@@ -643,7 +645,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
     const { length, breadth, height, unit } = artworkData;
     const artworkSize = { length, breadth, unit, ...(height && { height }) };
-    const fractalDataPayload = {
+    const fractalDataPayload: Omit<Fractal, 'status'> & { status: 'pending_review' } = {
         id: newFractalId,
         artistId: artistProfile.id,
         title: artworkData.title,
@@ -1209,6 +1211,31 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
       toast({ title: flag ? "Image Flagged" : "Image Unflagged" });
   };
+  
+  const deleteArtistAchievement = async (artistId: string, type: 'award' | 'exhibition', item: Award | Exhibition) => {
+    if (!isAdmin || !db) throw new Error("Unauthorized");
+    const artistRef = doc(db, "artists", artistId);
+    const field = type === 'award' ? 'awards' : 'exhibitions';
+    try {
+        await updateDoc(artistRef, {
+            [field]: arrayRemove(item)
+        });
+        toast({ title: "Achievement Deleted", description: "The item has been removed from the artist's profile." });
+    } catch(e: any) {
+        throw new Error(handleAuthError(e));
+    }
+  };
+
+  const updateArtworkStatus = async (fractalId: string, status: 'pending_review' | 'active' | 'private') => {
+    if (!isAdmin || !db) throw new Error("Unauthorized");
+    const fractalRef = doc(db, 'fractals', fractalId);
+    try {
+        await updateDoc(fractalRef, { status });
+        toast({title: "Artwork Status Updated"});
+    } catch(e: any) {
+        throw new Error(handleAuthError(e));
+    }
+  };
 
   const markNotificationsAsRead = async () => {
     if (!db || !user || notifications.length === 0) return;
@@ -1265,6 +1292,8 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     flagArtwork,
     flagArtistContent,
     markNotificationsAsRead,
+    deleteArtistAchievement,
+    updateArtworkStatus,
   };
   
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

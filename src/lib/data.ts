@@ -102,7 +102,7 @@ export interface Fractal {
   height: number;
   price: number; // This is Vi
   priceHistory: { date: string; price: number }[];
-  status?: 'active' | 'pending_review';
+  status: 'active' | 'pending_review' | 'private';
   editions?: number;
   editionsAvailable?: number;
   aiScore?: number; // This is Si
@@ -501,6 +501,7 @@ export const artists: Artist[] = finalArtists;
 
 
     
+
 
 
 

@@ -12,6 +12,7 @@ export default function ExplorePage() {
   const { artists, fractals, isAdmin } = useAuth();
   
   const pendingFractals = fractals.filter(f => f.status === 'pending_review');
+  const activeFractals = fractals.filter(f => f.status === 'active');
   const artistsMap = new Map(artists.map(a => [a.id, a]));
 
   return (
@@ -40,7 +41,7 @@ export default function ExplorePage() {
         </div>
 
         <TabsContent value="artwork">
-          <ExploreTool fractals={fractals} artists={artists} />
+          <ExploreTool fractals={activeFractals} artists={artists} />
         </TabsContent>
         <TabsContent value="artists">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
