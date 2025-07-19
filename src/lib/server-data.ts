@@ -17,7 +17,7 @@ function sanitizeArtist(artist: Artist): Artist {
 // Helper function to safely get data from a collection. It returns an empty array on failure.
 async function getDataFromCollection<T>(collectionName: string): Promise<T[]> {
   if (!db) {
-    console.warn(`Firebase not configured. Cannot fetch ${collectionName}.`);
+    console.warn(`Firebase not configured. Cannot fetch ${collectionName}. Returning static mock data.`);
     return [];
   }
 

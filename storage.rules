@@ -2,52 +2,43 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    function isAdmin() {
-      return request.auth.token.admin == true;
+    // Allow public read access to all mock artwork images
+    match /MockArtWork/{allPaths=**} {
+      allow read;
+      allow write: if false; // Disallow public writes
     }
 
-    // Allow public read access to all files in the 'public' folder.
-    // This is useful for assets like the company wordmark.
-    match /public/{allPaths=**} {
-      allow read: if true;
+    // Allow authenticated users to read and write to their own folders
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-		 
-     // Allow public read access for specific folders containing public assets.
-    match /founders/{imageName} {
-      allow read: if true;
+
+    match /avatars/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Avatars can be read by anyone.
-    // Only the authenticated user can write to their own avatar directory.
-    match /avatars/{userId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Artwork images can be read by anyone.
-    // Writes are restricted to the owner of the user directory.
-    match /artworks/{userId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Achievement images (awards, exhibitions) can be read by anyone.
-    // Writes are restricted to the authenticated user's own directory.
     match /achievements/{userId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /artworks/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Previously sold artwork images can be read by anyone.
-    // Writes are restricted to the authenticated user's own directory.
-    match /previouslySold/{userId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+     match /previouslySold/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-		 // Allow admin full access to any other path as a fallback
-    match /{allPaths=**} {
-      allow read, write: if isAdmin();
+    
+    // Allow public read for assets
+     match /public/assets/{allPaths=**} {
+      allow read;
+      allow write: if false;
+    }
+    
+    // Allow public read for founder images
+    match /founders/{allPaths=**} {
+      allow read;
+      allow write: if false;
     }
   }
 }
