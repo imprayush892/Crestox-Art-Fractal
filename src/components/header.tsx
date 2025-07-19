@@ -20,7 +20,7 @@ import { SafeImage as Image } from '@/components/ui/safe-image';
 import { motion } from 'framer-motion';
 import { ThemeToggle } from './theme-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import type { Notification } from '@/lib/data';
+import type { Notification, AdminNotification } from '@/lib/data';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
@@ -64,9 +64,39 @@ const NotificationItem = ({ notification, onSelect }: { notification: Notificati
   );
 };
 
+const AdminNotificationItem = ({ notification, onMarkAsResolved }: { notification: AdminNotification, onMarkAsResolved: (id: string) => void }) => {
+  return (
+    <div className="p-3 rounded-md transition-colors">
+        <div className="flex items-start gap-3">
+            <div className="flex-1">
+                <Link href={notification.relatedContent.url} className="block hover:bg-muted/50 -m-2 p-2 rounded-md">
+                    <p className="text-sm font-medium">{notification.relatedContent.title}</p>
+                    <p className="text-sm text-muted-foreground">{notification.message}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}</p>
+                </Link>
+                 <Button size="sm" variant="outline" className="mt-2" onClick={() => onMarkAsResolved(notification.id)}>
+                    Mark as Resolved
+                </Button>
+            </div>
+        </div>
+    </div>
+  );
+};
+
 
 export function Header() {
-  const { user, isLoggedIn, logout, artistProfile, isLoading, isAdmin, notifications, markNotificationsAsRead } = useAuth();
+  const { 
+      user, 
+      isLoggedIn, 
+      logout, 
+      artistProfile, 
+      isLoading, 
+      isAdmin, 
+      notifications, 
+      markNotificationsAsRead,
+      adminNotifications,
+      markNotificationAsResolved,
+  } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const router = useRouter();
@@ -124,7 +154,7 @@ export function Header() {
           </nav>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-             {isLoggedIn && (
+             {isLoggedIn && !isAdmin && (
                  <Popover open={isNotificationsOpen} onOpenChange={handleNotificationsOpenChange}>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" className="relative">
@@ -141,6 +171,28 @@ export function Header() {
                               notifications.map(n => <NotificationItem key={n.id} notification={n} onSelect={() => setIsNotificationsOpen(false)} />)
                           ) : (
                               <p className="text-sm text-muted-foreground p-4 text-center">No notifications yet.</p>
+                          )}
+                        </ScrollArea>
+                    </PopoverContent>
+                </Popover>
+             )}
+            {isAdmin && (
+                 <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="relative">
+                            <Bell className="h-5 w-5" />
+                            {adminNotifications.length > 0 && <span className="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-primary" />}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-2">
+                        <div className="p-2">
+                          <h3 className="font-medium">Admin Notifications</h3>
+                        </div>
+                        <ScrollArea className="h-96">
+                          {adminNotifications.length > 0 ? (
+                              adminNotifications.map(n => <AdminNotificationItem key={n.id} notification={n} onMarkAsResolved={markNotificationAsResolved} />)
+                          ) : (
+                              <p className="text-sm text-muted-foreground p-4 text-center">No pending reviews.</p>
                           )}
                         </ScrollArea>
                     </PopoverContent>
@@ -252,7 +304,7 @@ export function Header() {
                     <div className="flex flex-col gap-4">
                         {!isAdmin && (
                           <div className="flex items-center gap-2 text-lg font-medium">
-                              <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wallet className="w-5 h-5"/></motion.div>
+                              <motion.div variants={iconVariants} initial="hidden" animate="visible"><Wallet className="w-5 w-5"/></motion.div>
                               <span>{user.walletBalance.toLocaleString('en-IN')} CreCoins</span>
                           </div>
                         )}

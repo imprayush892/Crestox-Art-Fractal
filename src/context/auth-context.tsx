@@ -7,7 +7,7 @@ import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, que
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser, PrivateHolding, PublicHolding, CollectorInfo, Award, Exhibition, PreviouslySoldArtwork, Notification } from '@/lib/data';
+import type { Artist, Fractal, OwnedFractal, ResaleListing, EditArtworkFormValues, AIScorecardBreakdown, ArtworkFormValues, CreateArtistProfileData, OrderBreakdownItem, PublicUser, PrivateHolding, PublicHolding, CollectorInfo, Award, Exhibition, PreviouslySoldArtwork, Notification, AdminNotification } from '@/lib/data';
 import type { EvaluationResult, ValuationBreakdownItem } from '@/ai/flows/evaluate-artwork-flow';
 import { artists as mockArtists, fractals as mockFractals } from '@/lib/data';
 import { v4 as uuidv4 } from 'uuid';
@@ -51,6 +51,7 @@ interface AuthContextType {
   resaleListings: ResaleListing[];
   watchlist: string[];
   notifications: Notification[];
+  adminNotifications: AdminNotification[];
   login: (email: string, pass: string) => Promise<void>;
   signup: (firstName: string, lastName: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -73,6 +74,7 @@ interface AuthContextType {
   flagArtwork: (fractalId: string, flag: boolean, reason: string) => Promise<void>;
   flagArtistContent: (artistId: string, imageUrl: string, flag: boolean, reason: string) => Promise<void>;
   markNotificationsAsRead: () => Promise<void>;
+  markNotificationAsResolved: (id: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -118,6 +120,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const [resaleListings, setResaleListings] = useState<ResaleListing[]>([]);
   const [allUsers, setAllUsers] = useState<PublicUser[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>([]);
 
   useEffect(() => {
     let unsubscribeUser: () => void = () => {};
@@ -125,18 +128,33 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     let unsubscribeHoldings: () => void = () => {};
     let unsubscribeAllUsers: () => void = () => {};
     let unsubscribeNotifications: () => void = () => {};
+    let unsubscribeAdminNotifications: () => void = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Unsubscribe from all previous listeners
       unsubscribeUser();
       unsubscribeArtist();
       unsubscribeHoldings();
       unsubscribeAllUsers();
       unsubscribeNotifications();
+      unsubscribeAdminNotifications();
       
       if (firebaseUser) {
-        setIsAdmin(firebaseUser.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL);
+        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        const userIsAdmin = !!adminEmail && firebaseUser.email === adminEmail;
+        setIsAdmin(userIsAdmin);
+
         setIsLoading(true);
         setIsCollectionLoading(true);
+        
+        // Admin-specific listeners
+        if (userIsAdmin) {
+            const adminNotifsQuery = query(firestoreCollection(db, 'admin_notifications'), where("status", "==", "pending"));
+            unsubscribeAdminNotifications = onSnapshot(adminNotifsQuery, (snapshot) => {
+                const fetchedNotifications = snapshot.docs.map(d => ({...d.data(), id: d.id})) as AdminNotification[];
+                setAdminNotifications(fetchedNotifications);
+            });
+        }
 
         const userRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeUser = onSnapshot(userRef, async (userDoc) => {
@@ -237,6 +255,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         setCollection([]);
         setAllUsers([]);
         setNotifications([]);
+        setAdminNotifications([]);
         setIsLoading(false);
         setIsCollectionLoading(false);
       }
@@ -352,24 +371,19 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     await signOut(auth);
   };
 
-  const createAdminNotification = async (message: string, relatedContent: Notification['relatedContent']) => {
+  const createAdminNotification = async (message: string, relatedContent: AdminNotification['relatedContent']) => {
     if (!db) throw new Error("Database not available.");
-    const adminUid = process.env.NEXT_PUBLIC_ADMIN_UID;
-    if (!adminUid) {
-        console.error("Admin UID not configured in .env. Cannot send notification.");
-        return;
-    }
     
     try {
-        const notification: Omit<Notification, 'id'> = {
+        const notification: Omit<AdminNotification, 'id'> = {
             message,
             timestamp: new Date().toISOString(),
-            read: false,
+            status: 'pending',
             type: 'manual_valuation_request',
             relatedContent,
         };
 
-        const notificationRef = doc(firestoreCollection(db, `users/${adminUid}/notifications`));
+        const notificationRef = doc(firestoreCollection(db, `admin_notifications`));
         await setDoc(notificationRef, notification);
     } catch (error) {
         console.error("Failed to create admin notification:", error);
@@ -689,7 +703,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     const fractalRef = doc(db, "fractals", newFractalId);
     try {
         await setDoc(fractalRef, fractalDataPayload);
-        await createAdminNotification(`${artistProfile.name} requested a manual review for a new artwork.`, {
+        await createAdminNotification(`New artwork from ${artistProfile.name} needs manual valuation.`, {
             title: `Artwork: ${artworkData.title}`,
             url: `/portfolio/artwork/edit/${newFractalId}`,
         });
@@ -710,7 +724,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         description: reason,
       });
 
-      await createAdminNotification(`${artistProfile.name} requested a manual re-evaluation for an artwork.`, {
+      await createAdminNotification(`${artistProfile.name} requested a manual re-evaluation.`, {
           title: `Artwork: ${fractalSnap.data().title}`,
           url: `/portfolio/artwork/edit/${artworkId}`,
       });
@@ -1202,7 +1216,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
           message: reason,
           timestamp: new Date().toISOString(),
           read: false,
-          type: flag ? 'artwork_flagged' : 'artwork_unflagged',
+          type: flag ? 'artwork_flagged' : 'content_unflagged',
           relatedContent: {
               title: `Artwork: ${fractalData.title}`,
               url: `/fractal/${fractalId}`,
@@ -1258,6 +1272,18 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         console.error("Error marking notifications as read:", error);
     }
   };
+  
+  const markNotificationAsResolved = async (id: string) => {
+    if (!isAdmin || !db) return;
+    try {
+        const notifRef = doc(db, 'admin_notifications', id);
+        await updateDoc(notifRef, { status: 'resolved' });
+        toast({ title: 'Notification Resolved' });
+    } catch (error) {
+        console.error("Error resolving notification:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not resolve notification.' });
+    }
+  };
 
 
   const contextValue: AuthContextType = {
@@ -1275,6 +1301,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     resaleListings,
     watchlist: user?.watchlist ?? [],
     notifications,
+    adminNotifications,
     login,
     signup,
     logout,
@@ -1297,6 +1324,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     flagArtwork,
     flagArtistContent,
     markNotificationsAsRead,
+    markNotificationAsResolved,
   };
   
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

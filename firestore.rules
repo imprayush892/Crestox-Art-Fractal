@@ -1,54 +1,44 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    function isAdmin() {
-      return request.auth.token.email == "crestox@crestox.com";
-    }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    // Allow public read for artists and fractals
+    match /artists/{artistId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == resource.data.userId;
     }
 
-    // Public collections are readable by anyone logged in
-    match /artists/{artistId} {
-      allow read: if request.auth != null;
-      // Allow artists to create/update their own profiles
-      allow create, update: if request.auth.uid == resource.data.userId || isAdmin();
-    }
-    
     match /fractals/{fractalId} {
-      allow read: if request.auth != null;
-      // Allow artists to create/update their own fractals
-      allow create, update: if get(/databases/$(database)/documents/artists/$(request.resource.data.artistId)).data.userId == request.auth.uid || isAdmin();
+      allow read: if true;
+      allow write: if request.auth != null; // More specific rules might be needed
     }
     
-    // Users can manage their own data
+    // Users can read/write their own data
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      allow read, write: if request.auth != null && request.auth.uid == userId;
       
-      // Holdings can be read and written by the owner
+      // Holdings are complex. For now, allow owner to manage.
       match /holdings/{holdingId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
       match /privateHoldings/{holdingId} {
-         allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /notifications/{notificationId} {
+         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
-    
-    // Resale listings can be read by authenticated users.
-    // They can only be created or updated by the lister.
-    match /resaleListings/{listingId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth.uid == request.resource.data.resellerId || isAdmin();
-        allow update: if request.auth.uid == resource.data.resellerId || isAdmin();
-    }
 
-    // As a failsafe, admin has full access to everything.
-    // This rule is placed last to be evaluated after more specific rules.
-    match /{document=**} {
-      allow read, write: if isAdmin();
+    // Resale listings can be read by anyone, written by owner
+    match /resaleListings/{listingId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == request.resource.data.resellerId;
+    }
+    
+    // Admin notifications can be created by any user, but only read/updated by admin.
+    match /admin_notifications/{notificationId} {
+      allow read, update: if request.auth != null && request.auth.token.email == "crestox@crestox.com";
+      allow create: if request.auth != null;
     }
   }
 }

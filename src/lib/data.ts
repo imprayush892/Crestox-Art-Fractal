@@ -47,6 +47,18 @@ export interface Notification {
   };
 }
 
+export interface AdminNotification {
+  id: string;
+  message: string;
+  timestamp: string; // ISO string
+  status: 'pending' | 'resolved';
+  type: 'manual_valuation_request';
+  relatedContent: {
+    title: string;
+    url: string;
+  };
+}
+
 export interface Artist {
   id: string;
   userId?: string;
@@ -489,5 +501,6 @@ export const artists: Artist[] = finalArtists;
 
 
     
+
 
 
