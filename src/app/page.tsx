@@ -131,6 +131,13 @@ export default function Home() {
           })}
         </div>
       )}
+      <div className="text-center mt-12">
+        <Button size="lg" asChild>
+          <Link href="/explore">
+            Explore More Art
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }
