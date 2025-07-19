@@ -219,8 +219,6 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
 
   const availablePercentage = artist.totalEditions > 0 ? (artist.availableEditions / artist.totalEditions) * 100 : 0;
   
-  const activeArtworks = useMemo(() => artistFractals.filter(f => f.status === 'active'), [artistFractals]);
-
   const isCollectible = useMemo(() => {
     if (isOwnProfile) return false;
     // Artworks can be collected if the artist has no art yet OR if they have art AND a message.
@@ -311,7 +309,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
 
   const portfolioSnapshotData = useMemo(() => {
     const grades = ['AAA', 'AA', 'A+', 'A', 'A-'];
-    const snapshot = activeArtworks.reduce((acc, fractal) => {
+    const snapshot = artistFractals.reduce((acc, fractal) => {
         if (fractal.crestoxGrade) {
             acc[fractal.crestoxGrade] = (acc[fractal.crestoxGrade] || 0) + 1;
         }
@@ -322,7 +320,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
         grade,
         count: snapshot[grade] || 0,
     })).filter(item => item.count > 0);
-  }, [activeArtworks]);
+  }, [artistFractals]);
 
 
   return (
@@ -409,7 +407,7 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
                 <CardContent>
                     <Button size="lg" className="w-full" asChild>
                         <Link href="/portfolio">
-                            <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Edit className="h-5 w-5" /></motion.div>
+                            <motion.div variants={iconVariants} initial="hidden" animate="visible" className="mr-2"><Edit className="h-5 h-5" /></motion.div>
                             Go to Dashboard
                         </Link>
                     </Button>
@@ -481,13 +479,13 @@ export function ArtistProfile({ artist, artistFractals }: ArtistProfileProps) {
         </div>
         <TabsContent value="artworks" className="mt-6">
             <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8">
-                {activeArtworks.map((fractal) => (
+                {artistFractals.map((fractal) => (
                     <div key={fractal.id} className="break-inside-avoid mb-8">
                         <FractalCard fractal={fractal} artist={artist} />
                     </div>
                 ))}
             </div>
-            {activeArtworks.length === 0 && (
+            {artistFractals.length === 0 && (
                 <div className="text-center py-16 text-muted-foreground">
                     This artist has not listed any artworks yet.
                 </div>
