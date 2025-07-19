@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup, orderBy } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -51,7 +51,6 @@ interface AuthContextType {
   resaleListings: ResaleListing[];
   watchlist: string[];
   notifications: Notification[];
-  adminNotifications: AdminNotification[];
   login: (email: string, pass: string) => Promise<void>;
   signup: (firstName: string, lastName: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -74,7 +73,6 @@ interface AuthContextType {
   flagArtwork: (fractalId: string, flag: boolean, reason: string) => Promise<void>;
   flagArtistContent: (artistId: string, imageUrl: string, flag: boolean, reason: string) => Promise<void>;
   markNotificationsAsRead: () => Promise<void>;
-  markNotificationAsResolved: (id: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -120,7 +118,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
   const [resaleListings, setResaleListings] = useState<ResaleListing[]>([]);
   const [allUsers, setAllUsers] = useState<PublicUser[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>([]);
 
   useEffect(() => {
     let unsubscribeUser: () => void = () => {};
@@ -128,7 +125,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     let unsubscribeHoldings: () => void = () => {};
     let unsubscribeAllUsers: () => void = () => {};
     let unsubscribeNotifications: () => void = () => {};
-    let unsubscribeAdminNotifications: () => void = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       // Unsubscribe from all previous listeners
@@ -137,24 +133,14 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       unsubscribeHoldings();
       unsubscribeAllUsers();
       unsubscribeNotifications();
-      unsubscribeAdminNotifications();
       
       if (firebaseUser) {
-        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-        const userIsAdmin = !!adminEmail && firebaseUser.email === adminEmail;
-        setIsAdmin(userIsAdmin);
-
         setIsLoading(true);
         setIsCollectionLoading(true);
         
-        // Admin-specific listeners
-        if (userIsAdmin) {
-            const adminNotifsQuery = query(firestoreCollection(db, 'admin_notifications'), where("status", "==", "pending"));
-            unsubscribeAdminNotifications = onSnapshot(adminNotifsQuery, (snapshot) => {
-                const fetchedNotifications = snapshot.docs.map(d => ({...d.data(), id: d.id})) as AdminNotification[];
-                setAdminNotifications(fetchedNotifications);
-            });
-        }
+        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        const userIsAdmin = !!adminEmail && firebaseUser.email === adminEmail;
+        setIsAdmin(userIsAdmin);
 
         const userRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeUser = onSnapshot(userRef, async (userDoc) => {
@@ -188,8 +174,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
                 setArtistProfile(artistData);
                 foundArtistProfile = true;
 
-                // Self-Heal: Repair the missing link in the user's document.
-                console.log("Repairing missing artist profile link for user:", firebaseUser.uid);
+                // Self-Heal: Repair the missing artist profile link for user:", firebaseUser.uid);
                 await updateDoc(userRef, {
                   artistProfile: {
                     id: artistData.id,
@@ -255,7 +240,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         setCollection([]);
         setAllUsers([]);
         setNotifications([]);
-        setAdminNotifications([]);
         setIsLoading(false);
         setIsCollectionLoading(false);
       }
@@ -369,25 +353,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
   const logout = async () => {
     await signOut(auth);
-  };
-
-  const createAdminNotification = async (message: string, relatedContent: AdminNotification['relatedContent']) => {
-    if (!db) throw new Error("Database not available.");
-    
-    try {
-        const notification: Omit<AdminNotification, 'id'> = {
-            message,
-            timestamp: new Date().toISOString(),
-            status: 'pending',
-            type: 'manual_valuation_request',
-            relatedContent,
-        };
-
-        const notificationRef = doc(firestoreCollection(db, `admin_notifications`));
-        await setDoc(notificationRef, notification);
-    } catch (error) {
-        console.error("Failed to create admin notification:", error);
-    }
   };
 
   const createArtistProfile = async (profileData: CreateArtistProfileData) => {
@@ -695,7 +660,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         timeEffort: artworkData.timeEffort || "",
         biographicalContext: artworkData.biographicalContext || "",
         commissionPatronage: artworkData.commissionPatronage || "",
-        status: 'pending_review',
+        status: 'pending_review' as const,
         price: 0,
         priceHistory: [],
     };
@@ -703,10 +668,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     const fractalRef = doc(db, "fractals", newFractalId);
     try {
         await setDoc(fractalRef, fractalDataPayload);
-        await createAdminNotification(`New artwork from ${artistProfile.name} needs manual valuation.`, {
-            title: `Artwork: ${artworkData.title}`,
-            url: `/portfolio/artwork/edit/${newFractalId}`,
-        });
     } catch (error) {
        throw new Error(handleAuthError(error));
     }
@@ -716,17 +677,9 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     if (!db || !user || !artistProfile) throw new Error("User or artist profile not authenticated.");
     const fractalRef = doc(db, "fractals", artworkId);
     try {
-      const fractalSnap = await getDoc(fractalRef);
-      if (!fractalSnap.exists()) throw new Error("Artwork not found.");
-      
       await updateDoc(fractalRef, {
         status: 'pending_review',
         description: reason,
-      });
-
-      await createAdminNotification(`${artistProfile.name} requested a manual re-evaluation.`, {
-          title: `Artwork: ${fractalSnap.data().title}`,
-          url: `/portfolio/artwork/edit/${artworkId}`,
       });
 
     } catch (error) {
@@ -1207,11 +1160,13 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
       if (!fractalSnap.exists()) throw new Error("Artwork not found");
 
       const fractalData = fractalSnap.data() as Fractal;
-      const artistId = fractalData.artistId;
+      const artistData = artists.find(a => a.id === fractalData.artistId);
+      if (!artistData?.userId) throw new Error("Could not find artist's user account.");
+
 
       await updateDoc(fractalRef, { isFlagged: flag });
 
-      const notificationRef = doc(firestoreCollection(db, `users/${artistId}/notifications`));
+      const notificationRef = doc(firestoreCollection(db, `users/${artistData.userId}/notifications`));
       const notification: Omit<Notification, 'id'> = {
           message: reason,
           timestamp: new Date().toISOString(),
@@ -1272,19 +1227,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         console.error("Error marking notifications as read:", error);
     }
   };
-  
-  const markNotificationAsResolved = async (id: string) => {
-    if (!isAdmin || !db) return;
-    try {
-        const notifRef = doc(db, 'admin_notifications', id);
-        await updateDoc(notifRef, { status: 'resolved' });
-        toast({ title: 'Notification Resolved' });
-    } catch (error) {
-        console.error("Error resolving notification:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not resolve notification.' });
-    }
-  };
-
 
   const contextValue: AuthContextType = {
     user,
@@ -1301,7 +1243,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     resaleListings,
     watchlist: user?.watchlist ?? [],
     notifications,
-    adminNotifications,
     login,
     signup,
     logout,
@@ -1324,7 +1265,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     flagArtwork,
     flagArtistContent,
     markNotificationsAsRead,
-    markNotificationAsResolved,
   };
   
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

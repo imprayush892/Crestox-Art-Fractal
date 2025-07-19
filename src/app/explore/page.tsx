@@ -1,12 +1,18 @@
+
 'use client';
 
 import { ExploreTool } from '@/components/explore-tool';
 import { ArtistCard } from '@/components/artist-card';
 import { useAuth } from '@/context/auth-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FractalCard } from '@/components/fractal-card';
+import { Shield } from 'lucide-react';
 
 export default function ExplorePage() {
-  const { artists, fractals } = useAuth();
+  const { artists, fractals, isAdmin } = useAuth();
+  
+  const pendingFractals = fractals.filter(f => f.status === 'pending_review');
+  const artistsMap = new Map(artists.map(a => [a.id, a]));
 
   return (
     <div className="container py-12">
@@ -19,10 +25,16 @@ export default function ExplorePage() {
 
       <Tabs defaultValue="artwork" className="w-full">
         <div className="flex justify-center mb-8">
-          <div className="w-full max-w-sm overflow-x-auto pb-2">
-            <TabsList className="w-max min-w-full grid grid-cols-2">
+          <div className="w-full max-w-md overflow-x-auto pb-2">
+            <TabsList className={`w-max min-w-full grid ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <TabsTrigger value="artwork">Artwork</TabsTrigger>
                 <TabsTrigger value="artists">Artists</TabsTrigger>
+                {isAdmin && (
+                    <TabsTrigger value="pending" className="text-destructive">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Pending Action ({pendingFractals.length})
+                    </TabsTrigger>
+                )}
             </TabsList>
           </div>
         </div>
@@ -37,6 +49,27 @@ export default function ExplorePage() {
             ))}
           </div>
         </TabsContent>
+        {isAdmin && (
+            <TabsContent value="pending">
+              {pendingFractals.length > 0 ? (
+                <div className="columns-2 md:columns-3 lg:columns-4 gap-4 sm:gap-8">
+                  {pendingFractals.map((fractal) => {
+                    const artist = artistsMap.get(fractal.artistId);
+                    if (!artist) return null;
+                    return (
+                      <div key={fractal.id} className="break-inside-avoid mb-4 sm:mb-8">
+                        <FractalCard fractal={fractal} artist={artist} />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
+                    No artworks are pending review.
+                </div>
+              )}
+            </TabsContent>
+        )}
       </Tabs>
     </div>
   );
