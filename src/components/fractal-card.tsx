@@ -3,9 +3,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Fractal, Artist } from '@/lib/data';
 import { motion } from 'framer-motion';
-import React, { useState, useRef } from 'react';
-import { Lightbox } from './lightbox';
-import { Button } from './ui/button';
+import React from 'react';
 
 interface FractalCardProps {
   fractal: Fractal;
@@ -14,21 +12,6 @@ interface FractalCardProps {
 }
 
 export const FractalCard = React.forwardRef<HTMLDivElement, FractalCardProps>(({ fractal, artist, className }, ref) => {
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  const handleMouseEnter = () => {
-    hoverTimeout.current = setTimeout(() => {
-      setIsLightboxOpen(true);
-    }, 1500); // 1.5 second delay for preview
-  };
-
-  const handleMouseLeave = () => {
-    if (hoverTimeout.current) {
-      clearTimeout(hoverTimeout.current);
-    }
-  };
-  
   return (
     <>
       <motion.div
@@ -36,8 +19,6 @@ export const FractalCard = React.forwardRef<HTMLDivElement, FractalCardProps>(({
         className={className}
         whileHover={{ y: -5, scale: 1.03, zIndex: 10 }}
         transition={{ type: 'spring', stiffness: 300 }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
       >
         <Link href={`/fractal/${fractal.id}`} className="group block">
           <Card className="overflow-hidden transition-all duration-300 ease-in-out shadow-md group-hover:shadow-xl group-hover:shadow-primary/10 border-2 border-transparent group-hover:border-primary/20">
@@ -63,28 +44,6 @@ export const FractalCard = React.forwardRef<HTMLDivElement, FractalCardProps>(({
           </Card>
         </Link>
       </motion.div>
-
-      <Lightbox isOpen={isLightboxOpen} onClose={() => setIsLightboxOpen(false)}>
-        <div className="flex flex-col items-center gap-4 text-white">
-          <Image
-            src={fractal.heroImage}
-            alt={fractal.title}
-            width={800}
-            height={800}
-            className="object-contain w-auto h-auto max-w-full max-h-[75vh] rounded-lg shadow-2xl"
-            data-ai-hint={fractal.aiHint}
-          />
-          <div className="text-center">
-            <p className="font-headline text-2xl">{fractal.title}</p>
-            <p className="text-lg text-white/80">by {artist.name}</p>
-          </div>
-          <Button asChild size="lg">
-            <Link href={`/fractal/${fractal.id}`}>
-              Collect Fractal
-            </Link>
-          </Button>
-        </div>
-      </Lightbox>
     </>
   );
 });
