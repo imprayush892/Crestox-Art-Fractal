@@ -1,19 +1,34 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { ExploreTool } from '@/components/explore-tool';
 import { ArtistCard } from '@/components/artist-card';
 import { useAuth } from '@/context/auth-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FractalCard } from '@/components/fractal-card';
 import { Shield } from 'lucide-react';
+import type { Artist, Fractal } from '@/lib/data';
 
 export default function ExplorePage() {
   const { artists, fractals, isAdmin } = useAuth();
+
+  const [shuffledArtists, setShuffledArtists] = useState<Artist[]>([]);
+  const [shuffledFractals, setShuffledFractals] = useState<Fractal[]>([]);
+
+  useEffect(() => {
+    if (artists.length > 0) {
+      setShuffledArtists([...artists].sort(() => 0.5 - Math.random()));
+    }
+  }, [artists]);
+
+  useEffect(() => {
+    if (fractals.length > 0) {
+      setShuffledFractals([...fractals].sort(() => 0.5 - Math.random()));
+    }
+  }, [fractals]);
   
   const pendingFractals = fractals.filter(f => f.status === 'pending_review');
-  // FIX: Display all fractals, not just 'active' ones.
-  const allFractals = fractals;
   const artistsMap = new Map(artists.map(a => [a.id, a]));
 
   return (
@@ -42,11 +57,11 @@ export default function ExplorePage() {
         </div>
 
         <TabsContent value="artwork">
-          <ExploreTool fractals={allFractals} artists={artists} />
+          <ExploreTool fractals={shuffledFractals} artists={artists} />
         </TabsContent>
         <TabsContent value="artists">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {artists.map((artist) => (
+            {shuffledArtists.map((artist) => (
               <ArtistCard key={artist.id} artist={artist} />
             ))}
           </div>

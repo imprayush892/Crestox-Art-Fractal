@@ -32,7 +32,7 @@ interface ExploreToolProps {
 export function ExploreTool({ fractals, artists }: ExploreToolProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [artistFilter, setArtistFilter] = useState('all');
-  const [sortOrder, setSortOrder] = useState('newest');
+  const [sortOrder, setSortOrder] = useState('relevance');
 
   const artistsMap = useMemo(() => new Map(artists.map(a => [a.id, a])), [artists]);
 
@@ -51,21 +51,30 @@ export function ExploreTool({ fractals, artists }: ExploreToolProps) {
     if (artistFilter !== 'all') {
       filtered = filtered.filter(fractal => fractal.artistId === artistFilter);
     }
+    
+    const sorted = [...filtered];
 
     switch (sortOrder) {
       case 'price-asc':
-        filtered.sort((a, b) => a.price - b.price);
+        sorted.sort((a, b) => a.price - b.price);
         break;
       case 'price-desc':
-        filtered.sort((a, b) => b.price - a.price);
+        sorted.sort((a, b) => b.price - a.price);
         break;
       case 'newest':
+         sorted.sort((a, b) => {
+            const dateA = new Date(a.priceHistory[0]?.date || 0).getTime();
+            const dateB = new Date(b.priceHistory[0]?.date || 0).getTime();
+            return dateB - dateA;
+        });
+        break;
+      case 'relevance':
       default:
-        filtered.sort((a, b) => parseInt(b.id.split('-')[1]) - parseInt(a.id.split('-')[1]));
+        // Do nothing, preserving the random order from props
         break;
     }
 
-    return filtered;
+    return sorted;
   }, [searchTerm, artistFilter, sortOrder, artistsMap, fractals]);
 
   return (
@@ -102,6 +111,7 @@ export function ExploreTool({ fractals, artists }: ExploreToolProps) {
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="relevance">Relevance</SelectItem>
               <SelectItem value="newest">Newest</SelectItem>
               <SelectItem value="price-asc">Price: Low to High</SelectItem>
               <SelectItem value="price-desc">Price: High to Low</SelectItem>
