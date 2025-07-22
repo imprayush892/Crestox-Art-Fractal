@@ -43,7 +43,7 @@ export default function Home() {
 
   useEffect(() => {
     if (fractals.length > 0) {
-      const activeFractals = fractals.filter(f => f.status !== 'pending_review');
+      const activeFractals = fractals.filter(f => f.status === 'active');
       const shuffled = [...activeFractals].sort(() => 0.5 - Math.random());
       setDisplayedFractals(shuffled);
       setIsLoading(false);

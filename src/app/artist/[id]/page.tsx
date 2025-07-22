@@ -18,8 +18,8 @@ export default function ArtistProfilePage() {
   }
   
   const artistFractals = useMemo(() => {
-    // FIX: Show all fractals for a given artist on their profile page.
-    return fractals.filter(f => f.artistId === artist.id);
+    // FIX: Show only active fractals on the public artist profile.
+    return fractals.filter(f => f.artistId === artist.id && f.status === 'active');
   }, [artist.id, fractals]);
 
   return (

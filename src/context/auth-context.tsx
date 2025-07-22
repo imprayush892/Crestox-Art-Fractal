@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { type User as FirebaseUser, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection as firestoreCollection, query, where, writeBatch, Timestamp, serverTimestamp, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs, runTransaction, Firestore, DocumentReference, DocumentData, DocumentSnapshot, collectionGroup, orderBy, limit, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -74,6 +74,7 @@ interface AuthContextType {
   markNotificationsAsRead: () => Promise<void>;
   deleteArtistAchievement: (artistId: string, type: 'award' | 'exhibition', item: Award | Exhibition) => Promise<void>;
   updateArtworkStatus: (fractalId: string, status: 'pending_review' | 'active' | 'private') => Promise<void>;
+  deleteArtwork: (fractalId: string, artistId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -1219,6 +1220,48 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     }
   };
 
+  const deleteArtwork = async (fractalId: string, artistId: string) => {
+    if (!isAdmin || !db) throw new Error("Unauthorized to delete artwork.");
+
+    await runTransaction(db, async (transaction) => {
+        const fractalRef = doc(db, "fractals", fractalId);
+        const artistRef = doc(db, "artists", artistId);
+
+        const [fractalSnap, artistSnap] = await Promise.all([
+            transaction.get(fractalRef),
+            transaction.get(artistRef),
+        ]);
+
+        if (!fractalSnap.exists()) throw new Error("Artwork not found.");
+        if (!artistSnap.exists()) throw new Error("Artist not found.");
+
+        const artistFractalsQuery = query(firestoreCollection(db, "fractals"), where("artistId", "==", artistId));
+        const allFractalsSnap = await getDocs(artistFractalsQuery);
+        const allExistingFractals = allFractalsSnap.docs
+            .map(d => ({id: d.id, ...d.data()}) as Fractal)
+            .filter(f => f.id !== fractalId); // Exclude the one being deleted
+
+        const V_new = allExistingFractals.reduce((sum, f) => sum + (f.price || 0), 0);
+        const F_new = allExistingFractals.reduce((sum, f) => sum + (f.editions || 0), 0);
+        const sum_SiVi_new = allExistingFractals.reduce((sum, f) => sum + ((f.aiScore || 0) * (f.price || 0)), 0);
+        const sum_S_squared_new = allExistingFractals.reduce((sum, f) => sum + Math.pow(f.aiScore || 0, 2), 0);
+
+        const k_new = sum_SiVi_new > 0 ? V_new / sum_SiVi_new : 0;
+        const P_new = F_new > 0 ? V_new / F_new : 0;
+
+        transaction.update(artistRef, {
+            totalPortfolioValue: V_new,
+            totalEditions: F_new,
+            fractalPrice: P_new,
+            kFactor: k_new,
+            totalScoreWeightedValuation: sum_SiVi_new,
+            sumOfScoresSquared: sum_S_squared_new,
+        });
+
+        transaction.delete(fractalRef);
+    });
+  };
+
   const contextValue: AuthContextType = {
     user,
     artistProfile,
@@ -1258,6 +1301,7 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
     markNotificationsAsRead,
     deleteArtistAchievement,
     updateArtworkStatus,
+    deleteArtwork,
   };
   
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

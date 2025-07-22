@@ -14,16 +14,17 @@ import { FractalCard } from '@/components/fractal-card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from 'recharts';
 import { format } from 'date-fns';
-import { Star, ChevronLeft, ChevronRight, Edit, Flag, Loader2, Clock, Check, XCircle, Shield } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Edit, Flag, Loader2, Clock, Check, XCircle, Shield, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/auth-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from './ui/textarea';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
@@ -68,8 +69,9 @@ const formatSize = (size: ArtworkSize) => {
 };
 
 export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: FractalDetailProps) {
-  const { user, isAdmin, updateFractalPriceAsAdmin, flagArtwork, updateArtworkStatus } = useAuth();
+  const { user, isAdmin, updateFractalPriceAsAdmin, flagArtwork, updateArtworkStatus, deleteArtwork } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   
   if (fractal.status !== 'active' && !isAdmin && user?.uid !== artist?.userId) {
       notFound();
@@ -83,6 +85,7 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
   const [newPrice, setNewPrice] = useState<string>(fractal.price.toString());
   const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [isFlagging, setIsFlagging] = useState(false);
   const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
@@ -137,6 +140,19 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
         toast({ variant: 'destructive', title: "Action Failed", description: error.message });
     } finally {
         setIsFlagging(false);
+    }
+  };
+  
+  const handleDelete = async () => {
+    if (!artist) return;
+    setIsDeleting(true);
+    try {
+      await deleteArtwork(fractal.id, artist.id);
+      toast({ title: "Artwork Deleted", description: `"${fractal.title}" has been removed.`});
+      router.push(`/artist/${artist.id}`);
+    } catch (error: any) {
+       toast({ variant: 'destructive', title: "Deletion Failed", description: error.message });
+       setIsDeleting(false);
     }
   };
 
@@ -333,31 +349,53 @@ export function FractalDetail({ fractal, artist, relatedFractals, allArtists }: 
                   <CardTitle>Admin Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={() => setIsPriceDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit Price</Button>
-                      <Button variant={fractal.isFlagged ? "destructive" : "outline"} onClick={() => setIsFlagDialogOpen(true)}>
-                          <Flag className="mr-2 h-4 w-4" />
-                          {fractal.isFlagged ? 'Unflag Artwork' : 'Flag Artwork'}
-                      </Button>
-                  </div>
-                  <div>
-                    <Label>Status</Label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between" disabled={isUpdatingStatus}>
-                          {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                          <span>
-                            {fractal.status === 'pending_review' ? 'Pending Review' : fractal.status === 'active' ? 'Active (Public)' : 'Private (Hidden)'}
-                          </span>
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button onClick={() => setIsPriceDialogOpen(true)}><Edit className="mr-2 h-4 w-4" /> Edit Price</Button>
+                        <Button variant={fractal.isFlagged ? "destructive" : "outline"} onClick={() => setIsFlagDialogOpen(true)}>
+                            <Flag className="mr-2 h-4 w-4" />
+                            {fractal.isFlagged ? 'Unflag Artwork' : 'Flag Artwork'}
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                        <DropdownMenuItem onClick={() => handleUpdateStatus('active')}><Check className="mr-2 h-4 w-4"/>Active (Public)</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleUpdateStatus('pending_review')}><Clock className="mr-2 h-4 w-4"/>Pending Review</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleUpdateStatus('private')}><XCircle className="mr-2 h-4 w-4"/>Private (Hidden)</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                    </div>
+                    <div>
+                        <Label>Status</Label>
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="w-full justify-between" disabled={isUpdatingStatus}>
+                            {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            <span>
+                                {fractal.status === 'pending_review' ? 'Pending Review' : fractal.status === 'active' ? 'Active (Public)' : 'Private (Hidden)'}
+                            </span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                            <DropdownMenuItem onClick={() => handleUpdateStatus('active')}><Check className="mr-2 h-4 w-4"/>Active (Public)</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdateStatus('pending_review')}><Clock className="mr-2 h-4 w-4"/>Pending Review</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdateStatus('private')}><XCircle className="mr-2 h-4 w-4"/>Private (Hidden)</DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" className="w-full">
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete Artwork
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the artwork "{fractal.title}" and recalculate the artist's portfolio.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                                    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Continue
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </CardContent>
               </Card>
             )}
