@@ -121,10 +121,7 @@ const generatedArtists = staticArtists.map(artist => {
     const totalPortfolioValue = artistFractals.reduce((sum, f) => sum + f.price, 0);
     const totalEditions = artistFractals.reduce((sum, f) => sum + (f.editions || 0), 0);
     const availableEditions = artistFractals.reduce((sum, f) => sum + (f.editionsAvailable || 0), 0);
-    const fractalPrice = totalEditions > 0 ? Math.round((totalPortfolioValue / totalEditions)) : 0;
-    const totalScoreWeightedValuation = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) * f.price), 0);
-    const sumOfScoresSquared = artistFractals.reduce((sum, f) => sum + ((f.aiScore || 0) ** 2), 0);
-    const kFactor = totalScoreWeightedValuation > 0 ? totalPortfolioValue / totalScoreWeightedValuation : 0;
+    const fractalPrice = totalEditions > 0 ? (totalPortfolioValue / totalEditions) : 0;
     const avatarUrl = getFirebaseImageUrl(artist.folder, 'artist-avatar');
 
     return {
@@ -139,9 +136,6 @@ const generatedArtists = staticArtists.map(artist => {
         totalPortfolioValueHistory: [{ date: new Date().toISOString(), value: totalPortfolioValue }],
         totalEditions,
         availableEditions,
-        kFactor,
-        totalScoreWeightedValuation,
-        sumOfScoresSquared,
         awards: [],
         exhibitions: [],
         location: 'Gujarat, India',
@@ -236,9 +230,6 @@ export interface Artist {
   totalPortfolioValueHistory: { date: string; value: number }[];
   totalEditions: number;
   availableEditions: number;
-  kFactor: number;
-  totalScoreWeightedValuation: number;
-  sumOfScoresSquared: number;
   flaggedImageUrls?: string[];
 }
 
@@ -397,7 +388,7 @@ export const editArtworkFormSchema = z.object({
 
 export type EditArtworkFormValues = z.infer<typeof editArtworkFormSchema>;
 
-export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'awards' | 'exhibitions' | 'previouslySoldArtworks' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'totalPortfolioValue' | 'kFactor' | 'totalScoreWeightedValuation' | 'sumOfScoresSquared'> & { 
+export type CreateArtistProfileData = Omit<Artist, 'id' | 'avatar' | 'awards' | 'exhibitions' | 'previouslySoldArtworks' | 'fractalPrice' | 'priceHistory' | 'totalPortfolioValueHistory' | 'totalEditions' | 'availableEditions' | 'totalPortfolioValue' > & { 
   avatar?: File | string | null;
   awards: { value: string; image?: File | string | null }[];
   exhibitions: { value: string; images?: (File | string | null)[] }[];
@@ -420,6 +411,8 @@ export type NewArtworkData = {
     biographicalContext?: string;
     commissionPatronage?: string;
 }
+
+    
 
     
 

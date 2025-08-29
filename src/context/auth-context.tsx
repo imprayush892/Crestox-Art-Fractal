@@ -393,9 +393,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
         totalPortfolioValueHistory: [],
         totalEditions: 0,
         availableEditions: 0,
-        kFactor: 0,
-        totalScoreWeightedValuation: 0,
-        sumOfScoresSquared: 0,
     };
 
     try {
@@ -560,10 +557,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         const V_new = allFractalsForCalc.reduce((sum, f) => sum + (f.price || 0), 0);
         const F_new = allFractalsForCalc.reduce((sum, f) => sum + (f.editions || 0), 0);
-        const sum_SiVi_new = allFractalsForCalc.reduce((sum, f) => sum + ((f.aiScore || 0) * (f.price || 0)), 0);
-        const sum_S_squared_new = allFractalsForCalc.reduce((sum, f) => sum + Math.pow(f.aiScore || 0, 2), 0);
-        
-        const k_new = sum_SiVi_new > 0 ? V_new / sum_SiVi_new : 0;
         const P_new = F_new > 0 ? V_new / F_new : 0;
         const available_F_new = (artistSnap.data().availableEditions || 0) + new_Fi;
 
@@ -575,9 +568,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             totalEditions: F_new,
             availableEditions: available_F_new,
             fractalPrice: P_new,
-            kFactor: k_new,
-            totalScoreWeightedValuation: sum_SiVi_new,
-            sumOfScoresSquared: sum_S_squared_new,
             priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_new }),
             totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_new })
         });
@@ -690,20 +680,13 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         const V_new = allActiveFractals.reduce((sum, f) => sum + (f.price || 0), 0);
         const F_new = allActiveFractals.reduce((sum, f) => sum + (f.editions || 0), 0);
-        const sum_SiVi_new = allActiveFractals.reduce((sum, f) => sum + ((f.aiScore || 50) * (f.price || 0)), 0);
-        const sum_S_squared_new = allActiveFractals.reduce((sum, f) => sum + Math.pow(f.aiScore || 50, 2), 0);
-        
-        const k_new = sum_SiVi_new > 0 ? V_new / sum_SiVi_new : 0;
         const P_new = F_new > 0 ? V_new / F_new : 0;
-
+        
         transaction.update(fractalRef, artworkUpdate);
         transaction.update(artistRef, {
             totalPortfolioValue: V_new,
             fractalPrice: P_new,
             totalEditions: F_new,
-            kFactor: k_new,
-            totalScoreWeightedValuation: sum_SiVi_new,
-            sumOfScoresSquared: sum_S_squared_new,
             priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_new }),
             totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_new })
         });
@@ -771,10 +754,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
           const V_final = updatedFractalList.reduce((sum, f) => sum + (f.price || 0), 0);
           const F_final = updatedFractalList.reduce((sum, f) => sum + (f.editions || 0), 0);
-          const sum_SiVi_final = updatedFractalList.reduce((sum, f) => sum + ((f.aiScore || 0) * (f.price || 0)), 0);
-          const sum_S_squared_final = updatedFractalList.reduce((sum, f) => sum + Math.pow(f.aiScore || 0, 2), 0);
-
-          const k_final = sum_SiVi_final > 0 ? V_final / sum_SiVi_final : 0;
           const P_final = F_final > 0 ? V_final / F_final : 0;
           const available_F_final = (artistSnap.data().availableEditions || 0) + f_portfolio_new;
 
@@ -783,9 +762,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
               totalEditions: F_final,
               availableEditions: available_F_final,
               fractalPrice: P_final,
-              kFactor: k_final,
-              totalScoreWeightedValuation: sum_SiVi_final,
-              sumOfScoresSquared: sum_S_squared_final,
               priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_final }),
               totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_final })
           });
@@ -980,8 +956,6 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
             totalPortfolioValue: V_new_total,
             priceHistory: arrayUnion({ date: new Date().toISOString(), price: P_new }),
             totalPortfolioValueHistory: arrayUnion({ date: new Date().toISOString(), value: V_new_total }),
-            kFactor: k_recalculated,
-            sumOfScoresSquared: sum_S_squared
         };
         if (quantityFromArtist > 0) {
             artistUpdate.availableEditions = artistData.availableEditions - quantityFromArtist;
@@ -1243,19 +1217,12 @@ export function AuthProvider({ children, initialArtists, initialFractals }: { ch
 
         const V_new = allExistingFractals.reduce((sum, f) => sum + (f.price || 0), 0);
         const F_new = allExistingFractals.reduce((sum, f) => sum + (f.editions || 0), 0);
-        const sum_SiVi_new = allExistingFractals.reduce((sum, f) => sum + ((f.aiScore || 0) * (f.price || 0)), 0);
-        const sum_S_squared_new = allExistingFractals.reduce((sum, f) => sum + Math.pow(f.aiScore || 0, 2), 0);
-
-        const k_new = sum_SiVi_new > 0 ? V_new / sum_SiVi_new : 0;
         const P_new = F_new > 0 ? V_new / F_new : 0;
-
+        
         transaction.update(artistRef, {
             totalPortfolioValue: V_new,
             totalEditions: F_new,
             fractalPrice: P_new,
-            kFactor: k_new,
-            totalScoreWeightedValuation: sum_SiVi_new,
-            sumOfScoresSquared: sum_S_squared_new,
         });
 
         transaction.delete(fractalRef);
@@ -1314,3 +1281,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    
