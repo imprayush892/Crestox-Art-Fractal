@@ -6,11 +6,18 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { artists as mockArtists, fractals as mockFractals, type Artist, type Fractal } from '@/lib/data';
 
-function sanitizeArtist(artist: Artist): Artist {
+function sanitizeArtist(artist: Artist, allFractals: Fractal[]): Artist {
+  const artistFractals = allFractals.filter(f => f.artistId === artist.id && f.status === 'active');
+  const totalPortfolioValue = artistFractals.reduce((sum, f) => sum + f.price, 0);
+  const totalEditions = artistFractals.reduce((sum, f) => sum + (f.editions || 0), 0);
+  const fractalPrice = totalEditions > 0 ? totalPortfolioValue / totalEditions : 0;
+  
   return {
     ...artist,
+    totalPortfolioValue,
     totalEditions: Number(artist.totalEditions || 0),
     availableEditions: Number(artist.availableEditions || 0),
+    fractalPrice,
   };
 }
 
@@ -32,6 +39,7 @@ async function getDataFromCollection<T>(collectionName: string): Promise<T[]> {
 
 export async function getInitialArtists(): Promise<Artist[]> {
   const artistsFromDb = await getDataFromCollection<Artist>('artists');
+  const allFractals = await getInitialFractals();
   
   // Start with the static mock data as the base
   const combined = [...mockArtists];
@@ -44,7 +52,7 @@ export async function getInitialArtists(): Promise<Artist[]> {
     }
   }
 
-  return combined.map(sanitizeArtist);
+  return combined.map(artist => sanitizeArtist(artist, allFractals));
 }
 
 export async function getInitialFractals(): Promise<Fractal[]> {
